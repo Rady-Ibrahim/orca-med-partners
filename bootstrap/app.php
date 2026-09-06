@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'ensure.admin.context' => \App\Http\Middleware\EnsureAdminContext::class,
             'ensure.participant.context' => \App\Http\Middleware\EnsureParticipantContext::class,
+            'ensure.web.admin' => \App\Http\Middleware\EnsureWebAdminContext::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
