@@ -18,8 +18,7 @@ class ParticipantAuthController
     public function __construct(
         protected RefreshTokenService $refreshTokenService,
         protected SecurityAuditService $securityAuditService,
-    ) {
-    }
+    ) {}
 
     public function login(Request $request): JsonResponse
     {

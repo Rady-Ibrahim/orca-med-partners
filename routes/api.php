@@ -36,9 +36,13 @@ Route::middleware(['ensure.admin.context'])->group(function () {
 
     Route::get('/admin/participants', function (Request $request) {
         $token = $request->bearerToken();
-        if (! $token) { abort(401, 'Unauthenticated.'); }
+        if (! $token) {
+            abort(401, 'Unauthenticated.');
+        }
         $accessToken = PersonalAccessToken::findToken($token);
-        if (! $accessToken || ! $accessToken->tokenable instanceof Admin) { abort(403, 'Admin access required.'); }
+        if (! $accessToken || ! $accessToken->tokenable instanceof Admin) {
+            abort(403, 'Admin access required.');
+        }
 
         $user = $request->user();
         abort_unless($user->can('viewAny', Participant::class), 403, 'Forbidden.');
@@ -95,9 +99,13 @@ Route::middleware(['ensure.participant.context'])->group(function () {
 
     Route::get('/me', function (Request $request) {
         $token = $request->bearerToken();
-        if (! $token) { abort(401, 'Unauthenticated.'); }
+        if (! $token) {
+            abort(401, 'Unauthenticated.');
+        }
         $accessToken = PersonalAccessToken::findToken($token);
-        if (! $accessToken || ! $accessToken->tokenable instanceof Participant) { abort(403, 'Participant access required.'); }
+        if (! $accessToken || ! $accessToken->tokenable instanceof Participant) {
+            abort(403, 'Participant access required.');
+        }
 
         return response()->json([
             'success' => true,

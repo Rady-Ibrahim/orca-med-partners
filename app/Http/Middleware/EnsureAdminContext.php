@@ -26,7 +26,7 @@ class EnsureAdminContext
             abort(403, 'Admin access required.');
         }
 
-        $request->setUserResolver(fn () => $token->tokenable);
+        $request->setUserResolver(fn() => $token->tokenable);
 
         return $next($request);
     }

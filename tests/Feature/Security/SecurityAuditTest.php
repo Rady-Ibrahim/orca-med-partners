@@ -162,7 +162,7 @@ class SecurityAuditTest extends TestCase
         ]);
 
         $token = $attacker->createToken('participant-api', ['*'])->plainTextToken;
-        $response = $this->withToken($token)->getJson('/api/participant/investments/'.$investment->id);
+        $response = $this->withToken($token)->getJson('/api/participant/investments/' . $investment->id);
         $response->assertStatus(403);
 
         $this->assertDatabaseHas('audit_logs', ['action' => 'authorization_denied']);

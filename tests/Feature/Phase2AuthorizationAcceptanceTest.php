@@ -78,7 +78,7 @@ class Phase2AuthorizationAcceptanceTest extends TestCase
 
         $token = $employee->createToken('admin-api', ['*'])->plainTextToken;
 
-        $response = $this->withToken($token)->postJson('/api/admin/investments/'.$investment->id.'/approve');
+        $response = $this->withToken($token)->postJson('/api/admin/investments/' . $investment->id . '/approve');
 
         $response->assertStatus(403);
     }
@@ -97,7 +97,7 @@ class Phase2AuthorizationAcceptanceTest extends TestCase
 
         $token = $attacker->createToken('participant-api', ['*'])->plainTextToken;
 
-        $response = $this->withToken($token)->getJson('/api/participant/investments/'.$investment->id);
+        $response = $this->withToken($token)->getJson('/api/participant/investments/' . $investment->id);
 
         $response->assertStatus(403);
     }

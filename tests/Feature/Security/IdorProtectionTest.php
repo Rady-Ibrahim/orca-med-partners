@@ -40,7 +40,7 @@ class IdorProtectionTest extends TestCase
 
         $token = $attacker->createToken('participant-api', ['*'])->plainTextToken;
 
-        $response = $this->withToken($token)->getJson('/api/participant/investments/'.$investment->id);
+        $response = $this->withToken($token)->getJson('/api/participant/investments/' . $investment->id);
 
         $response->assertStatus(403);
     }
@@ -68,7 +68,7 @@ class IdorProtectionTest extends TestCase
 
         $token = $attacker->createToken('participant-api', ['*'])->plainTextToken;
 
-        $response = $this->withToken($token)->getJson('/api/participant/capital/'.$capital->id);
+        $response = $this->withToken($token)->getJson('/api/participant/capital/' . $capital->id);
 
         $response->assertStatus(403);
     }
@@ -126,7 +126,7 @@ class IdorProtectionTest extends TestCase
 
         $token = $attacker->createToken('participant-api', ['*'])->plainTextToken;
 
-        $response = $this->withToken($token)->getJson('/api/participant/profits/'.$profit->id);
+        $response = $this->withToken($token)->getJson('/api/participant/profits/' . $profit->id);
 
         $response->assertStatus(403);
     }
@@ -137,7 +137,7 @@ class IdorProtectionTest extends TestCase
         $attacker = Participant::factory()->create(['username' => 'attacker-fund', 'status' => 'active', 'password' => Hash::make('secret123')]);
 
         $fund = Fund::query()->create([
-            'code' => 'FUND-'.time(),
+            'code' => 'FUND-' . time(),
             'name' => 'Growth Fund',
             'current_balance' => 5000,
             'status' => 'active',
@@ -192,7 +192,7 @@ class IdorProtectionTest extends TestCase
 
         $token = $attacker->createToken('participant-api', ['*'])->plainTextToken;
 
-        $response = $this->withToken($token)->getJson('/api/participant/funds/'.$allocation->id);
+        $response = $this->withToken($token)->getJson('/api/participant/funds/' . $allocation->id);
 
         $response->assertStatus(403);
     }
@@ -203,7 +203,7 @@ class IdorProtectionTest extends TestCase
         $attacker = Participant::factory()->create(['username' => 'attacker-depreciation', 'status' => 'active', 'password' => Hash::make('secret123')]);
 
         $fund = Fund::query()->create([
-            'code' => 'DEPR-'.time(),
+            'code' => 'DEPR-' . time(),
             'name' => 'Depreciation Fund',
             'current_balance' => 2000,
             'status' => 'active',
@@ -225,7 +225,7 @@ class IdorProtectionTest extends TestCase
 
         $token = $attacker->createToken('participant-api', ['*'])->plainTextToken;
 
-        $response = $this->withToken($token)->getJson('/api/participant/depreciation/'.$depreciation->id);
+        $response = $this->withToken($token)->getJson('/api/participant/depreciation/' . $depreciation->id);
 
         $response->assertStatus(403);
     }
@@ -259,7 +259,7 @@ class IdorProtectionTest extends TestCase
 
         $token = $attacker->createToken('participant-api', ['*'])->plainTextToken;
 
-        $response = $this->withToken($token)->getJson('/api/participant/settlements/'.$item->id);
+        $response = $this->withToken($token)->getJson('/api/participant/settlements/' . $item->id);
 
         $response->assertStatus(403);
     }
@@ -280,7 +280,7 @@ class IdorProtectionTest extends TestCase
 
         $token = $attacker->createToken('participant-api', ['*'])->plainTextToken;
 
-        $response = $this->withToken($token)->getJson('/api/participant/notifications/'.$notification->id);
+        $response = $this->withToken($token)->getJson('/api/participant/notifications/' . $notification->id);
 
         $response->assertStatus(403);
     }

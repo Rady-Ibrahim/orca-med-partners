@@ -26,7 +26,7 @@ class EnsureParticipantContext
             abort(403, 'Participant access required.');
         }
 
-        $request->setUserResolver(fn () => $token->tokenable);
+        $request->setUserResolver(fn() => $token->tokenable);
 
         return $next($request);
     }

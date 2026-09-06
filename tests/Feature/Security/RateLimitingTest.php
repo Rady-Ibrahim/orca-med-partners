@@ -107,7 +107,7 @@ class RateLimitingTest extends TestCase
         for ($i = 0; $i < 10; $i++) {
             $this->withServerVariables($server)
                 ->postJson('/api/auth/admin/refresh', [
-                    'refresh_token' => 'invalid-token-'.$i,
+                    'refresh_token' => 'invalid-token-' . $i,
                 ])
                 ->assertStatus(401);
         }
