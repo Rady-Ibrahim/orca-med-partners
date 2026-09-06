@@ -16,9 +16,7 @@ use RuntimeException;
 
 final class FundBalanceService
 {
-    public function __construct(private SecurityAuditService $audit)
-    {
-    }
+    public function __construct(private SecurityAuditService $audit) {}
 
     public function applyTransaction(
         Fund $fund,
@@ -31,8 +29,7 @@ final class FundBalanceService
         ?CarbonInterface $transactionDate = null,
         ?string $description = null,
         ?Admin $actor = null,
-    ): FundTransaction
-    {
+    ): FundTransaction {
         $normalizedAmount = $this->normalizeAmount($amount);
 
         $type = $transactionType instanceof FundTransactionType ? $transactionType : FundTransactionType::tryFrom($transactionType);

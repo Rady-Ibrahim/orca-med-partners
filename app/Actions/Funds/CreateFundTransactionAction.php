@@ -13,9 +13,7 @@ use Carbon\Carbon;
 
 final class CreateFundTransactionAction
 {
-    public function __construct(private FundBalanceService $balanceService)
-    {
-    }
+    public function __construct(private FundBalanceService $balanceService) {}
 
     /** @param array{transaction_type:string,amount:string,transaction_date?:string,reference?:string|null,description?:string|null,notes?:string|null,monthly_profit_id?:int|null} $attributes */
     public function execute(Admin $admin, Fund $fund, array $attributes): FundTransaction

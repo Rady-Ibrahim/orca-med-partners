@@ -6,4 +6,4 @@ namespace App\Domain\Financial\Exceptions;
 
 use RuntimeException;
 
-final class FundBalanceDriftException extends RuntimeException {}
+final class InvalidAnnualSettlementException extends RuntimeException {}

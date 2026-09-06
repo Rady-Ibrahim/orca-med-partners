@@ -11,9 +11,7 @@ use Illuminate\Support\Facades\DB;
 
 final class UpdateFundAction
 {
-    public function __construct(private SecurityAuditService $audit)
-    {
-    }
+    public function __construct(private SecurityAuditService $audit) {}
 
     /** @param array{code?:string,name?:string,status?:string,description?:string|null} $attributes */
     public function execute(Admin $admin, Fund $fund, array $attributes): Fund

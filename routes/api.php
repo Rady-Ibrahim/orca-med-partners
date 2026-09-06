@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Admin\AuditLogController;
 use App\Http\Controllers\Api\Admin\FundController;
 use App\Http\Controllers\Api\Admin\FundTransactionController;
+use App\Http\Controllers\Api\Admin\SettlementController as AdminSettlementController;
 use App\Http\Controllers\Api\Admin\InvestmentController;
 use App\Http\Controllers\Api\Admin\ParticipantController;
 use App\Http\Controllers\Api\Auth\AdminAuthController;
@@ -10,6 +11,7 @@ use App\Http\Controllers\Api\Auth\ParticipantAuthController;
 use App\Http\Controllers\Api\Financial\MonthlyProfitController;
 use App\Http\Controllers\Api\Participant\FinancialResourceController;
 use App\Http\Controllers\Api\Participant\MeController;
+use App\Http\Controllers\Api\Participant\SettlementController as ParticipantSettlementController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('throttle:10,1')->group(function () {
@@ -40,6 +42,13 @@ Route::middleware('ensure.admin.context')->group(function () {
     Route::post('/admin/funds/{fund}/transactions', [FundTransactionController::class, 'store']);
     Route::get('/admin/funds/{fund}/transactions/{transaction}', [FundTransactionController::class, 'show']);
     Route::get('/admin/funds/{fund}/reconciliation', [FundTransactionController::class, 'reconcile']);
+    Route::get('/admin/settlements', [AdminSettlementController::class, 'index']);
+    Route::post('/admin/settlements', [AdminSettlementController::class, 'store']);
+    Route::get('/admin/settlements/{settlement}', [AdminSettlementController::class, 'show']);
+    Route::post('/admin/settlements/{settlement}/approve', [AdminSettlementController::class, 'approve']);
+    Route::post('/admin/settlements/{settlement}/paid', [AdminSettlementController::class, 'paid']);
+    Route::post('/admin/settlements/{settlement}/cancel', [AdminSettlementController::class, 'cancel']);
+    Route::post('/admin/settlements/{settlement}/revision', [AdminSettlementController::class, 'revise']);
 
     Route::post('/admin/monthly-profits', [MonthlyProfitController::class, 'store']);
     Route::post('/admin/monthly-profits/{monthlyProfit}/approve', [MonthlyProfitController::class, 'approve']);
@@ -57,6 +66,7 @@ Route::middleware('ensure.participant.context')->group(function () {
     Route::get('/participant/profits/{profit}', [FinancialResourceController::class, 'profit']);
     Route::get('/participant/funds/{allocation}', [FinancialResourceController::class, 'fund']);
     Route::get('/participant/depreciation/{depreciation}', [FinancialResourceController::class, 'depreciation']);
-    Route::get('/participant/settlements/{settlement}', [FinancialResourceController::class, 'settlement']);
+    Route::get('/participant/settlements', [ParticipantSettlementController::class, 'index']);
+    Route::get('/participant/settlements/{settlement}', [ParticipantSettlementController::class, 'show']);
     Route::get('/participant/notifications/{notification}', [FinancialResourceController::class, 'notification']);
 });

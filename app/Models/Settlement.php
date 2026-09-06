@@ -49,7 +49,13 @@ class Settlement extends Model
     protected static function booted(): void
     {
         static::updating(function (self $settlement) {
-            if (in_array($settlement->getOriginal('status'), ['approved', 'paid', 'cancelled'], true) || in_array($settlement->status, ['approved', 'paid', 'cancelled'], true)) {
+            $dirty = array_keys($settlement->getDirty());
+            $statusOnly = count(array_diff($dirty, ['status', 'updated_at'])) === 0;
+            $originalStatus = $settlement->getOriginal('status');
+            $isAllowedCancellation = $originalStatus === 'draft' && $settlement->status === 'cancelled' && $statusOnly;
+            $isAllowedSupersession = $originalStatus === 'approved' && $settlement->status === 'superseded' && $statusOnly;
+
+            if (($originalStatus !== 'draft' && ! $isAllowedSupersession) || ($settlement->status === 'cancelled' && ! $isAllowedCancellation)) {
                 throw new ImmutableFinancialRecordException('Approved, paid, or cancelled settlement records are immutable.');
             }
         });
@@ -69,5 +75,10 @@ class Settlement extends Model
     public function items(): HasMany
     {
         return $this->hasMany(SettlementItem::class);
+    }
+
+    public function participantItems(int $participantId): HasMany
+    {
+        return $this->items()->where('participant_id', $participantId);
     }
 }
