@@ -6,6 +6,4 @@ namespace App\Domain\Financial\Exceptions;
 
 use RuntimeException;
 
-final class ImmutableFinancialRecordException extends RuntimeException
-{
-}
+final class ImmutableFinancialRecordException extends RuntimeException {}

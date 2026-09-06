@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Domain\Financial\Exceptions\ImmutableFinancialRecordException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -45,6 +46,25 @@ class MonthlyProfit extends Model
             'rounding_delta_adjustment' => 'decimal:2',
             'approved_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::updating(function (self $profit) {
+            if ($profit->getOriginal('status') === 'approved' || $profit->status === 'approved') {
+                throw new ImmutableFinancialRecordException('Approved monthly profit records are immutable and cannot be updated.');
+            }
+
+            if ($profit->getOriginal('status') === 'approved' && $profit->status !== 'approved') {
+                throw new ImmutableFinancialRecordException('Approved monthly profit records cannot return to draft or any other status.');
+            }
+        });
+
+        static::deleting(function (self $profit) {
+            if ($profit->status === 'approved') {
+                throw new ImmutableFinancialRecordException('Approved monthly profit records cannot be deleted.');
+            }
+        });
     }
 
     public function capitalSnapshot(): BelongsTo

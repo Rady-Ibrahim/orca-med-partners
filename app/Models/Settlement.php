@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Domain\Financial\Exceptions\ImmutableFinancialRecordException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -43,6 +44,21 @@ class Settlement extends Model
             'approved_at' => 'datetime',
             'payout_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::updating(function (self $settlement) {
+            if (in_array($settlement->getOriginal('status'), ['approved', 'paid', 'cancelled'], true) || in_array($settlement->status, ['approved', 'paid', 'cancelled'], true)) {
+                throw new ImmutableFinancialRecordException('Approved, paid, or cancelled settlement records are immutable.');
+            }
+        });
+
+        static::deleting(function (self $settlement) {
+            if (in_array($settlement->status, ['approved', 'paid', 'cancelled'], true)) {
+                throw new ImmutableFinancialRecordException('Approved, paid, or cancelled settlement records cannot be deleted.');
+            }
+        });
     }
 
     public function parent(): BelongsTo

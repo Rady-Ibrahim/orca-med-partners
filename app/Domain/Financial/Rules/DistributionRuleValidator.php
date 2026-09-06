@@ -26,20 +26,23 @@ final class DistributionRuleValidator
                 throw new InvalidArgumentException("Missing rate [$key].");
             }
 
-            if (! is_numeric($rates[$key])) {
+            $value = (string) $rates[$key];
+
+            if (! preg_match('/^\d+(\.\d+)?$/', $value)) {
                 throw new InvalidArgumentException("Rate [$key] must be numeric.");
             }
 
-            $value = (float) $rates[$key];
-
-            if ($value < 0 || $value > 1) {
+            if (bccomp($value, '0', 4) < 0 || bccomp($value, '1', 4) > 0) {
                 throw new InvalidArgumentException("Rate [$key] must be between 0 and 1.");
             }
         }
 
-        $total = array_sum(array_map(fn (string $key): float => (float) $rates[$key], $required));
+        $total = '0';
+        foreach ($required as $key) {
+            $total = bcadd($total, (string) $rates[$key], 4);
+        }
 
-        if (round($total, 4) !== 1.0) {
+        if (bccomp($total, '1.0000', 4) !== 0) {
             throw new InvalidArgumentException('Distribution rule totals must equal 1.0000.');
         }
     }
