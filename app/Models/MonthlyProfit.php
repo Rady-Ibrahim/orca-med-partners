@@ -16,6 +16,7 @@ class MonthlyProfit extends Model
     protected $fillable = [
         'capital_snapshot_id',
         'distribution_rule_id',
+        'distribution_rule_snapshot',
         'parent_id',
         'year',
         'month',
@@ -45,18 +46,27 @@ class MonthlyProfit extends Model
             'distributed_amount' => 'decimal:2',
             'rounding_delta_adjustment' => 'decimal:2',
             'approved_at' => 'datetime',
+            'distribution_rule_snapshot' => 'array',
         ];
     }
 
     protected static function booted(): void
     {
         static::updating(function (self $profit) {
-            if ($profit->getOriginal('status') === 'approved' || $profit->status === 'approved') {
+            $dirtyAttributes = array_keys($profit->getDirty());
+            $isSupersedingTransition = $profit->status === 'superseded'
+                && count(array_diff($dirtyAttributes, ['status', 'updated_at'])) === 0;
+
+            if ($profit->getOriginal('status') === 'approved' && ! $isSupersedingTransition) {
                 throw new ImmutableFinancialRecordException('Approved monthly profit records are immutable and cannot be updated.');
             }
 
-            if ($profit->getOriginal('status') === 'approved' && $profit->status !== 'approved') {
-                throw new ImmutableFinancialRecordException('Approved monthly profit records cannot return to draft or any other status.');
+            if ($profit->getOriginal('status') === 'superseded') {
+                throw new ImmutableFinancialRecordException('Superseded monthly profit records are immutable.');
+            }
+
+            if ($profit->getOriginal('status') !== 'approved' && $profit->status === 'approved') {
+                throw new ImmutableFinancialRecordException('Monthly profit approval must be performed by the financial approval action.');
             }
         });
 

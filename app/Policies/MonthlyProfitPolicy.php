@@ -10,10 +10,15 @@ use App\Models\Participant;
 
 class MonthlyProfitPolicy
 {
+    public function create(Admin $user): bool
+    {
+        return $user->hasPermission('profits.create') || $user->is_super_admin;
+    }
+
     public function viewAny(Admin|Participant $user): bool
     {
         if ($user instanceof Admin) {
-            return $user->hasPermission('monthly_profits.view') || $user->is_super_admin;
+            return $user->hasPermission('profits.view') || $user->is_super_admin;
         }
 
         return true;
@@ -22,14 +27,14 @@ class MonthlyProfitPolicy
     public function view(Admin|Participant $user, MonthlyProfit $profit): bool
     {
         if ($user instanceof Admin) {
-            return $user->hasPermission('monthly_profits.view') || $user->is_super_admin;
+            return $user->hasPermission('profits.view') || $user->is_super_admin;
         }
 
-        return $user instanceof Participant && $profit->participant_id === $user->id;
+        return $user instanceof Participant && $profit->allocations()->where('participant_id', $user->id)->exists();
     }
 
     public function approve(Admin $user): bool
     {
-        return $user->hasPermission('monthly_profits.approve') || $user->is_super_admin;
+        return $user->hasPermission('profits.approve') || $user->is_super_admin;
     }
 }

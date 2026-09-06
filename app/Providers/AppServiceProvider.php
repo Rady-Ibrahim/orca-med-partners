@@ -13,6 +13,8 @@ use App\Models\MonthlyProfit;
 use App\Models\Notification;
 use App\Models\Participant;
 use App\Models\Settlement;
+use App\Domain\Financial\Services\FinancialCalculationService;
+use App\Domain\Financial\Services\FinancialCalculationServiceContract;
 use App\Policies\AdminPolicy;
 use App\Policies\AuditLogPolicy;
 use App\Policies\CapitalSnapshotPolicy;
@@ -45,7 +47,7 @@ class AppServiceProvider extends ServiceProvider
 
     public function register(): void
     {
-        //
+        $this->app->bind(FinancialCalculationServiceContract::class, FinancialCalculationService::class);
     }
 
     public function boot(): void

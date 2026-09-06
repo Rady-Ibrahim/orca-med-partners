@@ -30,7 +30,7 @@ class MassAssignmentAndStateTest extends TestCase
         $this->withToken($token)->patchJson('/api/participant/investments/1', [
             'role' => 'super_admin',
             'participant_id' => 999,
-        ]);
+        ])->assertMethodNotAllowed();
 
         $participant->refresh();
         $this->assertDatabaseHas('participants', ['id' => $participant->id, 'role' => 'participant']);
@@ -87,7 +87,7 @@ class MassAssignmentAndStateTest extends TestCase
         $this->withToken($token)->patchJson('/api/participant/investments/' . $investment->id, [
             'participant_id' => $other->id,
             'amount' => 9999,
-        ])->assertForbidden();
+        ])->assertMethodNotAllowed();
 
         $investment->refresh();
         $this->assertDatabaseHas('investments', ['id' => $investment->id, 'participant_id' => $owner->id]);

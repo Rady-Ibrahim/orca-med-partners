@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Domain\Financial\Exceptions\ImmutableFinancialRecordException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -25,6 +26,21 @@ class ParticipantProfitAllocation extends Model
             'amount' => 'decimal:2',
             'share_ratio' => 'decimal:4',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::updating(function (self $allocation) {
+            if ($allocation->monthlyProfit()->where('status', 'approved')->exists()) {
+                throw new ImmutableFinancialRecordException('Allocations for approved monthly profit records are immutable.');
+            }
+        });
+
+        static::deleting(function (self $allocation) {
+            if ($allocation->monthlyProfit()->where('status', 'approved')->exists()) {
+                throw new ImmutableFinancialRecordException('Allocations for approved monthly profit records cannot be deleted.');
+            }
+        });
     }
 
     public function monthlyProfit(): BelongsTo

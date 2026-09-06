@@ -12,7 +12,7 @@ use RuntimeException;
 
 final class FundBalanceService
 {
-    public function applyTransaction(Fund $fund, float|int|string $amount, string $transactionType, ?int $monthlyProfitId = null, ?string $reference = null, ?string $notes = null, ?int $createdByAdminId = null): FundTransaction
+    public function applyTransaction(Fund $fund, int|string $amount, string $transactionType, ?int $monthlyProfitId = null, ?string $reference = null, ?string $notes = null, ?int $createdByAdminId = null): FundTransaction
     {
         $normalizedAmount = $this->normalizeAmount($amount);
 
@@ -52,7 +52,7 @@ final class FundBalanceService
         });
     }
 
-    private function normalizeAmount(float|int|string $amount): string
+    private function normalizeAmount(int|string $amount): string
     {
         $normalized = is_string($amount) ? $amount : (string) $amount;
 

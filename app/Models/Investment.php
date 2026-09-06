@@ -20,6 +20,8 @@ class Investment extends Model
         'created_by_admin_id',
         'approved_by_admin_id',
         'approved_at',
+        'approved_by_admin_id',
+        'approved_at',
     ];
 
     protected function casts(): array
@@ -27,6 +29,7 @@ class Investment extends Model
         return [
             'amount' => 'decimal:2',
             'invested_at' => 'date',
+            'approved_at' => 'datetime',
         ];
     }
 
