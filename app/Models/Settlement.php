@@ -1,0 +1,57 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class Settlement extends Model
+{
+    protected $table = 'settlements';
+
+    protected $fillable = [
+        'parent_id',
+        'year',
+        'version',
+        'status',
+        'total_distributed_amount',
+        'participant_profit_share',
+        'participant_fund_share',
+        'net_payable',
+        'amount_due',
+        'paid_amount',
+        'created_by_admin_id',
+        'approved_by_admin_id',
+        'paid_by_admin_id',
+        'approved_at',
+        'payout_at',
+        'notes',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'total_distributed_amount' => 'decimal:2',
+            'participant_profit_share' => 'decimal:2',
+            'participant_fund_share' => 'decimal:2',
+            'net_payable' => 'decimal:2',
+            'amount_due' => 'decimal:2',
+            'paid_amount' => 'decimal:2',
+            'approved_at' => 'datetime',
+            'payout_at' => 'datetime',
+        ];
+    }
+
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_id');
+    }
+
+    public function items(): HasMany
+    {
+        return $this->hasMany(SettlementItem::class);
+    }
+}
