@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Api\Admin\AuditLogController;
+use App\Http\Controllers\Api\Admin\FundController;
+use App\Http\Controllers\Api\Admin\FundTransactionController;
 use App\Http\Controllers\Api\Admin\InvestmentController;
 use App\Http\Controllers\Api\Admin\ParticipantController;
 use App\Http\Controllers\Api\Auth\AdminAuthController;
@@ -30,6 +32,14 @@ Route::middleware('ensure.admin.context')->group(function () {
     Route::get('/admin/investments', [InvestmentController::class, 'index']);
     Route::post('/admin/investments/{investment}/approve', [InvestmentController::class, 'approve']);
     Route::get('/admin/audit-logs', [AuditLogController::class, 'index']);
+    Route::get('/admin/funds', [FundController::class, 'index']);
+    Route::post('/admin/funds', [FundController::class, 'store']);
+    Route::get('/admin/funds/{fund}', [FundController::class, 'show']);
+    Route::patch('/admin/funds/{fund}', [FundController::class, 'update']);
+    Route::get('/admin/funds/{fund}/transactions', [FundTransactionController::class, 'index']);
+    Route::post('/admin/funds/{fund}/transactions', [FundTransactionController::class, 'store']);
+    Route::get('/admin/funds/{fund}/transactions/{transaction}', [FundTransactionController::class, 'show']);
+    Route::get('/admin/funds/{fund}/reconciliation', [FundTransactionController::class, 'reconcile']);
 
     Route::post('/admin/monthly-profits', [MonthlyProfitController::class, 'store']);
     Route::post('/admin/monthly-profits/{monthlyProfit}/approve', [MonthlyProfitController::class, 'approve']);

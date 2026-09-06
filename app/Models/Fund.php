@@ -30,7 +30,7 @@ class Fund extends Model
 
     public function transactions(): HasMany
     {
-        return $this->hasMany(FundTransaction::class);
+        return $this->hasMany(FundTransaction::class)->orderBy('id');
     }
 
     public function createdBy(): BelongsTo
