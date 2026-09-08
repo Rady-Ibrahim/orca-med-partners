@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\Auth\AdminAuthController;
 use App\Http\Controllers\Api\Auth\ParticipantAuthController;
 use App\Http\Controllers\Api\Financial\MonthlyProfitController;
 use App\Http\Controllers\Api\Participant\FinancialResourceController;
+use App\Http\Controllers\Api\Participant\DashboardController;
 use App\Http\Controllers\Api\Participant\MeController;
 use App\Http\Controllers\Api\Participant\SettlementController as ParticipantSettlementController;
 use Illuminate\Support\Facades\Route;
@@ -60,6 +61,13 @@ Route::middleware('ensure.participant.context')->group(function () {
     Route::post('/auth/participant/password/change', [ParticipantAuthController::class, 'changePassword']);
 
     Route::get('/me', [MeController::class, 'show']);
+    Route::get('/me/investment', [DashboardController::class, 'investment']);
+    Route::get('/me/capital', [DashboardController::class, 'capital']);
+    Route::get('/me/profits', [DashboardController::class, 'profits']);
+    Route::get('/me/funds', [DashboardController::class, 'funds']);
+    Route::get('/me/depreciation', [DashboardController::class, 'depreciation']);
+    Route::get('/me/settlements', [DashboardController::class, 'settlements']);
+    Route::get('/me/notifications', [DashboardController::class, 'notifications']);
     Route::get('/participant/investments/{investment}', [FinancialResourceController::class, 'investment']);
     Route::get('/participant/monthly-profits/{monthlyProfit}', [MonthlyProfitController::class, 'showForParticipant']);
     Route::get('/participant/capital/{capital}', [FinancialResourceController::class, 'capital']);
