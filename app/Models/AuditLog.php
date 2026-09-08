@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Domain\Financial\Exceptions\ImmutableFinancialRecordException;
 use Illuminate\Database\Eloquent\Model;
 
 class AuditLog extends Model
@@ -34,5 +35,16 @@ class AuditLog extends Model
             'metadata' => 'array',
             'created_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::updating(function (): void {
+            throw new ImmutableFinancialRecordException('Audit logs are immutable.');
+        });
+
+        static::deleting(function (): void {
+            throw new ImmutableFinancialRecordException('Audit logs cannot be deleted.');
+        });
     }
 }

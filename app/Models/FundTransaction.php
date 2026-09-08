@@ -54,4 +54,9 @@ class FundTransaction extends Model
     {
         return $this->belongsTo(MonthlyProfit::class);
     }
+
+    public function createdBy(): BelongsTo
+    {
+        return $this->belongsTo(Admin::class, 'created_by_admin_id');
+    }
 }

@@ -60,4 +60,35 @@ final class AdminSidebarAuditTest extends TestCase
         $this->withSession(['web_admin_id' => $admin->id])->get('/admin/settings')->assertOk();
         $this->withSession(['web_admin_id' => $admin->id])->get('/admin/audit-logs')->assertOk();
     }
+
+    public function test_reports_notifications_and_audit_logs_require_their_specific_permissions(): void
+    {
+        $allowed = Admin::factory()->create([
+            'username' => 'module-permissions-allowed',
+            'password' => Hash::make('secret123'),
+            'status' => 'active',
+            'name' => 'Reports Access',
+            'role' => 'employee',
+            'permissions' => ['reports.view', 'notifications.view', 'audit_logs.view'],
+            'is_super_admin' => false,
+        ]);
+
+        $this->withSession(['web_admin_id' => $allowed->id])->get('/admin/reports')->assertOk();
+        $this->withSession(['web_admin_id' => $allowed->id])->get('/admin/notifications')->assertOk();
+        $this->withSession(['web_admin_id' => $allowed->id])->get('/admin/audit-logs')->assertOk();
+
+        $blocked = Admin::factory()->create([
+            'username' => 'module-permissions-blocked',
+            'password' => Hash::make('secret123'),
+            'status' => 'active',
+            'name' => 'Reports Blocked',
+            'role' => 'employee',
+            'permissions' => [],
+            'is_super_admin' => false,
+        ]);
+
+        $this->withSession(['web_admin_id' => $blocked->id])->get('/admin/reports')->assertForbidden();
+        $this->withSession(['web_admin_id' => $blocked->id])->get('/admin/notifications')->assertForbidden();
+        $this->withSession(['web_admin_id' => $blocked->id])->get('/admin/audit-logs')->assertForbidden();
+    }
 }

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Services\SecurityAuditService;
+use App\Services\ParticipantNotificationService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -32,6 +34,27 @@ class DepreciationNote extends Model
             'rate' => 'decimal:4',
             'transaction_date' => 'date',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::created(function (self $note): void {
+            app(SecurityAuditService::class)->log('depreciation_created', $note->created_by_admin_id ? Admin::query()->find($note->created_by_admin_id) : null, 'depreciation_note', $note->id, ['new' => $note->only(['amount', 'rate', 'transaction_date', 'year', 'month', 'description', 'admin_note'])]);
+            if ($note->participant) {
+                app(ParticipantNotificationService::class)->afterCommit(function () use ($note): void {
+                    app(ParticipantNotificationService::class)->createForParticipant($note->participant, 'depreciation_update', 'تحديث ملاحظة إهلاك', 'تم تحديث ملاحظة إهلاك مرتبطة بحسابك.', null, ['depreciation_note_id' => $note->id]);
+                });
+            }
+        });
+
+        static::updated(function (self $note): void {
+            app(SecurityAuditService::class)->log('depreciation_updated', $note->created_by_admin_id ? Admin::query()->find($note->created_by_admin_id) : null, 'depreciation_note', $note->id, ['old' => $note->getOriginal(), 'new' => $note->only(['amount', 'rate', 'transaction_date', 'year', 'month', 'description', 'admin_note'])]);
+            if ($note->participant) {
+                app(ParticipantNotificationService::class)->afterCommit(function () use ($note): void {
+                    app(ParticipantNotificationService::class)->createForParticipant($note->participant, 'depreciation_update', 'تحديث ملاحظة إهلاك', 'تم تحديث ملاحظة إهلاك مرتبطة بحسابك.', null, ['depreciation_note_id' => $note->id]);
+                });
+            }
+        });
     }
 
     public function participant(): BelongsTo

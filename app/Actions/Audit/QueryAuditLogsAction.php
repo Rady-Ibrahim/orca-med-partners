@@ -8,9 +8,9 @@ use App\Models\AuditLog;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 
-final class ListAuditLogsAction
+final class QueryAuditLogsAction
 {
-    public function execute(array $filters = []): LengthAwarePaginator
+    public function execute(array $filters = [], bool $paginate = true): LengthAwarePaginator|AuditLog
     {
         $query = AuditLog::query()->latest('id');
         $query->when($filters['actor'] ?? null, fn(Builder $q, $actor) => $q->where(function (Builder $nested) use ($actor): void {
@@ -22,6 +22,11 @@ final class ListAuditLogsAction
         $query->when($filters['date_from'] ?? null, fn(Builder $q, $date) => $q->whereDate('created_at', '>=', $date));
         $query->when($filters['date_to'] ?? null, fn(Builder $q, $date) => $q->whereDate('created_at', '<=', $date));
 
-        return $query->paginate(50)->withQueryString();
+        return $paginate ? $query->paginate(20)->withQueryString() : $query->firstOrFail();
+    }
+
+    public function find(int $id): AuditLog
+    {
+        return AuditLog::query()->findOrFail($id);
     }
 }

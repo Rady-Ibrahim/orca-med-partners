@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin;
 
 use App\Actions\Admin\SidebarPageDataAction;
+use App\Actions\Audit\QueryAuditLogsAction;
+use App\Http\Requests\Admin\AuditLogFilterRequest;
+use App\Models\AuditLog;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 
 final class SidebarPageController
@@ -75,6 +79,8 @@ final class SidebarPageController
 
     public function reports(Request $request, SidebarPageDataAction $action): View
     {
+        Gate::forUser($request->user())->authorize('reports.view');
+
         return view('admin.pages.reports', [
             'items' => $action->reports(),
             'title' => 'التقارير',
@@ -84,6 +90,8 @@ final class SidebarPageController
 
     public function notifications(Request $request, SidebarPageDataAction $action): View
     {
+        Gate::forUser($request->user())->authorize('notifications.view');
+
         return view('admin.pages.notifications', [
             'items' => $action->notifications(),
             'title' => 'الإشعارات',
@@ -109,11 +117,24 @@ final class SidebarPageController
         ]);
     }
 
-    public function auditLogs(Request $request, SidebarPageDataAction $action): View
+    public function auditLogs(Request $request, AuditLogFilterRequest $filterRequest, QueryAuditLogsAction $action): View
     {
+        Gate::forUser($request->user())->authorize('audit_logs.view');
+
         return view('admin.pages.audit-logs', [
-            'items' => $action->auditLogs(),
+            'items' => $action->execute($filterRequest->filters()),
             'title' => 'سجل التدقيق',
+            'user' => $request->user(),
+        ]);
+    }
+
+    public function auditLogDetails(Request $request, AuditLog $auditLog, QueryAuditLogsAction $action): View
+    {
+        Gate::forUser($request->user())->authorize('audit_logs.view');
+
+        return view('admin.pages.audit-log-detail', [
+            'item' => $action->find($auditLog->id),
+            'title' => 'تفاصيل سجل التدقيق',
             'user' => $request->user(),
         ]);
     }

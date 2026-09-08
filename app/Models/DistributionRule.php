@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Domain\Financial\Rules\DistributionRuleValidator;
 use App\Domain\Financial\Services\DistributionRuleService;
+use App\Services\SecurityAuditService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -67,6 +68,14 @@ class DistributionRule extends Model
                 $rule->getKey(),
                 true,
             );
+        });
+
+        static::created(function (self $rule): void {
+            app(SecurityAuditService::class)->log('distribution_rule_created', $rule->created_by_admin_id ? Admin::query()->find($rule->created_by_admin_id) : null, 'distribution_rule', $rule->id, ['new' => $rule->only(['effective_from', 'effective_to', 'management_fee_rate', 'depreciation_fund_rate', 'growth_fund_rate', 'incentive_fund_rate', 'distributed_share_rate', 'status'])]);
+        });
+
+        static::updated(function (self $rule): void {
+            app(SecurityAuditService::class)->log('distribution_rule_updated', $rule->created_by_admin_id ? Admin::query()->find($rule->created_by_admin_id) : null, 'distribution_rule', $rule->id, ['old' => $rule->getOriginal(), 'new' => $rule->only(['effective_from', 'effective_to', 'management_fee_rate', 'depreciation_fund_rate', 'growth_fund_rate', 'incentive_fund_rate', 'distributed_share_rate', 'status'])]);
         });
     }
 

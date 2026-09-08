@@ -15,6 +15,7 @@ use App\Models\MonthlyProfit;
 use App\Models\Notification;
 use App\Models\Participant;
 use App\Models\Settlement;
+use App\Support\DecimalFormatter;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 
@@ -33,7 +34,7 @@ final class SidebarPageDataAction
                     'name' => trim($participant->first_name . ' ' . $participant->last_name) ?: $participant->username,
                     'username' => $participant->username,
                     'status' => $participant->status,
-                    'investment' => number_format((float) $investment, 2),
+                    'investment' => DecimalFormatter::money($investment),
                     'joined' => $participant->created_at?->format('Y-m-d'),
                 ];
             });
@@ -48,7 +49,7 @@ final class SidebarPageDataAction
             ->through(function (Investment $investment): array {
                 return [
                     'participant' => $investment->participant?->first_name . ' ' . $investment->participant?->last_name ?: $investment->participant?->username,
-                    'amount' => number_format((float) $investment->amount, 2),
+                    'amount' => DecimalFormatter::money($investment->amount),
                     'status' => $investment->status,
                     'date' => $investment->invested_at?->format('Y-m-d'),
                     'notes' => $investment->notes ?: '—',
@@ -66,7 +67,7 @@ final class SidebarPageDataAction
                     'date' => $snapshot->snapshot_date?->format('Y-m-d'),
                     'year' => $snapshot->year,
                     'month' => $snapshot->month,
-                    'total' => number_format((float) $snapshot->total_capital, 2),
+                    'total' => DecimalFormatter::money($snapshot->total_capital),
                     'status' => $snapshot->status,
                 ];
             });
@@ -82,8 +83,8 @@ final class SidebarPageDataAction
             ->through(function (MonthlyProfit $profit): array {
                 return [
                     'period' => sprintf('%04d / %02d', $profit->year, $profit->month),
-                    'gross' => number_format((float) $profit->gross_profit, 2),
-                    'distributed' => number_format((float) $profit->distributed_amount, 2),
+                    'gross' => DecimalFormatter::money($profit->gross_profit),
+                    'distributed' => DecimalFormatter::money($profit->distributed_amount),
                     'status' => $profit->status,
                     'approved_at' => $profit->approved_at?->format('Y-m-d'),
                 ];
@@ -100,9 +101,9 @@ final class SidebarPageDataAction
                 return [
                     'year' => $settlement->year,
                     'participants' => $settlement->items()->count(),
-                    'annual_profit' => number_format((float) $settlement->participant_profit_share, 2),
-                    'amount_due' => number_format((float) $settlement->amount_due, 2),
-                    'paid_amount' => number_format((float) $settlement->paid_amount, 2),
+                    'annual_profit' => DecimalFormatter::money($settlement->participant_profit_share),
+                    'amount_due' => DecimalFormatter::money($settlement->amount_due),
+                    'paid_amount' => DecimalFormatter::money($settlement->paid_amount),
                     'status' => $settlement->status,
                 ];
             });
@@ -118,7 +119,7 @@ final class SidebarPageDataAction
                 return [
                     'name' => $fund->name,
                     'code' => $fund->code,
-                    'balance' => number_format((float) $fund->current_balance, 2),
+                    'balance' => DecimalFormatter::money($fund->current_balance),
                     'status' => $fund->status,
                     'transactions' => $fund->transactions_count,
                 ];
@@ -134,8 +135,8 @@ final class SidebarPageDataAction
             ->through(function (DepreciationNote $note): array {
                 return [
                     'period' => sprintf('%04d / %02d', $note->year, $note->month),
-                    'amount' => number_format((float) $note->amount, 2),
-                    'rate' => $note->rate ? number_format((float) $note->rate * 100, 2) . '%' : '—',
+                    'amount' => DecimalFormatter::money($note->amount),
+                    'rate' => $note->rate ? DecimalFormatter::percent($note->rate) : '—',
                     'date' => $note->transaction_date?->format('Y-m-d'),
                     'description' => $note->description,
                     'fund' => $note->fund?->name ?? '—',
@@ -147,12 +148,12 @@ final class SidebarPageDataAction
     {
         return [
             'participants' => Participant::query()->count(),
-            'investments' => Investment::query()->sum('amount'),
+            'investments' => (string) Investment::query()->sum('amount'),
             'capital' => CapitalSnapshot::query()->latest('snapshot_date')->value('total_capital') ?? 0,
-            'profits' => MonthlyProfit::query()->where('status', 'approved')->sum('gross_profit'),
-            'settlements' => Settlement::query()->where('status', 'paid')->sum('paid_amount'),
-            'funds' => Fund::query()->sum('current_balance'),
-            'depreciation' => DepreciationNote::query()->sum('amount'),
+            'profits' => (string) MonthlyProfit::query()->where('status', 'approved')->sum('gross_profit'),
+            'settlements' => (string) Settlement::query()->where('status', 'paid')->sum('paid_amount'),
+            'funds' => (string) Fund::query()->sum('current_balance'),
+            'depreciation' => (string) DepreciationNote::query()->sum('amount'),
         ];
     }
 
@@ -183,9 +184,9 @@ final class SidebarPageDataAction
                     'name' => $rule->notes ?: 'قاعدة توزيع',
                     'effective_from' => $rule->effective_from?->format('Y-m-d'),
                     'status' => $rule->status,
-                    'management' => number_format((float) $rule->management_fee_rate * 100, 2) . '%',
-                    'depreciation' => number_format((float) $rule->depreciation_fund_rate * 100, 2) . '%',
-                    'distributed' => number_format((float) $rule->distributed_share_rate * 100, 2) . '%',
+                    'management' => DecimalFormatter::percent($rule->management_fee_rate),
+                    'depreciation' => DecimalFormatter::percent($rule->depreciation_fund_rate),
+                    'distributed' => DecimalFormatter::percent($rule->distributed_share_rate),
                 ];
             });
     }

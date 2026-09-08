@@ -14,6 +14,7 @@ use App\Models\MonthlyProfit;
 use App\Models\Notification;
 use App\Models\Participant;
 use App\Models\Settlement;
+use App\Support\DecimalFormatter;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -35,11 +36,19 @@ final class GetDashboardDataAction
 
             return [
                 'label' => Carbon::create()->month($month)->locale('ar')->monthName,
-                'gross' => (float) ($row->gross_profit ?? 0),
-                'distributed' => (float) ($row->distributed_amount ?? 0),
+                'gross' => (string) ($row->gross_profit ?? '0.00'),
+                'distributed' => (string) ($row->distributed_amount ?? '0.00'),
             ];
         })->values()->all();
-        $chartMax = max(1, ...array_map(fn(array $point): float => max($point['gross'], $point['distributed']), $monthlySeries));
+        $chartMax = '1.00';
+        foreach ($monthlySeries as $point) {
+            if (bccomp($point['gross'], $chartMax, 2) > 0) {
+                $chartMax = $point['gross'];
+            }
+            if (bccomp($point['distributed'], $chartMax, 2) > 0) {
+                $chartMax = $point['distributed'];
+            }
+        }
 
         $fundTransactionTotals = FundTransaction::query()
             ->select(

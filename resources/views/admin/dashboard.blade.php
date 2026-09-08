@@ -1,6 +1,7 @@
 @php
     $kpis = $dashboard['kpis'];
-    $formatMoney = fn($value) => number_format((float) $value, 2);
+    $formatMoney = fn($value) => \App\Support\DecimalFormatter::money($value);
+    $chartPercent = fn($value) => \App\Support\DecimalFormatter::ratioPercent($value, $dashboard['chart_max']);
     $statusLabels = [
         'draft' => 'مسودة',
         'approved' => 'معتمد',
@@ -126,16 +127,16 @@
                         </div>
                         <div class="chart-wrap">
                             <div class="y-axis">
-                                <span>{{ $formatMoney($dashboard['chart_max']) }}</span><span>{{ $formatMoney($dashboard['chart_max'] * 0.66) }}</span><span>{{ $formatMoney($dashboard['chart_max'] * 0.33) }}</span><span>0</span>
+                                <span>{{ $formatMoney($dashboard['chart_max']) }}</span><span>{{ $formatMoney(bcmul($dashboard['chart_max'], '0.66', 2)) }}</span><span>{{ $formatMoney(bcmul($dashboard['chart_max'], '0.33', 2)) }}</span><span>0</span>
                             </div>
                             <div class="bars-area">
                                 @foreach ($dashboard['monthly_series'] as $point)
                                     <div class="bar-group">
                                         <div class="bar-pair"><span class="bar bar-gross"
-                                                style="height: {{ min(100, ($point['gross'] / $dashboard['chart_max']) * 100) }}%"
+                                                style="height: {{ $chartPercent($point['gross']) }}%"
                                                 title="{{ $formatMoney($point['gross']) }}"></span><span
                                                 class="bar bar-distributed"
-                                                style="height: {{ min(100, ($point['distributed'] / $dashboard['chart_max']) * 100) }}%"
+                                                style="height: {{ $chartPercent($point['distributed']) }}%"
                                                 title="{{ $formatMoney($point['distributed']) }}"></span></div>
                                         <small>{{ $point['label'] }}</small>
                                     </div>
@@ -154,7 +155,7 @@
                             <div class="rule-list">
                                 @foreach ([['management', 'الإدارة', 'rule-navy'], ['depreciation', 'صندوق الإهلاك', 'rule-sky'], ['growth', 'صندوق النمو', 'rule-blue'], ['incentive', 'حافز المشاركين', 'rule-cyan'], ['distributed', 'الموزع للمشاركين', 'rule-deep']] as [$key, $label, $color])
                                     <div class="rule-row"><span
-                                            class="rule-dot {{ $color }}"></span><span>{{ $label }}</span><strong>{{ number_format((float) $dashboard['distribution_rule'][$key] * 100, 2) }}%</strong>
+                                            class="rule-dot {{ $color }}"></span><span>{{ $label }}</span><strong>{{ \App\Support\DecimalFormatter::percent($dashboard['distribution_rule'][$key]) }}</strong>
                                     </div>
                                 @endforeach
                             </div>

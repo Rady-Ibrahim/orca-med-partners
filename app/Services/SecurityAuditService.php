@@ -25,6 +25,8 @@ class SecurityAuditService
         $actorId = $actor?->getKey();
 
         $safeMetadata = $this->sanitizeMetadata($metadata);
+        $oldValues = isset($safeMetadata['old']) && is_array($safeMetadata['old']) ? $safeMetadata['old'] : null;
+        $newValues = isset($safeMetadata['new']) && is_array($safeMetadata['new']) ? $safeMetadata['new'] : null;
 
         AuditLog::query()->create([
             'auditable_type' => $auditableType ?? 'security_event',
@@ -32,6 +34,8 @@ class SecurityAuditService
             'action' => $action,
             'actor_type' => $actorType,
             'actor_id' => $actorId ?? 0,
+            'old_values' => $oldValues,
+            'new_values' => $newValues,
             'metadata' => $safeMetadata,
             'ip_address' => $ipAddress ?? Request::ip(),
             'user_agent' => $userAgent ?? Request::header('User-Agent'),

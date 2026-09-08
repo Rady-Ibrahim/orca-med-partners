@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\SidebarPageController;
+use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminWebAuthController;
 use Illuminate\Support\Facades\Route;
@@ -19,10 +20,14 @@ Route::middleware('ensure.web.admin')->prefix('admin')->name('admin.')->group(fu
     Route::get('/funds', [SidebarPageController::class, 'funds'])->name('funds');
     Route::get('/depreciation', [SidebarPageController::class, 'depreciation'])->name('depreciation');
     Route::get('/reports', [SidebarPageController::class, 'reports'])->name('reports');
+    Route::get('/reports/{report}/export/excel', [ReportController::class, 'excel'])->name('reports.export.excel');
+    Route::get('/reports/{report}/export/pdf', [ReportController::class, 'pdf'])->name('reports.export.pdf');
+    Route::get('/reports/{report}', [ReportController::class, 'index'])->name('reports.show');
     Route::get('/notifications', [SidebarPageController::class, 'notifications'])->name('notifications');
     Route::get('/distribution-rules', [SidebarPageController::class, 'distributionRules'])->name('distribution-rules');
     Route::get('/settings', [SidebarPageController::class, 'settings'])->name('settings');
     Route::get('/audit-logs', [SidebarPageController::class, 'auditLogs'])->name('audit-logs');
+    Route::get('/audit-logs/{auditLog}', [SidebarPageController::class, 'auditLogDetails'])->name('audit-logs.show');
 });
 
 Route::get('/', function () {

@@ -1056,6 +1056,87 @@ td strong {
     background: #edf1f4
 }
 
+.report-filters {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(120px, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
+    padding: 16px;
+}
+
+.report-filters label {
+    display: grid;
+    gap: 6px;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.report-filters input {
+    min-height: 34px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 6px 8px;
+    color: var(--navy);
+    background: #fff;
+}
+
+.report-index-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-top: 18px;
+    padding: 20px;
+}
+
+.report-index-grid .panel-heading {
+    grid-column: 1 / -1;
+}
+
+.report-index-link {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    color: var(--navy);
+    background: #f8fbfe;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    padding: 22px;
+}
+
+.detail-grid dl,
+.detail-grid section {
+    margin: 0;
+    padding: 14px;
+    border: 1px solid var(--line);
+}
+
+.detail-grid dt,
+.detail-grid h2 {
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.detail-grid dd {
+    margin: 7px 0 0;
+    color: var(--navy);
+    font-weight: 700;
+}
+
+.detail-grid pre {
+    direction: ltr;
+    overflow: auto;
+    white-space: pre-wrap;
+    color: var(--navy);
+}
+
 .attention-panel {
     padding: 21px 23px
 }
@@ -1231,6 +1312,14 @@ td strong {
 }
 
 @media(max-width:850px) {
+    .report-index-grid {
+        grid-template-columns: repeat(2, 1fr)
+    }
+
+    .report-filters {
+        grid-template-columns: repeat(2, minmax(120px, 1fr))
+    }
+
     .sidebar {
         transform: translateX(100%);
         left: auto;
@@ -1277,6 +1366,17 @@ td strong {
 }
 
 @media(max-width:560px) {
+
+    .report-index-grid,
+    .report-filters,
+    .detail-grid {
+        grid-template-columns: 1fr
+    }
+
+    .report-index-grid .panel-heading {
+        grid-column: auto
+    }
+
     .kpi-grid {
         grid-template-columns: repeat(2, 1fr);
         gap: 9px

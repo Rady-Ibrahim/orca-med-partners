@@ -7,12 +7,13 @@ namespace App\Actions\Settlements;
 use App\Domain\Financial\Exceptions\InvalidAnnualSettlementException;
 use App\Models\Admin;
 use App\Models\Settlement;
+use App\Services\ParticipantNotificationService;
 use App\Services\SecurityAuditService;
 use Illuminate\Support\Facades\DB;
 
 final class ApproveSettlementAction
 {
-    public function __construct(private SecurityAuditService $audit) {}
+    public function __construct(private SecurityAuditService $audit, private ParticipantNotificationService $notifications) {}
 
     public function execute(Admin $admin, Settlement $settlement): Settlement
     {
@@ -38,7 +39,16 @@ final class ApproveSettlementAction
                 'new_status' => 'approved',
             ]);
 
-            return $locked->fresh('items');
+            $approved = $locked->fresh('items.participant');
+            $this->notifications->afterCommit(function () use ($approved, $admin): void {
+                foreach ($approved->items as $item) {
+                    if ($item->participant) {
+                        $this->notifications->createForParticipant($item->participant, 'settlement_approval', 'اعتماد التسوية السنوية', 'تم اعتماد التسوية السنوية الخاصة بك.', $admin, ['settlement_id' => $approved->id]);
+                    }
+                }
+            });
+
+            return $approved;
         });
     }
 }

@@ -7,12 +7,13 @@ namespace App\Actions\Financial;
 use App\Domain\Financial\Exceptions\ImmutableFinancialRecordException;
 use App\Models\Admin;
 use App\Models\MonthlyProfit;
+use App\Services\ParticipantNotificationService;
 use App\Services\SecurityAuditService;
 use Illuminate\Support\Facades\DB;
 
 final class ApproveMonthlyProfitAction
 {
-    public function __construct(private SecurityAuditService $audit) {}
+    public function __construct(private SecurityAuditService $audit, private ParticipantNotificationService $notifications) {}
 
     public function execute(Admin $admin, MonthlyProfit $profit): MonthlyProfit
     {
@@ -32,7 +33,17 @@ final class ApproveMonthlyProfitAction
                 'version' => $profit->version,
             ]);
 
-            return $profit->fresh('allocations');
+            $approved = $profit->fresh('allocations');
+            $this->notifications->afterCommit(function () use ($approved, $admin): void {
+                foreach ($approved->allocations as $allocation) {
+                    $participant = $allocation->participant;
+                    if ($participant) {
+                        $this->notifications->createForParticipant($participant, 'profit_update', 'اعتماد أرباح شهرية', 'تم اعتماد أرباح شهرية جديدة لحسابك.', $admin, ['monthly_profit_id' => $approved->id]);
+                    }
+                }
+            });
+
+            return $approved;
         });
     }
 }

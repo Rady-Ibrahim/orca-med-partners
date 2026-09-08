@@ -20,7 +20,7 @@ final class ApproveInvestmentAction
                 'approved_at' => now(),
             ])->save();
 
-            return $investment->fresh();
+            return $investment->fresh('participant');
         });
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Domain\Financial\Exceptions\ImmutableFinancialRecordException;
+use App\Services\SecurityAuditService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -33,6 +34,14 @@ class CapitalSnapshot extends Model
 
     protected static function booted(): void
     {
+        static::created(function (self $snapshot): void {
+            app(SecurityAuditService::class)->log('capital_snapshot_created', $snapshot->created_by_admin_id ? Admin::query()->find($snapshot->created_by_admin_id) : null, 'capital_snapshot', $snapshot->id, ['new' => $snapshot->only(['snapshot_date', 'year', 'month', 'total_capital', 'status'])]);
+        });
+
+        static::updated(function (self $snapshot): void {
+            app(SecurityAuditService::class)->log('capital_snapshot_updated', $snapshot->created_by_admin_id ? Admin::query()->find($snapshot->created_by_admin_id) : null, 'capital_snapshot', $snapshot->id, ['old' => $snapshot->getOriginal(), 'new' => $snapshot->only(['snapshot_date', 'year', 'month', 'total_capital', 'status'])]);
+        });
+
         static::updating(function (self $snapshot) {
             if (MonthlyProfit::query()->where('capital_snapshot_id', $snapshot->id)->where('status', 'approved')->exists()) {
                 throw new ImmutableFinancialRecordException('Capital snapshots used by approved financial calculations are immutable.');

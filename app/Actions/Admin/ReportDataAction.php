@@ -1,0 +1,131 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Actions\Admin;
+
+use App\Models\CapitalSnapshot;
+use App\Models\DepreciationNote;
+use App\Models\Fund;
+use App\Models\FundTransaction;
+use App\Models\Investment;
+use App\Models\MonthlyProfit;
+use App\Models\Participant;
+use App\Models\ParticipantProfitAllocation;
+use App\Models\SettlementItem;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
+
+final class ReportDataAction
+{
+    public const REPORTS = [
+        'participants',
+        'investments',
+        'capital',
+        'monthly-profits',
+        'annual-profits',
+        'distribution',
+        'funds',
+        'fund-transactions',
+        'depreciation',
+        'settlements',
+        'due-paid',
+        'capital-growth',
+    ];
+
+    public function execute(string $report, array $filters = [], bool $paginate = true): LengthAwarePaginator|Collection
+    {
+        $query = $this->query($report, $filters);
+
+        return $paginate ? $query->paginate(20)->withQueryString() : $query->limit(5000)->get();
+    }
+
+    public function title(string $report): string
+    {
+        return [
+            'participants' => 'تقرير المشاركين',
+            'investments' => 'تقرير الاستثمارات',
+            'capital' => 'تقرير رأس المال',
+            'monthly-profits' => 'تقرير الأرباح الشهرية',
+            'annual-profits' => 'تقرير الأرباح السنوية',
+            'distribution' => 'تقرير التوزيعات',
+            'funds' => 'تقرير الصناديق',
+            'fund-transactions' => 'تقرير حركات الصناديق',
+            'depreciation' => 'تقرير الإهلاك',
+            'settlements' => 'تقرير التسويات السنوية',
+            'due-paid' => 'تقرير المستحق والمدفوع',
+            'capital-growth' => 'تقرير نمو رأس المال',
+        ][$report] ?? 'تقرير مالي';
+    }
+
+    public function columns(string $report): array
+    {
+        return match ($report) {
+            'participants' => ['name' => 'المشارك', 'username' => 'الرمز', 'status' => 'الحالة', 'created_at' => 'تاريخ البدء'],
+            'investments' => ['participant' => 'المشارك', 'amount' => 'قيمة الاستثمار', 'status' => 'الحالة', 'invested_at' => 'تاريخ الاستثمار', 'approved_at' => 'تاريخ الاعتماد'],
+            'capital' => ['snapshot_date' => 'تاريخ اللقطة', 'year' => 'السنة', 'month' => 'الشهر', 'total_capital' => 'إجمالي رأس المال', 'status' => 'الحالة'],
+            'monthly-profits' => ['period' => 'الفترة', 'gross_profit' => 'إجمالي الربح', 'management_amount' => 'الإدارة', 'depreciation_amount' => 'الإهلاك', 'growth_amount' => 'النمو', 'incentive_amount' => 'الحافز', 'distributed_amount' => 'الموزع', 'status' => 'الحالة', 'approved_at' => 'تاريخ الاعتماد'],
+            'annual-profits' => ['year' => 'السنة', 'participant' => 'المشارك', 'amount' => 'الربح الموزع'],
+            'distribution' => ['period' => 'الفترة', 'management_amount' => 'الإدارة', 'depreciation_amount' => 'الإهلاك', 'growth_amount' => 'النمو', 'incentive_amount' => 'الحافز', 'distributed_amount' => 'الموزع', 'rule_snapshot' => 'لقطة القاعدة'],
+            'funds' => ['code' => 'الرمز', 'name' => 'الصندوق', 'current_balance' => 'الرصيد', 'status' => 'الحالة'],
+            'fund-transactions' => ['fund' => 'الصندوق', 'transaction_type' => 'النوع', 'amount' => 'المبلغ', 'transaction_date' => 'التاريخ', 'description' => 'الوصف', 'created_by_admin_id' => 'أنشأ بواسطة'],
+            'depreciation' => ['period' => 'الفترة', 'amount' => 'المبلغ', 'rate' => 'المعدل', 'transaction_date' => 'التاريخ', 'description' => 'الوصف', 'admin_note' => 'الملاحظة'],
+            'settlements' => ['participant' => 'المشارك', 'year' => 'السنة', 'profit_share' => 'الربح السنوي', 'fund_share' => 'حصة الصندوق', 'amount_due' => 'المستحق', 'paid_amount' => 'المدفوع', 'status' => 'الحالة'],
+            'due-paid' => ['participant' => 'المشارك', 'settlement_id' => 'التسوية', 'amount_due' => 'المستحق', 'paid_amount' => 'المدفوع', 'remaining' => 'المتبقي', 'payment_status' => 'الحالة'],
+            'capital-growth' => ['period' => 'الفترة', 'previous_capital' => 'رأس المال السابق', 'current_capital' => 'رأس المال الحالي', 'movement' => 'الحركة'],
+            default => [],
+        };
+    }
+
+    private function query(string $report, array $filters): Builder
+    {
+        abort_unless(in_array($report, self::REPORTS, true), 404);
+
+        return match ($report) {
+            'participants' => Participant::query()->latest('created_at')->when($filters['participant_id'] ?? null, fn(Builder $q, $id) => $q->whereKey($id))->when($filters['status'] ?? null, fn(Builder $q, $status) => $q->where('status', $status)),
+            'investments' => Investment::query()->with('participant')->latest('invested_at')->when($filters['participant_id'] ?? null, fn(Builder $q, $id) => $q->where('participant_id', $id))->when($filters['status'] ?? null, fn(Builder $q, $status) => $q->where('status', $status)),
+            'capital', 'capital-growth' => CapitalSnapshot::query()->when($filters['year'] ?? null, fn(Builder $q, $year) => $q->where('year', $year))->when($filters['month'] ?? null, fn(Builder $q, $month) => $q->where('month', $month))->orderBy('snapshot_date'),
+            'monthly-profits', 'distribution' => MonthlyProfit::query()->with('distributionRule')->whereIn('status', ['draft', 'approved', 'superseded'])->when($filters['year'] ?? null, fn(Builder $q, $year) => $q->where('year', $year))->when($filters['month'] ?? null, fn(Builder $q, $month) => $q->where('month', $month))->when($filters['status'] ?? null, fn(Builder $q, $status) => $q->where('status', $status))->latest('year')->latest('month')->latest('version'),
+            'annual-profits' => ParticipantProfitAllocation::query()->join('monthly_profits', 'monthly_profits.id', '=', 'participant_profit_allocations.monthly_profit_id')->join('participants', 'participants.id', '=', 'participant_profit_allocations.participant_id')->where('monthly_profits.status', 'approved')->when($filters['year'] ?? null, fn(Builder $q, $year) => $q->where('monthly_profits.year', $year))->when($filters['participant_id'] ?? null, fn(Builder $q, $id) => $q->where('participant_profit_allocations.participant_id', $id))->selectRaw('participant_profit_allocations.participant_id, monthly_profits.year, SUM(participant_profit_allocations.amount) as annual_amount, participants.first_name, participants.last_name, participants.username')->groupBy('participant_profit_allocations.participant_id', 'monthly_profits.year', 'participants.first_name', 'participants.last_name', 'participants.username')->orderByDesc('monthly_profits.year'),
+            'funds' => Fund::query()->when($filters['status'] ?? null, fn(Builder $q, $status) => $q->where('status', $status))->orderBy('code'),
+            'fund-transactions' => FundTransaction::query()->with(['fund', 'createdBy'])->when($filters['fund_id'] ?? null, fn(Builder $q, $id) => $q->where('fund_id', $id))->when($filters['transaction_type'] ?? null, fn(Builder $q, $type) => $q->where('transaction_type', $type))->latest('transaction_date')->latest('id'),
+            'depreciation' => DepreciationNote::query()->with(['participant', 'fund'])->when($filters['year'] ?? null, fn(Builder $q, $year) => $q->where('year', $year))->when($filters['month'] ?? null, fn(Builder $q, $month) => $q->where('month', $month))->latest('transaction_date'),
+            'settlements', 'due-paid' => SettlementItem::query()->with(['participant', 'settlement'])->when($filters['participant_id'] ?? null, fn(Builder $q, $id) => $q->where('participant_id', $id))->whereHas('settlement', fn(Builder $q) => $q->when($filters['year'] ?? null, fn(Builder $nested, $year) => $nested->where('year', $year))->when($filters['status'] ?? null, fn(Builder $nested, $status) => $nested->where('status', $status)))->latest('id'),
+        };
+    }
+
+    public function normalize(Collection $rows, string $report): Collection
+    {
+        $previousCapital = '0.00';
+
+        return $rows->map(function ($row) use ($report, &$previousCapital): array {
+            $participant = $row->participant ?? null;
+            $name = $participant ? trim($participant->first_name . ' ' . $participant->last_name) : null;
+
+            return match ($report) {
+                'participants' => ['name' => trim($row->first_name . ' ' . $row->last_name) ?: $row->username, 'username' => $row->username, 'status' => $row->status, 'created_at' => optional($row->created_at)->format('Y-m-d')],
+                'investments' => ['participant' => $name ?: $participant?->username, 'amount' => (string) $row->amount, 'status' => $row->status, 'invested_at' => optional($row->invested_at)->format('Y-m-d'), 'approved_at' => optional($row->approved_at)->format('Y-m-d H:i')],
+                'capital' => ['snapshot_date' => optional($row->snapshot_date)->format('Y-m-d'), 'year' => $row->year, 'month' => $row->month, 'total_capital' => (string) $row->total_capital, 'status' => $row->status],
+                'monthly-profits' => ['period' => sprintf('%04d/%02d v%d', $row->year, $row->month, $row->version), 'gross_profit' => (string) $row->gross_profit, 'management_amount' => (string) $row->management_amount, 'depreciation_amount' => (string) $row->depreciation_amount, 'growth_amount' => (string) $row->growth_amount, 'incentive_amount' => (string) $row->incentive_amount, 'distributed_amount' => (string) $row->distributed_amount, 'status' => $row->status, 'approved_at' => optional($row->approved_at)->format('Y-m-d H:i')],
+                'annual-profits' => ['year' => $row->year, 'participant' => trim(($row->first_name ?? '') . ' ' . ($row->last_name ?? '')) ?: ($row->username ?? null), 'amount' => (string) $row->annual_amount],
+                'distribution' => ['period' => sprintf('%04d/%02d', $row->year, $row->month), 'management_amount' => (string) $row->management_amount, 'depreciation_amount' => (string) $row->depreciation_amount, 'growth_amount' => (string) $row->growth_amount, 'incentive_amount' => (string) $row->incentive_amount, 'distributed_amount' => (string) $row->distributed_amount, 'rule_snapshot' => json_encode($row->distribution_rule_snapshot, JSON_UNESCAPED_UNICODE)],
+                'funds' => ['code' => $row->code, 'name' => $row->name, 'current_balance' => (string) $row->current_balance, 'status' => $row->status],
+                'fund-transactions' => ['fund' => $row->fund?->name, 'transaction_type' => $row->transaction_type, 'amount' => (string) $row->amount, 'transaction_date' => optional($row->transaction_date)->format('Y-m-d'), 'description' => $row->description ?: $row->notes, 'created_by_admin_id' => $row->created_by_admin_id],
+                'depreciation' => ['period' => sprintf('%04d/%02d', $row->year, $row->month), 'amount' => (string) $row->amount, 'rate' => $row->rate === null ? null : (string) $row->rate, 'transaction_date' => optional($row->transaction_date)->format('Y-m-d'), 'description' => $row->description, 'admin_note' => $row->admin_note],
+                'settlements' => ['participant' => $name ?: $participant?->username, 'year' => $row->settlement?->year, 'profit_share' => (string) $row->profit_share, 'fund_share' => (string) $row->fund_share, 'amount_due' => (string) $row->net_payable, 'paid_amount' => (string) $row->paid_amount, 'status' => $row->settlement?->status],
+                'due-paid' => ['participant' => $name ?: $participant?->username, 'settlement_id' => $row->settlement_id, 'amount_due' => (string) $row->net_payable, 'paid_amount' => (string) $row->paid_amount, 'remaining' => bcsub((string) $row->net_payable, (string) $row->paid_amount, 2), 'payment_status' => $row->payment_status],
+                'capital-growth' => $this->capitalGrowthRow($row, $previousCapital),
+                default => [],
+            };
+        });
+    }
+
+    private function capitalGrowthRow(object $row, string &$previousCapital): array
+    {
+        $current = (string) $row->total_capital;
+        $result = ['period' => sprintf('%04d/%02d', $row->year, $row->month), 'previous_capital' => $previousCapital, 'current_capital' => $current, 'movement' => bcsub($current, $previousCapital, 2)];
+        $previousCapital = $current;
+        return $result;
+    }
+}

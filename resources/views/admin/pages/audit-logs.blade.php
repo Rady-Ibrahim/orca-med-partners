@@ -8,6 +8,16 @@
         </div>
     </div>
 
+    <form class="panel report-filters" method="GET">
+        <label>المستخدم<input name="actor" value="{{ request('actor') }}"></label>
+        <label>الحدث<input name="action" value="{{ request('action') }}"></label>
+        <label>نوع الكائن<input name="entity" value="{{ request('entity') }}"></label>
+        <label>معرف الكائن<input name="entity_id" value="{{ request('entity_id') }}"></label>
+        <label>من تاريخ<input type="date" name="date_from" value="{{ request('date_from') }}"></label>
+        <label>إلى تاريخ<input type="date" name="date_to" value="{{ request('date_to') }}"></label>
+        <button class="primary-button" type="submit">تطبيق الفلاتر</button>
+    </form>
+
     @if ($items->isEmpty())
         <div class="empty-state panel"><span>◌</span>
             <p>لا توجد سجلات تدقيق</p>
@@ -28,11 +38,12 @@
                     <tbody>
                         @foreach ($items as $item)
                             <tr>
-                                <td>{{ $item['action'] }}</td>
-                                <td>{{ $item['actor'] }}</td>
-                                <td>{{ $item['entity'] }}</td>
-                                <td><span class="status-badge status-info">{{ $item['action'] }}</span></td>
-                                <td>{{ $item['created_at'] }}</td>
+                                <td><a class="text-link"
+                                        href="{{ route('admin.audit-logs.show', $item->id) }}">{{ $item->action }}</a></td>
+                                <td>{{ $item->actor_type }}:{{ $item->actor_id }}</td>
+                                <td>{{ $item->auditable_type }}:{{ $item->auditable_id }}</td>
+                                <td><span class="status-badge status-info">{{ $item->action }}</span></td>
+                                <td>{{ $item->created_at?->format('Y-m-d H:i') }}</td>
                             </tr>
                         @endforeach
                     </tbody>

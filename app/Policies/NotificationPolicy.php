@@ -12,13 +12,13 @@ class NotificationPolicy
 {
     public function viewAny(Admin|Participant $user): bool
     {
-        return $user instanceof Admin ? ($user->hasPermission('participants.view') || $user->is_super_admin) : true;
+        return $user instanceof Admin ? ($user->hasPermission('notifications.view') || $user->is_super_admin) : true;
     }
 
     public function view(Admin|Participant $user, Notification $notification): bool
     {
         if ($user instanceof Admin) {
-            return $user->hasPermission('participants.view') || $user->is_super_admin;
+            return $user->hasPermission('notifications.view') || $user->is_super_admin;
         }
 
         return $user instanceof Participant && $notification->participant_id === $user->id;
