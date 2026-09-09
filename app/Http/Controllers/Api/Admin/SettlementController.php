@@ -7,10 +7,14 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Actions\Settlements\ApproveSettlementAction;
 use App\Actions\Settlements\CreateAnnualSettlementAction;
 use App\Actions\Settlements\MarkSettlementPaidAction;
+use App\Actions\Settlements\RecordSettlementPaymentAction;
+use App\Actions\Settlements\CreateSettlementAdjustmentAction;
 use App\Actions\Settlements\ListAnnualSettlementsAction;
 use App\Actions\Settlements\CancelSettlementAction;
 use App\Actions\Settlements\CreateSettlementRevisionAction;
 use App\Http\Requests\StoreAnnualSettlementRequest;
+use App\Http\Requests\StoreSettlementPaymentRequest;
+use App\Http\Requests\StoreSettlementAdjustmentRequest;
 use App\Models\Settlement;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -54,6 +58,20 @@ final class SettlementController
         Gate::forUser($request->user())->authorize('pay', $settlement);
 
         return response()->json(['success' => true, 'data' => $action->execute($request->user(), $settlement)]);
+    }
+
+    public function payment(StoreSettlementPaymentRequest $request, Settlement $settlement, RecordSettlementPaymentAction $action): JsonResponse
+    {
+        Gate::forUser($request->user())->authorize('pay', $settlement);
+
+        return response()->json(['success' => true, 'data' => $action->execute($request->user(), $settlement, $request->validated())]);
+    }
+
+    public function adjustment(StoreSettlementAdjustmentRequest $request, Settlement $settlement, CreateSettlementAdjustmentAction $action): JsonResponse
+    {
+        Gate::forUser($request->user())->authorize('pay', $settlement);
+
+        return response()->json(['success' => true, 'data' => $action->execute($request->user(), $settlement, $request->validated())], 201);
     }
 
     public function cancel(Request $request, Settlement $settlement, CancelSettlementAction $action): JsonResponse

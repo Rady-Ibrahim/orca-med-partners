@@ -9,6 +9,7 @@ use App\Actions\Settlements\CancelSettlementAction;
 use App\Actions\Settlements\CreateAnnualSettlementAction;
 use App\Actions\Settlements\CreateSettlementRevisionAction;
 use App\Actions\Settlements\MarkSettlementPaidAction;
+use App\Actions\Settlements\RecordSettlementPaymentAction;
 use App\Domain\Financial\Exceptions\ImmutableFinancialRecordException;
 use App\Domain\Financial\Exceptions\InvalidAnnualSettlementException;
 use App\Models\Admin;
@@ -61,13 +62,22 @@ class AnnualSettlementTest extends TestCase
             'status' => 'approved',
         ]);
 
+        \App\Models\ParticipantFundAllocation::query()->create([
+            'fund_id' => Fund::query()->create(['code' => 'GROWTH-2026', 'name' => 'Growth Fund'])->id,
+            'monthly_profit_id' => $effective->id,
+            'participant_id' => $first->id,
+            'amount' => '30.00',
+            'allocation_type' => 'growth',
+        ]);
+
         $settlement = app(CreateAnnualSettlementAction::class)->execute($admin, 2026);
 
-        self::assertSame('130.00', (string) $settlement->amount_due);
+        self::assertSame('160.00', (string) $settlement->amount_due);
         self::assertSame('130.00', (string) $settlement->participant_profit_share);
-        self::assertSame('130.00', (string) $settlement->items->first()->profit_share);
-        self::assertSame('0.00', (string) $settlement->participant_fund_share);
-        self::assertStringContainsString('[NEEDS BUSINESS DECISION]', (string) $settlement->notes);
+        self::assertSame('30.00', (string) $settlement->participant_fund_share);
+        self::assertSame('30.00', (string) $settlement->items->first()->fund_share);
+        self::assertSame('160.00', (string) $settlement->items->first()->net_payable);
+        self::assertStringContainsString('approved participant fund allocations', (string) $settlement->notes);
         self::assertDatabaseHas('audit_logs', ['action' => 'settlement_created']);
         self::assertNotSame($second->id, $settlement->items->first()->participant_id);
     }
@@ -152,7 +162,7 @@ class AnnualSettlementTest extends TestCase
 
         self::assertSame('10000.00', (string) $settlement->amount_due);
         self::assertSame('0.00', (string) $settlement->participant_fund_share);
-        self::assertStringContainsString('No prior payout/deduction source exists', (string) $settlement->notes);
+        self::assertStringContainsString('Previous payments are recorded separately', (string) $settlement->notes);
     }
 
     public function test_payment_does_not_change_funds_or_create_fund_transactions(): void
@@ -170,6 +180,27 @@ class AnnualSettlementTest extends TestCase
 
         self::assertSame('500.00', (string) $fund->fresh()->current_balance);
         self::assertDatabaseCount('fund_transactions', 0);
+    }
+
+    public function test_partial_and_final_payments_are_immutable_and_reconciled(): void
+    {
+        [$admin] = $this->createApprovedAnnualData(2038, '100.00');
+        $settlement = app(ApproveSettlementAction::class)->execute($admin, app(CreateAnnualSettlementAction::class)->execute($admin, 2038));
+
+        $partial = app(RecordSettlementPaymentAction::class)->execute($admin, $settlement, ['amount' => '60.00', 'reference' => 'PAY-1']);
+        self::assertSame('partially_paid', $partial->status);
+        self::assertSame('60.00', (string) $partial->paid_amount);
+        self::assertCount(1, $partial->payments);
+
+        $paid = app(RecordSettlementPaymentAction::class)->execute($admin, $partial, ['amount' => '40.00', 'reference' => 'PAY-2']);
+        self::assertSame('paid', $paid->status);
+        self::assertSame('100.00', (string) $paid->paid_amount);
+        self::assertCount(2, $paid->payments);
+
+        $payment = $paid->payments->first();
+        $this->expectException(ImmutableFinancialRecordException::class);
+        $payment->amount = '99.00';
+        $payment->save();
     }
 
     public function test_draft_can_be_cancelled_but_finalized_settlement_cannot(): void

@@ -15,7 +15,7 @@ final class ListParticipantSettlementsAction
     {
         return Settlement::query()
             ->whereHas('items', fn($query) => $query->where('participant_id', $participant->id))
-            ->with(['items' => fn($query) => $query->where('participant_id', $participant->id)])
+            ->with(['items' => fn($query) => $query->where('participant_id', $participant->id), 'payments'])
             ->latest('year')
             ->get();
     }

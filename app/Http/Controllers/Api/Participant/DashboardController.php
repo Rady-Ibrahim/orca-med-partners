@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api\Participant;
 use App\Actions\Participant\GetParticipantDashboardDataAction;
 use App\Http\Requests\ParticipantCollectionRequest;
 use App\Models\Participant;
+use App\Models\Settlement;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -27,6 +28,11 @@ final class DashboardController
         return $this->success($action->capital($this->participant($request), $request->filters()));
     }
 
+    public function capitalGrowth(ParticipantCollectionRequest $request, GetParticipantDashboardDataAction $action): JsonResponse
+    {
+        return $this->success($action->capitalGrowth($request->filters()));
+    }
+
     public function profits(ParticipantCollectionRequest $request, GetParticipantDashboardDataAction $action): JsonResponse
     {
         return $this->success($action->profits($this->participant($request), $request->filters()));
@@ -45,6 +51,16 @@ final class DashboardController
     public function settlements(ParticipantCollectionRequest $request, GetParticipantDashboardDataAction $action): JsonResponse
     {
         return $this->success($action->settlements($this->participant($request), $request->filters()));
+    }
+
+    public function settlement(Request $request, Settlement $settlement, GetParticipantDashboardDataAction $action): JsonResponse
+    {
+        return $this->success($action->settlement($this->participant($request), $settlement));
+    }
+
+    public function settlementPayments(Request $request, Settlement $settlement, GetParticipantDashboardDataAction $action): JsonResponse
+    {
+        return $this->success($action->settlementPayments($this->participant($request), $settlement));
     }
 
     public function notifications(ParticipantCollectionRequest $request, GetParticipantDashboardDataAction $action): JsonResponse

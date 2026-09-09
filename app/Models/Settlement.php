@@ -81,4 +81,14 @@ class Settlement extends Model
     {
         return $this->items()->where('participant_id', $participantId);
     }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(SettlementPayment::class)->orderBy('paid_at')->orderBy('id');
+    }
+
+    public function adjustments(): HasMany
+    {
+        return $this->hasMany(SettlementAdjustment::class)->latest('id');
+    }
 }

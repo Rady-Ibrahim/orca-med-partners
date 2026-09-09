@@ -48,6 +48,8 @@ Route::middleware('ensure.admin.context')->group(function () {
     Route::get('/admin/settlements/{settlement}', [AdminSettlementController::class, 'show']);
     Route::post('/admin/settlements/{settlement}/approve', [AdminSettlementController::class, 'approve']);
     Route::post('/admin/settlements/{settlement}/paid', [AdminSettlementController::class, 'paid']);
+    Route::post('/admin/settlements/{settlement}/payments', [AdminSettlementController::class, 'payment']);
+    Route::post('/admin/settlements/{settlement}/adjustments', [AdminSettlementController::class, 'adjustment']);
     Route::post('/admin/settlements/{settlement}/cancel', [AdminSettlementController::class, 'cancel']);
     Route::post('/admin/settlements/{settlement}/revision', [AdminSettlementController::class, 'revise']);
 
@@ -63,10 +65,13 @@ Route::middleware('ensure.participant.context')->group(function () {
     Route::get('/me', [MeController::class, 'show']);
     Route::get('/me/investment', [DashboardController::class, 'investment']);
     Route::get('/me/capital', [DashboardController::class, 'capital']);
+    Route::get('/me/capital/growth', [DashboardController::class, 'capitalGrowth']);
     Route::get('/me/profits', [DashboardController::class, 'profits']);
     Route::get('/me/funds', [DashboardController::class, 'funds']);
     Route::get('/me/depreciation', [DashboardController::class, 'depreciation']);
     Route::get('/me/settlements', [DashboardController::class, 'settlements']);
+    Route::get('/me/settlements/{settlement}', [DashboardController::class, 'settlement']);
+    Route::get('/me/settlements/{settlement}/payments', [DashboardController::class, 'settlementPayments']);
     Route::get('/me/notifications', [DashboardController::class, 'notifications']);
     Route::get('/participant/investments/{investment}', [FinancialResourceController::class, 'investment']);
     Route::get('/participant/monthly-profits/{monthlyProfit}', [MonthlyProfitController::class, 'showForParticipant']);

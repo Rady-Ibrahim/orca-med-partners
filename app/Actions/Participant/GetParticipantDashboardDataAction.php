@@ -12,6 +12,8 @@ use App\Models\Participant;
 use App\Models\ParticipantFundAllocation;
 use App\Models\ParticipantProfitAllocation;
 use App\Models\SettlementItem;
+use App\Models\Settlement;
+use App\Models\CapitalSnapshot;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 final class GetParticipantDashboardDataAction
@@ -50,11 +52,59 @@ final class GetParticipantDashboardDataAction
 
     public function settlements(Participant $participant, array $filters): LengthAwarePaginator
     {
-        return SettlementItem::query()->with('settlement')->where('participant_id', $participant->id)->when($filters['year'] ?? null, fn($query, $year) => $query->whereHas('settlement', fn($nested) => $nested->where('year', $year)))->when($filters['status'] ?? null, fn($query, $status) => $query->whereHas('settlement', fn($nested) => $nested->where('status', $status)))->latest('id')->paginate(20)->through(fn(SettlementItem $item): array => ['id' => $item->id, 'settlement_id' => $item->settlement_id, 'year' => $item->settlement?->year, 'status' => $item->settlement?->status, 'profit_share' => (string) $item->profit_share, 'fund_share' => (string) $item->fund_share, 'amount_due' => (string) $item->net_payable, 'paid_amount' => (string) $item->paid_amount, 'payment_status' => $item->payment_status, 'paid_at' => $item->paid_at?->toISOString()])->withQueryString();
+        return SettlementItem::query()->with('settlement.payments')->where('participant_id', $participant->id)->when($filters['year'] ?? null, fn($query, $year) => $query->whereHas('settlement', fn($nested) => $nested->where('year', $year)))->when($filters['status'] ?? null, fn($query, $status) => $query->whereHas('settlement', fn($nested) => $nested->where('status', $status)))->latest('id')->paginate(20)->through(fn(SettlementItem $item): array => ['id' => $item->id, 'settlement_id' => $item->settlement_id, 'year' => $item->settlement?->year, 'status' => $item->settlement?->status, 'profit_share' => (string) $item->profit_share, 'fund_share' => (string) $item->fund_share, 'amount_due' => (string) $item->settlement?->amount_due, 'paid_amount' => (string) $item->settlement?->paid_amount, 'remaining' => bcsub((string) ($item->settlement?->amount_due ?? '0.00'), (string) ($item->settlement?->paid_amount ?? '0.00'), 2), 'payment_status' => $item->payment_status, 'paid_at' => $item->paid_at?->toISOString(), 'payments' => $item->settlement?->payments->map(fn($payment): array => ['id' => $payment->id, 'amount' => (string) $payment->amount, 'paid_at' => $payment->paid_at?->toISOString(), 'payment_method' => $payment->payment_method, 'reference' => $payment->reference, 'description' => $payment->description])->values()->all()])->withQueryString();
     }
 
     public function notifications(Participant $participant, array $filters): LengthAwarePaginator
     {
         return Notification::query()->where('participant_id', $participant->id)->when(array_key_exists('read', $filters), fn($query) => $query->where('is_read', (bool) $filters['read']))->latest('created_at')->paginate(20)->through(fn(Notification $notification): array => ['id' => $notification->id, 'type' => $notification->type, 'title' => $notification->title, 'message' => $notification->body, 'data' => is_array($notification->metadata) ? $notification->metadata : [], 'read' => $notification->is_read, 'created_at' => $notification->created_at?->toISOString()]);
+    }
+
+    public function settlement(Participant $participant, Settlement $settlement): array
+    {
+        $item = $settlement->items()->where('participant_id', $participant->id)->firstOrFail();
+        $settlement->load(['payments', 'adjustments']);
+
+        return [
+            'id' => $settlement->id,
+            'year' => $settlement->year,
+            'version' => $settlement->version,
+            'parent_id' => $settlement->parent_id,
+            'status' => $settlement->status,
+            'profit_share' => (string) $item->profit_share,
+            'fund_share' => (string) $item->fund_share,
+            'amount_due' => (string) $settlement->amount_due,
+            'paid_amount' => (string) $settlement->paid_amount,
+            'remaining' => bcsub((string) $settlement->amount_due, (string) $settlement->paid_amount, 2),
+            'approved_at' => $settlement->approved_at?->toISOString(),
+            'payout_at' => $settlement->payout_at?->toISOString(),
+            'payments' => $settlement->payments->map(fn($payment): array => $this->payment($payment))->values()->all(),
+            'adjustments' => $settlement->adjustments->map(fn($adjustment): array => ['id' => $adjustment->id, 'type' => $adjustment->type, 'direction' => $adjustment->direction, 'amount' => (string) $adjustment->amount, 'reason' => $adjustment->reason, 'created_at' => $adjustment->created_at?->toISOString()])->values()->all(),
+        ];
+    }
+
+    public function settlementPayments(Participant $participant, Settlement $settlement): LengthAwarePaginator
+    {
+        abort_unless($settlement->items()->where('participant_id', $participant->id)->exists(), 404);
+
+        return $settlement->payments()->paginate(20)->through(fn($payment): array => $this->payment($payment))->withQueryString();
+    }
+
+    public function capitalGrowth(array $filters): LengthAwarePaginator
+    {
+        $snapshots = CapitalSnapshot::query()->when($filters['year'] ?? null, fn($query, $year) => $query->where('year', $year))->orderBy('snapshot_date')->paginate(20)->withQueryString();
+        $previous = '0.00';
+
+        return $snapshots->through(function (CapitalSnapshot $snapshot) use (&$previous): array {
+            $current = (string) $snapshot->total_capital;
+            $row = ['id' => $snapshot->id, 'snapshot_date' => $snapshot->snapshot_date?->toDateString(), 'year' => $snapshot->year, 'month' => $snapshot->month, 'snapshot_capital' => $current, 'movement' => bcsub($current, $previous, 2)];
+            $previous = $current;
+            return $row;
+        });
+    }
+
+    private function payment($payment): array
+    {
+        return ['id' => $payment->id, 'amount' => (string) $payment->amount, 'paid_at' => $payment->paid_at?->toISOString(), 'payment_method' => $payment->payment_method, 'payment_source' => $payment->payment_source, 'reference' => $payment->reference, 'description' => $payment->description];
     }
 }

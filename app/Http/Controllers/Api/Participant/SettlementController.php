@@ -27,7 +27,7 @@ final class SettlementController
 
         return response()->json([
             'success' => true,
-            'data' => $settlement->load(['items' => fn($query) => $query->where('participant_id', $participant->id)]),
+            'data' => $settlement->load(['items' => fn($query) => $query->where('participant_id', $participant->id), 'payments']),
         ]);
     }
 }
