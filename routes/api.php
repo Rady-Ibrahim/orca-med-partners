@@ -9,10 +9,17 @@ use App\Http\Controllers\Api\Admin\ParticipantController;
 use App\Http\Controllers\Api\Auth\AdminAuthController;
 use App\Http\Controllers\Api\Auth\ParticipantAuthController;
 use App\Http\Controllers\Api\Financial\MonthlyProfitController;
+use App\Http\Controllers\Api\LegalController;
 use App\Http\Controllers\Api\Participant\FinancialResourceController;
 use App\Http\Controllers\Api\Participant\DashboardController;
 use App\Http\Controllers\Api\Participant\MeController;
+use App\Http\Controllers\Api\Participant\NotificationActionController;
+use App\Http\Controllers\Api\Participant\ReceiptController;
+use App\Http\Controllers\Api\Participant\ReportController;
+use App\Http\Controllers\Api\Participant\RoiSimulationController;
+use App\Http\Controllers\Api\Participant\SecuritySettingsController;
 use App\Http\Controllers\Api\Participant\SettlementController as ParticipantSettlementController;
+use App\Http\Controllers\Api\Participant\SupportTicketController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('throttle:10,1')->group(function () {
@@ -82,4 +89,29 @@ Route::middleware('ensure.participant.context')->group(function () {
     Route::get('/participant/settlements', [ParticipantSettlementController::class, 'index']);
     Route::get('/participant/settlements/{settlement}', [ParticipantSettlementController::class, 'show']);
     Route::get('/participant/notifications/{notification}', [FinancialResourceController::class, 'notification']);
+});
+
+Route::prefix('v1')->group(function () {
+    Route::middleware('throttle:60,1')->group(function () {
+        Route::get('/legal/terms', [LegalController::class, 'terms']);
+    });
+
+    Route::middleware('ensure.participant.context')->group(function () {
+        Route::post('/auth/participant/change-password', [ParticipantAuthController::class, 'changePassword']);
+
+        Route::get('/me/notifications/unread-count', [NotificationActionController::class, 'unreadCount']);
+        Route::patch('/me/notifications/read-all', [NotificationActionController::class, 'markAllRead']);
+        Route::patch('/me/notifications/{notification}/read', [NotificationActionController::class, 'markRead']);
+
+        Route::get('/me/reports', [ReportController::class, 'index']);
+        Route::get('/me/reports/{type}/download', [ReportController::class, 'download']);
+        Route::get('/me/settlements/{settlement}/payments/{payment}/receipt', [ReceiptController::class, 'show']);
+
+        Route::post('/me/tools/roi-simulation', [RoiSimulationController::class, 'simulate']);
+
+        Route::get('/me/settings/2fa', [SecuritySettingsController::class, 'show2fa']);
+        Route::post('/me/settings/2fa/toggle', [SecuritySettingsController::class, 'toggle2fa']);
+
+        Route::post('/support/ticket', [SupportTicketController::class, 'store']);
+    });
 });

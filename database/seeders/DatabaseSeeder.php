@@ -17,6 +17,11 @@ class DatabaseSeeder extends Seeder
         $this->seedAdminRoles();
     }
 
+    public function runDemo(): void
+    {
+        $this->call(DemoSeeder::class);
+    }
+
     protected function seedAdminRoles(): void
     {
         $roles = AdminAuthorization::defaultRoleAssignments();

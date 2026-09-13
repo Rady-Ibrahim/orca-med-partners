@@ -1,0 +1,556 @@
+{
+  "info": {
+    "name": "ORCA MED Partners — Investor Mobile API",
+    "description": "Verified endpoint collection for the ORCA MED investor/partner mobile application. Every request is scoped to the authenticated participant via `ensure.participant.context` (Bearer + owner-scoped queries).\n\nSetup:\n1. Set `baseUrl` (default https://api.orca-med.local/api)\n2. Set `participantUsername` / `participantPassword` and run **Auth → Login**; the script stores `accessToken` + `refreshToken`.\n3. All protected requests read `{{accessToken}}` automatically.\n\nContract expectations asserted by in-request tests:\n- Success envelope { \"success\": true, \"data\": ... }\n- Collections: Laravel paginator shape (current_page/data/links/total)\n- All monetary fields as decimal strings (never floats)\n\nVerified against Laravel backend (105 tests, 445 assertions passing).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://api.orca-med.local/api" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" },
+    { "key": "participantUsername", "value": "mahmoud_elmalawani" },
+    { "key": "participantPassword", "value": "secret123" },
+    { "key": "settlementId", "value": "1" },
+    { "key": "resourceId", "value": "1" },
+    { "key": "notificationId", "value": "1" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "1. Auth & Session",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('authenticates and returns token pair', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.success).to.eql(true);",
+                  "    pm.expect(body.data.access_token).to.be.a('string');",
+                  "    pm.expect(body.data.refresh_token).to.be.a('string');",
+                  "    pm.expect(body.data.token_type).to.eql('Bearer');",
+                  "    pm.expect(body.data.expires_in).to.eql(3600);",
+                  "    pm.expect(body.data.user.username).to.be.a('string');",
+                  "});",
+                  "pm.environment.set('accessToken', pm.response.json().data.access_token);",
+                  "pm.environment.set('refreshToken', pm.response.json().data.refresh_token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"username\": \"{{participantUsername}}\",\n    \"password\": \"{{participantPassword}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/auth/participant/login", "host": ["{{baseUrl}}"], "path": ["auth", "participant", "login"] },
+            "description": "Validates credentials, issues Sanctum access token + rotating refresh token. Rate-limited to 10/min. 401 invalid credentials; 403 inactive account."
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('rotates token pair', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.success).to.eql(true);",
+                  "    pm.expect(body.data.access_token).to.be.a('string');",
+                  "});",
+                  "pm.environment.set('accessToken', pm.response.json().data.access_token);",
+                  "pm.environment.set('refreshToken', pm.response.json().data.refresh_token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"refresh_token\": \"{{refreshToken}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/auth/participant/refresh", "host": ["{{baseUrl}}"], "path": ["auth", "participant", "refresh"] },
+            "description": "Single-use rotation; old refresh token is invalidated immediately. 401 invalid/expired."
+          }
+        },
+        {
+          "name": "Change Password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('password changed (revokes all sessions)', function () { pm.expect(pm.response.json().success).to.eql(true); });"]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"current_password\": \"secret123\",\n    \"password\": \"newsecret123\",\n    \"password_confirmation\": \"newsecret123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/auth/participant/password/change", "host": ["{{baseUrl}}"], "path": ["auth", "participant", "password", "change"] },
+            "description": "422 if current password is wrong. On success ALL tokens + refresh family are revoked — client must re-login."
+          }
+        },
+        {
+          "name": "Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('logged out, tokens revoked', function () { pm.expect(pm.response.json().success).to.eql(true); });"]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/participant/logout", "host": ["{{baseUrl}}"], "path": ["auth", "participant", "logout"] }
+          }
+        },
+        {
+          "name": "Request Password Reset",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('always 200 (anti-enumeration)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().success).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"m@orca.med\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/auth/participant/password/reset/request", "host": ["{{baseUrl}}"], "path": ["auth", "participant", "password", "reset", "request"] }
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"token\": \"<reset-token-from-email>\",\n    \"password\": \"newsecret123\",\n    \"password_confirmation\": \"newsecret123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/auth/participant/password/reset", "host": ["{{baseUrl}}"], "path": ["auth", "participant", "password", "reset"] },
+            "description": "400 invalid/expired token. Revokes all sessions on success."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Profile & Dashboard",
+      "item": [
+        {
+          "name": "Profile (GET /me)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('profile contract', function () {",
+                  "    const d = pm.response.json().data;",
+                  "    pm.expect(pm.response.json().success).to.eql(true);",
+                  "    ['id','username','name','email','status','participation_start_date'].forEach(k => pm.expect(d).to.have.property(k));",
+                  "    pm.expect(d).to.not.have.property('password');",
+                  "    pm.expect(d).to.not.have.property('permissions');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/me", "host": ["{{baseUrl}}"], "path": ["me"] },
+            "description": "Home/header profile: identity, status, participation start date. Must never expose password/tokens."
+          }
+        },
+        {
+          "name": "Investment Metrics (GET /me/investment)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('investment collection contract', function () {",
+                  "    const wrap = pm.response.json();",
+                  "    pm.expect(wrap.success).to.eql(true);",
+                  "    ['current_page','data','per_page','total','links'].forEach(k => pm.expect(wrap.data).to.have.property(k));",
+                  "    if (wrap.data.data.length) {",
+                  "        ['id','amount','invested_at','status'].forEach(k => pm.expect(wrap.data.data[0]).to.have.property(k));",
+                  "        pm.expect(wrap.data.data[0].amount).to.match(/^\\d+\\.\\d{2}$/);",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/me/investment?status=approved&page=1", "host": ["{{baseUrl}}"], "path": ["me", "investment"], "query": [{ "key": "status", "value": "approved" }, { "key": "page", "value": "1" }] },
+            "description": "Investment rows. Filters: status. `amount` is a decimal string."
+          }
+        },
+        {
+          "name": "Capital Positions (GET /me/capital)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('capital collection contract', function () {",
+                  "    const wrap = pm.response.json();",
+                  "    pm.expect(wrap.success).to.eql(true);",
+                  "    if (wrap.data.data.length) {",
+                  "        ['participant_capital','participant_ratio'].forEach(k => pm.expect(wrap.data.data[0]).to.have.property(k));",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/me/capital?year=&page=1", "host": ["{{baseUrl}}"], "path": ["me", "capital"], "query": [{ "key": "year", "value": "" }, { "key": "page", "value": "1" }] },
+            "description": "Licensed share/capital positions per snapshot. Filters: year."
+          }
+        },
+        {
+          "name": "Capital Growth (GET /me/capital/growth)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('capital growth contract', function () {",
+                  "    const wrap = pm.response.json();",
+                  "    pm.expect(wrap.success).to.eql(true);",
+                  "    if (wrap.data.data.length) {",
+                  "        ['snapshot_capital','movement'].forEach(k => pm.expect(wrap.data.data[0]).to.have.property(k));",
+                  "        pm.expect(wrap.data.data[0].movement).to.match(/^-?\\d+\\.\\d{2}$/);",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/me/capital/growth?year=&page=1", "host": ["{{baseUrl}}"], "path": ["me", "capital", "growth"], "query": [{ "key": "year", "value": "" }, { "key": "page", "value": "1" }] },
+            "description": "Company capital growth series with snapshot-to-snapshot `movement` (bcsub at read time). Filters: year."
+          }
+        },
+        {
+          "name": "Profits (GET /me/profits)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('profit collection contract', function () {",
+                  "    const wrap = pm.response.json();",
+                  "    pm.expect(wrap.success).to.eql(true);",
+                  "    if (wrap.data.data.length) {",
+                  "        ['year','month','gross_profit','amount','status'].forEach(k => pm.expect(wrap.data.data[0]).to.have.property(k));",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/me/profits?year=&month=&page=1", "host": ["{{baseUrl}}"], "path": ["me", "profits"], "query": [{ "key": "year", "value": "" }, { "key": "month", "value": "" }, { "key": "page", "value": "1" }] },
+            "description": "Approved profit allocation rows. Filters: year (2000-2200), month (1-12)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Funds, Depreciation & Settlements",
+      "item": [
+        {
+          "name": "Fund Allocations (GET /me/funds)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('fund allocations contract', function () {",
+                  "    const wrap = pm.response.json();",
+                  "    pm.expect(wrap.success).to.eql(true);",
+                  "    if (wrap.data.data.length) {",
+                  "        const row = wrap.data.data[0];",
+                  "        ['id','fund','amount','allocation_type','year','month'].forEach(k => pm.expect(row).to.have.property(k));",
+                  "        pm.expect(row.fund).to.have.property('code');",
+                  "        pm.expect(row.fund).to.have.property('name');",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/me/funds?year=&page=1", "host": ["{{baseUrl}}"], "path": ["me", "funds"], "query": [{ "key": "year", "value": "" }, { "key": "page", "value": "1" }] },
+            "description": "Growth / incentive / depreciation fund allocations (allocation_type). Filters: year."
+          }
+        },
+        {
+          "name": "Depreciation (GET /me/depreciation)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('depreciation contract', function () {",
+                  "    const wrap = pm.response.json();",
+                  "    pm.expect(wrap.success).to.eql(true);",
+                  "    if (wrap.data.data.length) {",
+                  "        ['amount','rate','transaction_date','description'].forEach(k => pm.expect(wrap.data.data[0]).to.have.property(k));",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/me/depreciation?year=&month=&page=1", "host": ["{{baseUrl}}"], "path": ["me", "depreciation"], "query": [{ "key": "year", "value": "" }, { "key": "month", "value": "" }, { "key": "page", "value": "1" }] },
+            "description": "Depreciation movements/notes. Filters: year, month."
+          }
+        },
+        {
+          "name": "Settlements (GET /me/settlements)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('settlement collection contract', function () {",
+                  "    const wrap = pm.response.json();",
+                  "    pm.expect(wrap.success).to.eql(true);",
+                  "    if (wrap.data.data.length) {",
+                  "        const row = wrap.data.data[0];",
+                  "        ['profit_share','fund_share','amount_due','paid_amount','remaining','payment_status'].forEach(k => pm.expect(row).to.have.property(k));",
+                  "        pm.expect(row.amount_due).to.match(/^\\d+\\.\\d{2}$/);",
+                  "        pm.expect(row.remaining).to.match(/^-?\\d+\\.\\d{2}$/);",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/me/settlements?year=&status=&page=1", "host": ["{{baseUrl}}"], "path": ["me", "settlements"], "query": [{ "key": "year", "value": "" }, { "key": "status", "value": "" }, { "key": "page", "value": "1" }] },
+            "description": "Yearly settlement breakdown with embedded payments. Filters: year, status."
+          }
+        },
+        {
+          "name": "Settlement Detail (GET /me/settlements/{id})",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('settlement detail contract', function () {",
+                  "    const d = pm.response.json().data;",
+                  "    ['year','version','status','profit_share','fund_share','amount_due','paid_amount','remaining','payments','adjustments'].forEach(k => pm.expect(d).to.have.property(k));",
+                  "    pm.expect(d.remaining).to.eql((parseFloat(d.amount_due) - parseFloat(d.paid_amount)).toFixed(2));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/me/settlements/{{settlementId}}", "host": ["{{baseUrl}}"], "path": ["me", "settlements", "{{settlementId}}"] },
+            "description": "Full ledger: profit_share + fund_share + amount_due + payments + adjustments. remaining = amount_due - paid_amount (bcsub)."
+          }
+        },
+        {
+          "name": "Settlement Payments (GET /me/settlements/{id}/payments)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('payments ledger contract', function () {",
+                  "    const wrap = pm.response.json();",
+                  "    pm.expect(wrap.success).to.eql(true);",
+                  "    if (wrap.data.data.length) {",
+                  "        ['amount','paid_at','payment_method','payment_source','reference','description'].forEach(k => pm.expect(wrap.data.data[0]).to.have.property(k));",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/me/settlements/{{settlementId}}/payments", "host": ["{{baseUrl}}"], "path": ["me", "settlements", "{{settlementId}}", "payments"] },
+            "description": "Transfer/payout history (verification trail). 404 if participant has no item in this settlement."
+          }
+        },
+        {
+          "name": "Settlement List (alt) (GET /participant/settlements)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/participant/settlements", "host": ["{{baseUrl}}"], "path": ["participant", "settlements"] },
+            "description": "Alias list for the settlement ledger screen."
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Single Resources (owner-scoped)",
+      "item": [
+        {
+          "name": "Investment Detail",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('investment detail 200', function () { pm.response.to.have.status(200); pm.expect(pm.response.json().success).to.eql(true); });"]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/participant/investments/{{resourceId}}", "host": ["{{baseUrl}}"], "path": ["participant", "investments", "{{resourceId}}"] },
+            "description": "Ownership-scoped: 403 for any resource not owned by the token holder (logged as security event)."
+          }
+        },
+        {
+          "name": "Capital Detail",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/participant/capital/{{resourceId}}", "host": ["{{baseUrl}}"], "path": ["participant", "capital", "{{resourceId}}"] }
+          }
+        },
+        {
+          "name": "Profit Allocation Detail",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/participant/profits/{{resourceId}}", "host": ["{{baseUrl}}"], "path": ["participant", "profits", "{{resourceId}}"] }
+          }
+        },
+        {
+          "name": "Fund Allocation Detail",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/participant/funds/{{resourceId}}", "host": ["{{baseUrl}}"], "path": ["participant", "funds", "{{resourceId}}"] }
+          }
+        },
+        {
+          "name": "Depreciation Detail",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/participant/depreciation/{{resourceId}}", "host": ["{{baseUrl}}"], "path": ["participant", "depreciation", "{{resourceId}}"] }
+          }
+        },
+        {
+          "name": "Monthly Profit Detail",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/participant/monthly-profits/{{resourceId}}", "host": ["{{baseUrl}}"], "path": ["participant", "monthly-profits", "{{resourceId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Notifications",
+      "item": [
+        {
+          "name": "List (GET /me/notifications)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('notifications contract', function () {",
+                  "    const wrap = pm.response.json();",
+                  "    pm.expect(wrap.success).to.eql(true);",
+                  "    if (wrap.data.data.length) {",
+                  "        ['type','title','message','read','created_at'].forEach(k => pm.expect(wrap.data.data[0]).to.have.property(k));",
+                  "        pm.expect(wrap.data.data[0].read).to.be.a('boolean');",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/me/notifications?read=&page=1", "host": ["{{baseUrl}}"], "path": ["me", "notifications"], "query": [{ "key": "read", "value": "" }, { "key": "page", "value": "1" }] },
+            "description": "Notification feed. Filter: read=true/false. Types: investment_update, monthly_profit_approved, settlement_created/approved/paid/cancelled, depreciation_update, investment_value_update."
+          }
+        },
+        {
+          "name": "Detail (GET /participant/notifications/{id})",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('notification detail 200', function () { pm.response.to.have.status(200); pm.expect(pm.response.json().success).to.eql(true); });"]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/participant/notifications/{{notificationId}}", "host": ["{{baseUrl}}"], "path": ["participant", "notifications", "{{notificationId}}"] },
+            "description": "Ownership-scoped single notification."
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api\Auth;
 use App\Models\Participant;
 use App\Services\RefreshTokenService;
 use App\Services\SecurityAuditService;
+use App\Http\Requests\ChangePasswordRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -118,12 +119,9 @@ class ParticipantAuthController
         ]);
     }
 
-    public function changePassword(Request $request): JsonResponse
+    public function changePassword(ChangePasswordRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'current_password' => ['required', 'string'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
-        ]);
+        $validated = $request->validated();
 
         $participant = $request->user();
 
