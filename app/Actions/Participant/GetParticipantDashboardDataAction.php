@@ -52,7 +52,7 @@ final class GetParticipantDashboardDataAction
 
     public function settlements(Participant $participant, array $filters): LengthAwarePaginator
     {
-        return SettlementItem::query()->with('settlement.payments')->where('participant_id', $participant->id)->when($filters['year'] ?? null, fn($query, $year) => $query->whereHas('settlement', fn($nested) => $nested->where('year', $year)))->when($filters['status'] ?? null, fn($query, $status) => $query->whereHas('settlement', fn($nested) => $nested->where('status', $status)))->latest('id')->paginate(20)->through(fn(SettlementItem $item): array => ['id' => $item->id, 'settlement_id' => $item->settlement_id, 'year' => $item->settlement?->year, 'status' => $item->settlement?->status, 'profit_share' => (string) $item->profit_share, 'fund_share' => (string) $item->fund_share, 'amount_due' => (string) $item->settlement?->amount_due, 'paid_amount' => (string) $item->settlement?->paid_amount, 'remaining' => bcsub((string) ($item->settlement?->amount_due ?? '0.00'), (string) ($item->settlement?->paid_amount ?? '0.00'), 2), 'payment_status' => $item->payment_status, 'paid_at' => $item->paid_at?->toISOString(), 'payments' => $item->settlement?->payments->map(fn($payment): array => ['id' => $payment->id, 'amount' => (string) $payment->amount, 'paid_at' => $payment->paid_at?->toISOString(), 'payment_method' => $payment->payment_method, 'reference' => $payment->reference, 'description' => $payment->description])->values()->all()])->withQueryString();
+        return SettlementItem::query()->with('settlement.payments')->where('participant_id', $participant->id)->when($filters['year'] ?? null, fn($query, $year) => $query->whereHas('settlement', fn($nested) => $nested->where('year', $year)))->when($filters['status'] ?? null, fn($query, $status) => $query->whereHas('settlement', fn($nested) => $nested->where('status', $status)))->latest('id')->paginate(20)->through(fn(SettlementItem $item): array => ['id' => $item->id, 'settlement_id' => $item->settlement_id, 'year' => $item->settlement?->year, 'status' => $item->settlement?->status, 'profit_share' => (string) $item->profit_share, 'fund_share' => (string) $item->fund_share, 'amount_due' => (string) $item->net_payable, 'paid_amount' => (string) $item->paid_amount, 'remaining' => bcsub((string) $item->net_payable, (string) $item->paid_amount, 2), 'payment_status' => $item->payment_status, 'paid_at' => $item->paid_at?->toISOString(), 'payments' => $item->settlement?->payments->map(fn($payment): array => ['id' => $payment->id, 'amount' => (string) $payment->amount, 'paid_at' => $payment->paid_at?->toISOString(), 'payment_method' => $payment->payment_method, 'reference' => $payment->reference, 'description' => $payment->description])->values()->all()])->withQueryString();
     }
 
     public function notifications(Participant $participant, array $filters): LengthAwarePaginator
@@ -73,9 +73,11 @@ final class GetParticipantDashboardDataAction
             'status' => $settlement->status,
             'profit_share' => (string) $item->profit_share,
             'fund_share' => (string) $item->fund_share,
-            'amount_due' => (string) $settlement->amount_due,
-            'paid_amount' => (string) $settlement->paid_amount,
-            'remaining' => bcsub((string) $settlement->amount_due, (string) $settlement->paid_amount, 2),
+            'amount_due' => (string) $item->net_payable,
+            'paid_amount' => (string) $item->paid_amount,
+            'remaining' => bcsub((string) $item->net_payable, (string) $item->paid_amount, 2),
+            'settlement_total_due' => (string) $settlement->amount_due,
+            'settlement_total_paid' => (string) $settlement->paid_amount,
             'approved_at' => $settlement->approved_at?->toISOString(),
             'payout_at' => $settlement->payout_at?->toISOString(),
             'payments' => $settlement->payments->map(fn($payment): array => $this->payment($payment))->values()->all(),
@@ -92,15 +94,33 @@ final class GetParticipantDashboardDataAction
 
     public function capitalGrowth(array $filters): LengthAwarePaginator
     {
-        $snapshots = CapitalSnapshot::query()->when($filters['year'] ?? null, fn($query, $year) => $query->where('year', $year))->orderBy('snapshot_date')->paginate(20)->withQueryString();
-        $previous = '0.00';
+        $query = CapitalSnapshot::query()
+            ->when($filters['year'] ?? null, fn($query, $year) => $query->where('year', $year))
+            ->orderBy('snapshot_date')
+            ->orderBy('id');
 
-        return $snapshots->through(function (CapitalSnapshot $snapshot) use (&$previous): array {
+        $paginator = $query->paginate(20)->withQueryString();
+        $rows = $paginator->getCollection();
+
+        $baseline = '0.00';
+        $first = $rows->first();
+        if ($first !== null && $paginator->currentPage() > 1) {
+            $baseline = (string) (CapitalSnapshot::query()
+                ->when($filters['year'] ?? null, fn($query, $year) => $query->where('year', $year))
+                ->where(fn($nested) => $nested->where('snapshot_date', '<', $first->snapshot_date)->orWhere(fn($sameDate) => $sameDate->where('snapshot_date', $first->snapshot_date)->where('id', '<', $first->id)))
+                ->orderByDesc('snapshot_date')
+                ->orderByDesc('id')
+                ->value('total_capital') ?? '0.00');
+        }
+
+        $previous = $baseline;
+
+        return $paginator->setCollection($rows->map(function (CapitalSnapshot $snapshot) use (&$previous): array {
             $current = (string) $snapshot->total_capital;
             $row = ['id' => $snapshot->id, 'snapshot_date' => $snapshot->snapshot_date?->toDateString(), 'year' => $snapshot->year, 'month' => $snapshot->month, 'snapshot_capital' => $current, 'movement' => bcsub($current, $previous, 2)];
             $previous = $current;
             return $row;
-        });
+        }));
     }
 
     private function payment($payment): array

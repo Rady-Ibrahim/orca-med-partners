@@ -131,6 +131,52 @@ class AnnualSettlementTest extends TestCase
         $item->save();
     }
 
+    public function test_participant_settlement_screens_show_own_due_not_aggregate(): void
+    {
+        $year = 2040;
+        [$admin, $first, $second] = $this->createApprovedAnnualData($year, '40.00');
+        $profit = MonthlyProfit::query()->where('year', $year)->firstOrFail();
+
+        ParticipantProfitAllocation::query()->create([
+            'monthly_profit_id' => $profit->id,
+            'participant_id' => $second->id,
+            'amount' => '25.00',
+            'share_ratio' => '1.0000',
+            'status' => 'approved',
+        ]);
+        \App\Models\ParticipantFundAllocation::query()->create([
+            'fund_id' => Fund::query()->create(['code' => 'INC-2040', 'name' => 'Incentive'])->id,
+            'monthly_profit_id' => $profit->id,
+            'participant_id' => $first->id,
+            'amount' => '5.00',
+            'allocation_type' => 'incentive',
+        ]);
+
+        $settlement = app(ApproveSettlementAction::class)->execute(
+            $admin,
+            app(CreateAnnualSettlementAction::class)->execute($admin, $year),
+        );
+
+        self::assertSame('70.00', (string) $settlement->amount_due);
+
+        $firstToken = $first->createToken('participant-api', ['*'])->plainTextToken;
+        $secondToken = $second->createToken('participant-api', ['*'])->plainTextToken;
+
+        $firstList = $this->withToken($firstToken)->getJson('/api/me/settlements')->assertOk()->json('data.data.0');
+        self::assertSame('45.00', $firstList['amount_due']);
+        self::assertSame('0.00', $firstList['paid_amount']);
+        self::assertSame('45.00', $firstList['remaining']);
+
+        $secondList = $this->withToken($secondToken)->getJson('/api/me/settlements')->assertOk()->json('data.data.0');
+        self::assertSame('25.00', $secondList['amount_due']);
+        self::assertSame('25.00', $secondList['remaining']);
+
+        $detail = $this->withToken($firstToken)->getJson('/api/me/settlements/' . $settlement->id)->assertOk()->json('data');
+        self::assertSame('45.00', $detail['amount_due']);
+        self::assertSame('45.00', $detail['remaining']);
+        self::assertSame('70.00', $detail['settlement_total_due']);
+    }
+
     public function test_participant_can_only_read_own_settlement(): void
     {
         [$admin, $owner, $other] = $this->createApprovedAnnualData(2029);

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\ParticipantApi;
 
+use App\Models\CapitalSnapshot;
 use App\Models\Investment;
 use App\Models\Notification;
 use App\Models\Participant;
@@ -75,6 +76,32 @@ final class ParticipantDashboardApiTest extends TestCase
         $this->withToken($token)->postJson('/api/me/settlements')->assertStatus(405);
         $this->withToken($token)->postJson('/api/me/funds')->assertStatus(405);
         $this->withToken($token)->postJson('/api/me/depreciation')->assertStatus(405);
+    }
+
+    public function test_capital_growth_movement_is_continuous_across_pages(): void
+    {
+        $participant = Participant::factory()->create(['password' => Hash::make('secret123'), 'status' => 'active']);
+        $token = $participant->createToken('participant-api', ['*'])->plainTextToken;
+
+        for ($i = 1; $i <= 25; $i++) {
+            CapitalSnapshot::query()->create([
+                'snapshot_date' => sprintf('2026-01-%02d', $i),
+                'year' => 2026,
+                'month' => 1,
+                'total_capital' => (string) ($i * 100),
+                'status' => 'final',
+            ]);
+        }
+
+        $page1 = $this->withToken($token)->getJson('/api/me/capital/growth?page=1')->assertOk();
+        self::assertCount(20, $page1->json('data.data'));
+        self::assertSame('2000.00', $page1->json('data.data.19.snapshot_capital'));
+        self::assertSame('100.00', $page1->json('data.data.19.movement'));
+
+        $page2 = $this->withToken($token)->getJson('/api/me/capital/growth?page=2')->assertOk();
+        self::assertCount(5, $page2->json('data.data'));
+        self::assertSame('2100.00', $page2->json('data.data.0.snapshot_capital'));
+        self::assertSame('100.00', $page2->json('data.data.0.movement'));
     }
 
     public function test_unauthenticated_participant_dashboard_request_is_rejected(): void
