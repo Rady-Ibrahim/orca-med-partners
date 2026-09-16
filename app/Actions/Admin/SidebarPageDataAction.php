@@ -86,6 +86,7 @@ final class SidebarPageDataAction
 
         return $query->paginate(15)->withQueryString()->through(function (Investment $investment): array {
             return [
+                'id'          => $investment->getKey(),
                 'participant' => trim(($investment->participant?->first_name ?? '') . ' ' . ($investment->participant?->last_name ?? '')) ?: ($investment->participant?->username ?? '—'),
                 'amount'      => DecimalFormatter::money($investment->amount),
                 'status'      => $investment->status,

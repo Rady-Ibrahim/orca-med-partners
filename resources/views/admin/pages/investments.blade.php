@@ -5,7 +5,14 @@
         <p class="eyebrow">المشاريع المالية</p>
         <h1>الاستثمارات</h1>
     </div>
+    <div class="page-actions">
+        <button type="button" class="primary-button" data-modal-open="modal-investment-create">+ إضافة استثمار</button>
+    </div>
 </div>
+
+@if (session('success'))
+    <div class="alert alert-success">{{ session('success') }}</div>
+@endif
 
 <form class="page-filter-bar" method="GET" action="{{ route('admin.investments') }}">
     <label>
@@ -48,6 +55,7 @@
                         <th>الحالة</th>
                         <th>تاريخ الاستثمار</th>
                         <th>ملاحظات</th>
+                        <th>إجراءات</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -58,6 +66,15 @@
                             <td><span class="status-badge status-{{ $item['status'] }}">{{ match($item['status']) { 'approved' => 'معتمد', 'pending' => 'قيد الانتظار', 'rejected' => 'مرفوض', default => $item['status'] } }}</span></td>
                             <td class="muted">{{ $item['date'] }}</td>
                             <td>{{ $item['notes'] }}</td>
+                            <td>
+                                <div class="row-actions">
+                                    @if ($item['status'] === 'pending')
+                                        <button type="button" class="action-approve" data-post
+                                            data-url="{{ route('admin.investments.approve', $item['id']) }}"
+                                            data-confirm="هل أنت متأكد من اعتماد استثمار «{{ $item['participant'] }}» بقيمة {{ $item['amount'] }} ر.س؟">اعتماد</button>
+                                    @endif
+                                </div>
+                            </td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -66,4 +83,49 @@
         <div class="pagination-wrap">{{ $items->links() }}</div>
     </div>
 @endif
+
+{{-- ── إضافة استثمار ── --}}
+<div class="modal-backdrop" id="modal-investment-create" hidden>
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3>+ إضافة استثمار</h3>
+            <button type="button" class="modal-close" data-modal-close aria-label="إغلاق">×</button>
+        </div>
+        <form data-ajax-form action="{{ route('admin.investments.store') }}" method="POST">
+            @csrf
+            <div class="modal-body">
+                <div class="modal-grid">
+                    <div class="om-field full">
+                        <label for="inv_participant">المشارك</label>
+                        <select id="inv_participant" name="participant_id" required>
+                            <option value="">اختر مشارك...</option>
+                            @foreach ($participants as $participant)
+                                <option value="{{ $participant['id'] }}">{{ $participant['name'] }}</option>
+                            @endforeach
+                        </select>
+                        @if ($participants->isEmpty())
+                            <span class="om-error">لا يوجد مشاركون مسجلون بعد.</span>
+                        @endif
+                    </div>
+                    <div class="om-field">
+                        <label for="inv_amount">المبلغ (ر.س)</label>
+                        <input id="inv_amount" name="amount" type="number" required min="0.01" step="0.01" dir="ltr" placeholder="0.00">
+                    </div>
+                    <div class="om-field">
+                        <label for="inv_date">تاريخ الاستثمار</label>
+                        <input id="inv_date" name="invested_at" type="date" value="{{ now()->toDateString() }}">
+                    </div>
+                    <div class="om-field full">
+                        <label for="inv_notes">ملاحظات</label>
+                        <textarea id="inv_notes" name="notes" rows="2"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="secondary-button" data-modal-close>إلغاء</button>
+                <button type="submit" class="primary-button" data-submit>إنشاء الاستثمار</button>
+            </div>
+        </form>
+    </div>
+</div>
 @endsection

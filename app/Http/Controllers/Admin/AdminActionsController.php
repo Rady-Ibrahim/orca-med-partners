@@ -9,6 +9,7 @@ use App\Actions\Financial\CreateMonthlyProfitAction;
 use App\Actions\Financial\CreateMonthlyProfitRevisionAction;
 use App\Actions\Funds\CreateFundAction;
 use App\Actions\Funds\CreateFundTransactionAction;
+use App\Actions\Investment\ApproveInvestmentAction;
 use App\Actions\Settlements\ApproveSettlementAction;
 use App\Actions\Settlements\CreateAnnualSettlementAction;
 use App\Actions\Settlements\CreateSettlementRevisionAction;
@@ -25,6 +26,7 @@ use App\Http\Requests\StoreSettlementPaymentRequest;
 use App\Models\CapitalSnapshot;
 use App\Models\DistributionRule;
 use App\Models\Fund;
+use App\Models\Investment;
 use App\Models\MonthlyProfit;
 use App\Models\Settlement;
 use Illuminate\Http\JsonResponse;
@@ -140,6 +142,58 @@ final class AdminActionsController
         }
 
         return redirect()->route('admin.funds')->with('success', 'تم تسجيل الحركة المالية.');
+    }
+
+    public function storeInvestment(Request $request): JsonResponse|RedirectResponse
+    {
+        abort_if($request->user()->cannot('create', Investment::class), 403, 'Forbidden.');
+
+        $data = $request->validate([
+            'participant_id' => ['required', 'integer', 'exists:participants,id'],
+            'amount' => ['required', 'numeric', 'min:0.01', 'regex:/^\d+(?:\.\d{1,2})?$/'],
+            'invested_at' => ['nullable', 'date'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        try {
+            $investment = Investment::query()->create([
+                'participant_id' => (int) $data['participant_id'],
+                'amount' => (string) $data['amount'],
+                'invested_at' => $data['invested_at'] ?? now()->toDateString(),
+                'status' => 'pending',
+                'notes' => $data['notes'] ?? null,
+                'created_by_admin_id' => $request->user()->id,
+            ]);
+        } catch (Throwable $e) {
+            return $this->fail($request, $e, 'تعذر إنشاء الاستثمار.');
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'تم إنشاء الاستثمار بانتظار الاعتماد.',
+                'data' => ['id' => $investment->id],
+            ], 201);
+        }
+
+        return redirect()->route('admin.investments')->with('success', 'تم إنشاء الاستثمار بانتظار الاعتماد.');
+    }
+
+    public function approveInvestment(Request $request, Investment $investment, ApproveInvestmentAction $action): JsonResponse|RedirectResponse
+    {
+        abort_if($request->user()->cannot('approve', $investment), 403, 'Forbidden.');
+
+        try {
+            $action->execute($request->user(), $investment);
+        } catch (Throwable $e) {
+            return $this->fail($request, $e, 'تعذر اعتماد الاستثمار.');
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'تم اعتماد الاستثمار.']);
+        }
+
+        return redirect()->route('admin.investments')->with('success', 'تم اعتماد الاستثمار.');
     }
 
     public function storeSettlement(Request $request, CreateAnnualSettlementAction $action): JsonResponse|RedirectResponse

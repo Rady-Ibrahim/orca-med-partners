@@ -26,7 +26,15 @@ final class SidebarPageController
     public function investments(Request $request, SidebarPageDataAction $action): View
     {
         return view('admin.pages.investments', [
-            'items'   => $action->investments($request->only(['participant', 'status', 'date_from', 'date_to'])),
+            'items'       => $action->investments($request->only(['participant', 'status', 'date_from', 'date_to'])),
+            'participants' => \App\Models\Participant::query()
+                ->orderBy('first_name')
+                ->orderBy('last_name')
+                ->get()
+                ->map(fn(\App\Models\Participant $p): array => [
+                    'id'   => $p->getKey(),
+                    'name' => trim($p->first_name . ' ' . $p->last_name) ?: $p->username,
+                ]),
             'title'   => 'الاستثمارات',
             'filters' => $request->only(['participant', 'status', 'date_from', 'date_to']),
         ]);

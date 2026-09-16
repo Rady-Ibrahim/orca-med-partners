@@ -23,6 +23,8 @@ Route::middleware('ensure.web.admin')->prefix('admin')->name('admin.')->group(fu
     Route::put('/participants/{participant}/password', [AdminParticipantController::class, 'passwordUpdate'])->name('participants.password.update');
     Route::post('/participants/{participant}/revoke-tokens', [AdminParticipantController::class, 'revokeTokens'])->name('participants.revoke-tokens');
     Route::get('/investments', [SidebarPageController::class, 'investments'])->name('investments');
+    Route::post('/investments', [AdminActionsController::class, 'storeInvestment'])->name('investments.store');
+    Route::post('/investments/{investment}/approve', [AdminActionsController::class, 'approveInvestment'])->name('investments.approve');
     Route::get('/capital', [SidebarPageController::class, 'capital'])->name('capital');
     Route::post('/capital', [AdminActionsController::class, 'storeCapitalSnapshot'])->name('capital.store');
     Route::get('/monthly-profits', [SidebarPageController::class, 'monthlyProfits'])->name('monthly-profits');
