@@ -296,6 +296,35 @@ button {
     box-shadow: 0 0 0 3px var(--cyan-dim);
 }
 
+.auth-form .password-field {
+    position: relative;
+}
+
+.auth-form .password-field input {
+    padding-inline-end: 44px;
+}
+
+.password-toggle {
+    position: absolute;
+    top: 50%;
+    inset-inline-end: 10px;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-faint);
+    cursor: pointer;
+    padding: 6px;
+    display: grid;
+    place-items: center;
+    border-radius: 6px;
+    transition: color var(--transition), background var(--transition);
+}
+
+.password-toggle:hover {
+    color: var(--text-head);
+    background: var(--bg-hover);
+}
+
 .button {
     border-radius: var(--radius-sm);
     padding: 13px 20px;

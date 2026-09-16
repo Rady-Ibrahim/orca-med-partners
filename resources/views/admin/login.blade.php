@@ -24,7 +24,17 @@
                 <input id="username" name="username" value="{{ old('username') }}" autocomplete="username" required
                     autofocus>
                 <label for="password">كلمة المرور</label>
-                <input id="password" name="password" type="password" autocomplete="current-password" required>
+                <div class="password-field">
+                    <input id="password" name="password" type="password" autocomplete="current-password" required>
+                    <button type="button" class="password-toggle" id="passwordToggle" aria-label="إظهار كلمة المرور"
+                        title="إظهار كلمة المرور">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
+                </div>
                 <button class="button button-primary button-wide" type="submit">دخول آمن <span
                         aria-hidden="true">←</span></button>
             </form>
@@ -39,6 +49,16 @@
             <div class="aside-stat"><strong>01</strong><span>مركز مالي موثوق</span></div>
         </aside>
     </main>
+    <script>
+        const toggle = document.getElementById('passwordToggle');
+        const password = document.getElementById('password');
+        toggle.addEventListener('click', () => {
+            const show = password.type === 'password';
+            password.type = show ? 'text' : 'password';
+            toggle.setAttribute('aria-label', show ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور');
+            toggle.setAttribute('title', show ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور');
+        });
+    </script>
 </body>
 
 </html>

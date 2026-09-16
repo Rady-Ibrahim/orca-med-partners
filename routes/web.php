@@ -53,6 +53,4 @@ Route::middleware('ensure.web.admin')->prefix('admin')->name('admin.')->group(fu
     Route::get('/audit-logs/{auditLog}', [SidebarPageController::class, 'auditLogDetails'])->name('audit-logs.show');
 });
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::get('/', fn () => redirect()->route('admin.login'));
