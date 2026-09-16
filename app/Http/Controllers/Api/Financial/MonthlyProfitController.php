@@ -16,6 +16,24 @@ use Illuminate\Http\Request;
 
 final class MonthlyProfitController
 {
+    public function index(Request $request): JsonResponse
+    {
+        $admin = $request->user();
+        abort_unless($admin instanceof Admin && $admin->can('profits.view'), 403, 'Forbidden.');
+
+        $profits = MonthlyProfit::query()
+            ->withCount('allocations')
+            ->when($request->filled('year'), fn($query) => $query->where('year', (int) $request->integer('year')))
+            ->when($request->filled('month'), fn($query) => $query->where('month', (int) $request->integer('month')))
+            ->when($request->string('status')->toString(), fn($query, $status) => $query->where('status', $status))
+            ->latest('year')
+            ->latest('month')
+            ->paginate((int) $request->integer('per_page', 15))
+            ->withQueryString();
+
+        return response()->json(['success' => true, 'data' => $profits]);
+    }
+
     public function store(Request $request, CreateMonthlyProfitAction $action): JsonResponse
     {
         $admin = $request->user();

@@ -165,7 +165,7 @@ class FundLedgerTest extends TestCase
 
         $this->withToken($token)->getJson('/api/admin/funds/' . $fund->id . '/transactions')
             ->assertOk()
-            ->assertJsonPath('data.0.amount', '0.10');
+            ->assertJsonPath('data.data.0.amount', '0.10');
     }
 
     private function adminWithFundPermission(): Admin

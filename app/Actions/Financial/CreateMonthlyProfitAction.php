@@ -6,10 +6,15 @@ namespace App\Actions\Financial;
 
 use App\Domain\Financial\Services\DistributionRuleSnapshotService;
 use App\Domain\Financial\Services\FinancialCalculationServiceContract;
+use App\Domain\Financial\ValueObjects\FinancialRoundingService;
+use App\Domain\Financial\ValueObjects\MonthlyProfitCalculationResult;
 use App\Models\Admin;
 use App\Models\CapitalSnapshot;
+use App\Models\DepreciationNote;
 use App\Models\DistributionRule;
+use App\Models\Fund;
 use App\Models\MonthlyProfit;
+use App\Models\ParticipantFundAllocation;
 use App\Models\ParticipantProfitAllocation;
 use App\Services\SecurityAuditService;
 use Illuminate\Support\Facades\DB;
@@ -19,6 +24,7 @@ final class CreateMonthlyProfitAction
     public function __construct(
         private FinancialCalculationServiceContract $calculationService,
         private DistributionRuleSnapshotService $ruleSnapshotService,
+        private FinancialRoundingService $rounding,
         private SecurityAuditService $audit,
     ) {}
 
@@ -70,6 +76,8 @@ final class CreateMonthlyProfitAction
                 ]);
             }
 
+            $this->wireFundComponents($profit, $result, $snapshot);
+
             $this->audit->log('monthly_profit_created', $admin, 'monthly_profit', $profit->id, [
                 'year' => $year,
                 'month' => $month,
@@ -78,5 +86,55 @@ final class CreateMonthlyProfitAction
 
             return $profit->load('allocations');
         });
+    }
+
+    private function wireFundComponents(MonthlyProfit $profit, MonthlyProfitCalculationResult $result, CapitalSnapshot $snapshot): void
+    {
+        $funds = [
+            'growth' => ['fund' => $this->fundByCode('growth_fund'), 'amount' => $result->growthAmount],
+            'incentive' => ['fund' => $this->fundByCode('incentive_fund'), 'amount' => $result->incentiveAmount],
+            'depreciation' => ['fund' => $this->fundByCode('depreciation_fund'), 'amount' => $result->depreciationAmount],
+        ];
+
+        foreach ($funds as $type => $config) {
+            $fund = $config['fund'];
+            $amount = $config['amount'];
+
+            if (! $fund || bccomp($amount, '0', 2) <= 0) {
+                continue;
+            }
+
+foreach ($result->participantAllocations as $allocation) {
+                ParticipantFundAllocation::query()->create([
+                    'fund_id' => $fund->id,
+                    'monthly_profit_id' => $profit->id,
+                    'participant_id' => $allocation['participant_id'],
+                    'amount' => $this->rounding->money(bcmul($amount, $allocation['share_ratio'], 8)),
+                    'allocation_type' => $type,
+                ]);
+            }
+        }
+
+        $depreciationFund = $funds['depreciation']['fund'];
+        if ($depreciationFund && bccomp($result->depreciationAmount, '0', 2) > 0) {
+            DepreciationNote::query()->create([
+                'participant_id' => null,
+                'fund_id' => $depreciationFund->id,
+                'monthly_profit_id' => $profit->id,
+                'amount' => $result->depreciationAmount,
+                'rate' => $result->ruleSnapshot['depreciation_fund_rate'] ?? '0.0500',
+                'transaction_date' => $snapshot->snapshot_date ?? now()->toDateString(),
+                'year' => $profit->year,
+                'month' => $profit->month,
+                'description' => "مخصص إهلاك شهر {$profit->month}/{$profit->year}",
+                'admin_note' => 'تم إنشاء مخصص الإهلاك تلقائياً من فترة الأرباح.',
+                'created_by_admin_id' => $profit->created_by_admin_id,
+            ]);
+        }
+    }
+
+    private function fundByCode(string $code): ?Fund
+    {
+        return Fund::query()->where('code', $code)->first();
     }
 }

@@ -23,10 +23,10 @@ final class CreateAnnualSettlementAction
         private SecurityAuditService $audit,
     ) {}
 
-    public function execute(Admin $admin, int $year, ?int $parentId = null): Settlement
+    public function execute(Admin $admin, int $year, ?int $parentId = null, string|int $previousPayments = '0.00'): Settlement
     {
-        return DB::transaction(function () use ($admin, $year, $parentId) {
-            if ($parentId === null && Settlement::query()->where('year', $year)->whereIn('status', ['draft', 'approved', 'paid'])->exists()) {
+        return DB::transaction(function () use ($admin, $year, $parentId, $previousPayments) {
+            if ($parentId === null && Settlement::query()->where('year', $year)->whereIn('status', ['draft', 'approved', 'partially_paid', 'paid'])->exists()) {
                 throw new InvalidAnnualSettlementException('An active settlement already exists for this year.');
             }
 
@@ -68,7 +68,7 @@ final class CreateAnnualSettlementAction
             foreach ($fundByParticipant as $amount) {
                 $fundTotal = bcadd($fundTotal, (string) $amount, 2);
             }
-            $totalDue = $this->amountDue->calculate($profitTotal, $fundTotal, '0.00')['amount_due'];
+            $totalDue = $this->amountDue->calculate($profitTotal, $fundTotal, $previousPayments)['amount_due'];
 
             $settlement = Settlement::query()->create([
                 'parent_id' => $parentId,
@@ -82,7 +82,9 @@ final class CreateAnnualSettlementAction
                 'amount_due' => $totalDue,
                 'paid_amount' => '0.00',
                 'created_by_admin_id' => $admin->id,
-                'notes' => 'Amount due equals approved annual participant profit plus approved participant fund allocations. Principal remains excluded. Previous payments are recorded separately in settlement_payments.',
+                'notes' => $parentId
+                    ? sprintf('Revision settlement. Amount due (%s) = approved annual participant profit + approved fund allocations − previous payments already recorded on the parent settlement.', $totalDue)
+                    : 'Amount due equals approved annual participant profit plus approved participant fund allocations. Principal remains excluded. Previous payments are recorded separately in settlement_payments.',
             ]);
 
             foreach ($profitByParticipant as $participantId => $amount) {

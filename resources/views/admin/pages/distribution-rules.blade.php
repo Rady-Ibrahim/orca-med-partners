@@ -5,7 +5,17 @@
         <p class="eyebrow">قواعد التشغيل</p>
         <h1>قواعد التوزيع</h1>
     </div>
+    <div class="page-actions">
+        <button type="button" class="primary-button" data-modal-open="modal-rule-create">+ إنشاء قاعدة توزيع</button>
+    </div>
 </div>
+
+@if (session('success'))
+    <div class="alert alert-success">{{ session('success') }}</div>
+@endif
+@if (session('error'))
+    <div class="alert alert-danger">{{ session('error') }}</div>
+@endif
 
 <form class="page-filter-bar" method="GET" action="{{ route('admin.distribution-rules') }}">
     <label>
@@ -43,6 +53,7 @@
                         <th>الحوافز</th>
                         <th>الموزع</th>
                         <th>الحالة</th>
+                        <th>إجراءات</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -56,7 +67,14 @@
                             <td class="numeric">{{ $item['growth'] }}</td>
                             <td class="numeric">{{ $item['incentive'] }}</td>
                             <td class="numeric">{{ $item['distributed'] }}</td>
-                            <td><span class="status-badge status-{{ $item['status'] }}">{{ $item['status'] === 'active' ? 'نشطة' : 'غير نشطة' }}</span></td>
+                            <td><span class="status-badge status-{{ $item['status'] }}">{{ $item['status'] === 'active' ? 'نشطة' : $item['status'] }}</span></td>
+                            <td>
+                                <div class="row-actions">
+                                    <button type="button" class="action-edit" data-fill-modal="modal-rule-edit"
+                                        data-action-url="{{ route('admin.distribution-rules.update', $item['id']) }}"
+                                        data-edit='@json($item["edit_payload"])'>تعديل</button>
+                                </div>
+                            </td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -65,4 +83,140 @@
         <div class="pagination-wrap">{{ $items->links() }}</div>
     </div>
 @endif
+
+{{-- ── إنشاء قاعدة توزيع ── --}}
+<div class="modal-backdrop" id="modal-rule-create" hidden>
+    <div class="modal-card wide">
+        <div class="modal-header">
+            <h3>+ إنشاء قاعدة توزيع</h3>
+            <button type="button" class="modal-close" data-modal-close aria-label="إغلاق">×</button>
+        </div>
+        <form data-ajax-form action="{{ route('admin.distribution-rules.store') }}" method="POST">
+            @csrf
+            <div class="modal-body">
+                <div class="modal-grid">
+                    <div class="om-field">
+                        <label for="rule_from">سارية من</label>
+                        <input id="rule_from" name="effective_from" type="date" required value="{{ now()->toDateString() }}">
+                    </div>
+                    <div class="om-field">
+                        <label for="rule_to">سارية حتى (اختياري)</label>
+                        <input id="rule_to" name="effective_to" type="date">
+                    </div>
+                    <div class="om-field">
+                        <label for="rule_mgmt">رسوم الإدارة (٠–١)</label>
+                        <input id="rule_mgmt" name="management_fee_rate" type="number" required min="0" max="1" step="0.0001">
+                    </div>
+                    <div class="om-field">
+                        <label for="rule_dep">إهلاك (٠–١)</label>
+                        <input id="rule_dep" name="depreciation_fund_rate" type="number" required min="0" max="1" step="0.0001">
+                    </div>
+                    <div class="om-field">
+                        <label for="rule_growth">النمو (٠–١)</label>
+                        <input id="rule_growth" name="growth_fund_rate" type="number" required min="0" max="1" step="0.0001">
+                    </div>
+                    <div class="om-field">
+                        <label for="rule_incentive">الحوافز (٠–١)</label>
+                        <input id="rule_incentive" name="incentive_fund_rate" type="number" required min="0" max="1" step="0.0001">
+                    </div>
+                    <div class="om-field">
+                        <label for="rule_distributed">الموزع للمشاركين (٠–١)</label>
+                        <input id="rule_distributed" name="distributed_share_rate" type="number" required min="0" max="1" step="0.0001">
+                    </div>
+                    <div class="om-field">
+                        <label for="rule_status">الحالة</label>
+                        <select id="rule_status" name="status" required>
+                            <option value="draft">مسودة</option>
+                            <option value="active">نشطة</option>
+                            <option value="locked">مقفلة</option>
+                        </select>
+                    </div>
+                    <div class="om-field full">
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                            <input type="checkbox" name="is_default" value="1" style="width:auto">
+                            قاعدة افتراضية
+                        </label>
+                    </div>
+                    <div class="om-field full">
+                        <label for="rule_notes">الوصف / الملاحظات</label>
+                        <textarea id="rule_notes" name="notes" rows="2"></textarea>
+                    </div>
+                </div>
+                <p class="hint" style="margin-top:10px;color:var(--text-faint)">يجب أن يكون مجموع النِسَب يساوي 1 تمامًا.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="secondary-button" data-modal-close>إلغاء</button>
+                <button type="submit" class="primary-button" data-submit>إنشاء القاعدة</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{-- ── تعديل قاعدة توزيع ── --}}
+<div class="modal-backdrop" id="modal-rule-edit" hidden>
+    <div class="modal-card wide">
+        <div class="modal-header">
+            <h3>تعديل قاعدة التوزيع</h3>
+            <button type="button" class="modal-close" data-modal-close aria-label="إغلاق">×</button>
+        </div>
+        <form data-ajax-form action="" method="POST">
+            @csrf
+            @method('PATCH')
+            <div class="modal-body">
+                <div class="modal-grid">
+                    <div class="om-field">
+                        <label for="rule_edit_from">سارية من</label>
+                        <input id="rule_edit_from" name="effective_from" type="date" required>
+                    </div>
+                    <div class="om-field">
+                        <label for="rule_edit_to">سارية حتى (اختياري)</label>
+                        <input id="rule_edit_to" name="effective_to" type="date">
+                    </div>
+                    <div class="om-field">
+                        <label for="rule_edit_mgmt">رسوم الإدارة (٠–١)</label>
+                        <input id="rule_edit_mgmt" name="management_fee_rate" type="number" required min="0" max="1" step="0.0001">
+                    </div>
+                    <div class="om-field">
+                        <label for="rule_edit_dep">إهلاك (٠–١)</label>
+                        <input id="rule_edit_dep" name="depreciation_fund_rate" type="number" required min="0" max="1" step="0.0001">
+                    </div>
+                    <div class="om-field">
+                        <label for="rule_edit_growth">النمو (٠–١)</label>
+                        <input id="rule_edit_growth" name="growth_fund_rate" type="number" required min="0" max="1" step="0.0001">
+                    </div>
+                    <div class="om-field">
+                        <label for="rule_edit_incentive">الحوافز (٠–١)</label>
+                        <input id="rule_edit_incentive" name="incentive_fund_rate" type="number" required min="0" max="1" step="0.0001">
+                    </div>
+                    <div class="om-field">
+                        <label for="rule_edit_distributed">الموزع للمشاركين (٠–١)</label>
+                        <input id="rule_edit_distributed" name="distributed_share_rate" type="number" required min="0" max="1" step="0.0001">
+                    </div>
+                    <div class="om-field">
+                        <label for="rule_edit_status">الحالة</label>
+                        <select id="rule_edit_status" name="status" required>
+                            <option value="draft">مسودة</option>
+                            <option value="active">نشطة</option>
+                            <option value="locked">مقفلة</option>
+                        </select>
+                    </div>
+                    <div class="om-field full">
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                            <input type="checkbox" name="is_default" value="1" style="width:auto">
+                            قاعدة افتراضية
+                        </label>
+                    </div>
+                    <div class="om-field full">
+                        <label for="rule_edit_notes">الوصف / الملاحظات</label>
+                        <textarea id="rule_edit_notes" name="notes" rows="2"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="secondary-button" data-modal-close>إلغاء</button>
+                <button type="submit" class="primary-button" data-submit>حفظ التعديلات</button>
+            </div>
+        </form>
+    </div>
+</div>
 @endsection

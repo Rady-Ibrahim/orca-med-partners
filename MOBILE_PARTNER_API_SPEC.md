@@ -220,13 +220,16 @@ For the "official **signed** statement" requirement: the settlement-statement PD
 `PUT /me/settings/notifications` Body `{ "email": bool, "push": bool, "categories": ["financial","settlement","investment"] }` — requires new `notification_preferences` table.
 
 ### ❌ GAP — ROI Calculator (Interactive Investment Calculator)
-Blocked by design per `PHASE_9_SPECIFICATION_GAP_REPORT.md` — no authoritative growth formula. Until approved, expose a **pure function endpoint**:
+> **Updated:** endpoint implemented as a server-authoritative pure function (compound monthly, BCMath + half-even rounding).
 ```
 POST /me/tools/roi-simulation
 { "base_capital": "525000.00", "months": 12, "expected_monthly_rate": "0.015" }
-→ { "projected_capital": "619244.00", "projected_profit": "94244.00", "schedule": [ { "month":1, "capital":"532875.00", "profit":"7875.00" }, ... ] }
+→ { "base_capital": "525000.00", "months": 12, "expected_monthly_rate": "0.0150",
+    "projected_capital": "619244.00", "projected_profit": "94244.00",
+    "average_monthly_profit": "7853.67",
+    "schedule": [ { "month": 1, "capital": "532875.00", "profit": "7875.00" }, ... ] }
 ```
-Rule: **server-authoritative only** — never trust client-provided formulas; validate numeric bounds (`base_capital > 0`, `months 1–360`, `rate -1..1`). Mark as `data.disclaimer` (projection ≠ guarantee).
+Rule: **server-authoritative only** — never trust client-provided formulas; validate numeric bounds (`base_capital > 0`, `months 1–360`, `rate -1..1`). Mark as `data.disclaimer` (projection ≠ guarantee). `schedule[].capital` is the closing capital for that month.
 
 ### ❌ GAP — Security / 2FA
 No TOTP package installed. Admin page labels 2FA "غير مُفعّل". Endpoints to plan:

@@ -302,6 +302,28 @@ class AnnualSettlementTest extends TestCase
         self::assertDatabaseCount('fund_transactions', 0);
     }
 
+    public function test_revision_amount_due_is_net_of_previous_payments(): void
+    {
+        [$admin] = $this->createApprovedAnnualData(2038);
+        $paid = app(MarkSettlementPaidAction::class)->execute(
+            $admin,
+            app(ApproveSettlementAction::class)->execute(
+                $admin,
+                app(CreateAnnualSettlementAction::class)->execute($admin, 2038),
+            ),
+        );
+
+        $revision = app(CreateSettlementRevisionAction::class)->execute($admin, $paid);
+
+        self::assertSame('65.00', (string) $paid->fresh()->amount_due);
+        self::assertSame('65.00', (string) $paid->fresh()->paid_amount);
+        self::assertSame('0.00', (string) $revision->amount_due);
+        self::assertSame('0.00', (string) $revision->net_payable);
+        self::assertSame('0.00', (string) $revision->paid_amount);
+        self::assertSame($paid->id, $revision->parent_id);
+        self::assertSame(2, $revision->version);
+    }
+
     /** @return array{Admin, Participant, Participant} */
     private function createApprovedAnnualData(int $year, string $allocationAmount = '65.00'): array
     {

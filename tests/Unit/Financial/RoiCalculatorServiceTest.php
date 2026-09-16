@@ -15,15 +15,16 @@ final class RoiCalculatorServiceTest extends TestCase
         $result = (new RoiCalculatorService(new FinancialRoundingService()))->simulate('1000.00', 3, '0.10');
 
         self::assertSame('1000.00', $result['base_capital']);
-        self::assertSame(3, $result['years']);
-        self::assertSame('0.1000', $result['expected_annual_rate']);
+        self::assertSame(3, $result['months']);
+        self::assertSame('0.1000', $result['expected_monthly_rate']);
         self::assertSame('1331.00', $result['projected_capital']);
         self::assertSame('331.00', $result['projected_profit']);
+        self::assertSame('110.33', $result['average_monthly_profit']);
 
         self::assertSame([
-            ['year' => 1, 'opening_capital' => '1000.00', 'profit' => '100.00', 'closing_capital' => '1100.00'],
-            ['year' => 2, 'opening_capital' => '1100.00', 'profit' => '110.00', 'closing_capital' => '1210.00'],
-            ['year' => 3, 'opening_capital' => '1210.00', 'profit' => '121.00', 'closing_capital' => '1331.00'],
+            ['month' => 1, 'capital' => '1100.00', 'profit' => '100.00'],
+            ['month' => 2, 'capital' => '1210.00', 'profit' => '110.00'],
+            ['month' => 3, 'capital' => '1331.00', 'profit' => '121.00'],
         ], $result['schedule']);
     }
 
@@ -33,6 +34,7 @@ final class RoiCalculatorServiceTest extends TestCase
 
         self::assertSame('2001037.50', $result['projected_capital']);
         self::assertSame('501037.50', $result['projected_profit']);
+        self::assertSame('250518.75', $result['average_monthly_profit']);
     }
 
     public function test_loss_rate_produces_negative_profit_but_never_negative_capital_logic(): void
@@ -41,13 +43,15 @@ final class RoiCalculatorServiceTest extends TestCase
 
         self::assertSame('80.00', $result['projected_capital']);
         self::assertSame('-20.00', $result['projected_profit']);
+        self::assertSame('-20.00', $result['average_monthly_profit']);
     }
 
-    public function test_single_year_matches_flat_interest(): void
+    public function test_single_month_matches_flat_interest(): void
     {
         $result = (new RoiCalculatorService(new FinancialRoundingService()))->simulate('500000.00', 1, '0.12');
 
         self::assertSame('560000.00', $result['projected_capital']);
         self::assertSame('60000.00', $result['projected_profit']);
+        self::assertSame('60000.00', $result['average_monthly_profit']);
     }
 }

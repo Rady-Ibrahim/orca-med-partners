@@ -26,7 +26,14 @@ final class SettlementController
     {
         Gate::forUser($request->user())->authorize('viewAny', Settlement::class);
 
-        return response()->json(['success' => true, 'data' => $action->execute()]);
+        return response()->json([
+            'success' => true,
+            'data' => $action->execute(
+                $request->filled('year') ? (int) $request->integer('year') : null,
+                $request->string('status')->toString() ?: null,
+                (int) $request->integer('per_page', 15),
+            ),
+        ]);
     }
 
     public function store(StoreAnnualSettlementRequest $request, CreateAnnualSettlementAction $action): JsonResponse

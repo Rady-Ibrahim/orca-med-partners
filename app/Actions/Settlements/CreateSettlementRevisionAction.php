@@ -25,7 +25,7 @@ final class CreateSettlementRevisionAction
                 throw new InvalidAnnualSettlementException('Only approved or paid settlements can be revised.');
             }
 
-            $revision = $this->create->execute($admin, (int) $locked->year, $locked->id);
+            $revision = $this->create->execute($admin, (int) $locked->year, $locked->id, $this->previousPayments($locked));
             if ($locked->status === 'approved') {
                 $locked->status = 'superseded';
                 $locked->save();
@@ -39,5 +39,10 @@ final class CreateSettlementRevisionAction
 
             return $revision;
         });
+    }
+
+    private function previousPayments(Settlement $settlement): string
+    {
+        return bcadd((string) $settlement->payments()->sum('amount'), '0', 2);
     }
 }

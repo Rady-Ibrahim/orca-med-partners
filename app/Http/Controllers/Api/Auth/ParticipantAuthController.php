@@ -59,20 +59,7 @@ class ParticipantAuthController
             'context' => 'participant_login',
         ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Participant authenticated successfully.',
-            'data' => [
-                'access_token' => $accessToken,
-                'refresh_token' => $refreshToken,
-                'token_type' => 'Bearer',
-                'expires_in' => 3600,
-                'user' => [
-                    'id' => $participant->id,
-                    'username' => $participant->username,
-                ],
-            ],
-        ]);
+        return $this->authenticationResponse($participant, $accessToken, $refreshToken, 'Participant authenticated successfully.');
     }
 
     public function refresh(Request $request): JsonResponse
@@ -95,6 +82,18 @@ class ParticipantAuthController
             ], 401);
         }
 
+        if (! $token->tokenable->isActive()) {
+            $this->refreshTokenService->revokeForModel($token->tokenable);
+            $this->securityAuditService->log('inactive_account_attempt', $token->tokenable, 'participant', $token->tokenable->id, [
+                'context' => 'participant_refresh',
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Account is inactive.',
+            ], 403);
+        }
+
         $newRefreshToken = $this->refreshTokenService->rotate($validated['refresh_token']);
         $user = $token->tokenable;
         $accessToken = $user->createToken('participant-api', ['*'])->plainTextToken;
@@ -103,20 +102,7 @@ class ParticipantAuthController
             'context' => 'participant_refresh',
         ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Participant token refreshed successfully.',
-            'data' => [
-                'access_token' => $accessToken,
-                'refresh_token' => $newRefreshToken,
-                'token_type' => 'Bearer',
-                'expires_in' => 3600,
-                'user' => [
-                    'id' => $user->id,
-                    'username' => $user->username,
-                ],
-            ],
-        ]);
+        return $this->authenticationResponse($user, $accessToken, $newRefreshToken, 'Participant token refreshed successfully.');
     }
 
     public function changePassword(ChangePasswordRequest $request): JsonResponse
@@ -152,6 +138,24 @@ class ParticipantAuthController
         ]);
     }
 
+    private function authenticationResponse(Participant $user, string $accessToken, string $refreshToken, string $message): JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'message' => $message,
+            'data' => [
+                'access_token' => $accessToken,
+                'refresh_token' => $refreshToken,
+                'token_type' => 'Bearer',
+                'expires_in' => (int) config('sanctum.expiration', 60) * 60,
+                'user' => [
+                    'id' => $user->id,
+                    'username' => $user->username,
+                ],
+            ],
+        ]);
+    }
+
     public function requestPasswordReset(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -181,15 +185,27 @@ class ParticipantAuthController
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
-        $email = DB::table('password_reset_tokens')->where('token', $validated['token'])->value('email');
+        $row = DB::table('password_reset_tokens')->where('token', $validated['token'])->first();
 
-        if (! $email) {
+        if (! $row) {
             return response()->json([
                 'success' => false,
                 'message' => 'Invalid or expired reset token.',
             ], 400);
         }
 
+        $createdAt = \Illuminate\Support\Carbon::parse($row->created_at ?? now());
+
+        if ($createdAt->addMinutes(60)->isPast()) {
+            DB::table('password_reset_tokens')->where('email', $row->email)->delete();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid or expired reset token.',
+            ], 400);
+        }
+
+        $email = $row->email;
         $participant = Participant::query()->where('email', $email)->first();
 
         if (! $participant) {

@@ -9,6 +9,11 @@ use App\Models\DistributionRule;
 
 class DistributionRulePolicy
 {
+    public function create(Admin $user): bool
+    {
+        return $user->hasPermission('distribution_rules.manage') || $user->is_super_admin;
+    }
+
     public function viewAny(Admin $user): bool
     {
         return $user->hasPermission('distribution_rules.view') || $user->is_super_admin;
@@ -21,6 +26,6 @@ class DistributionRulePolicy
 
     public function update(Admin $user): bool
     {
-        return $user->hasPermission('distribution_rules.update') || $user->is_super_admin;
+        return $user->hasPermission('distribution_rules.manage') || $user->is_super_admin;
     }
 }

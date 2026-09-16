@@ -58,20 +58,7 @@ class AdminAuthController
             'context' => 'admin_login',
         ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Admin authenticated successfully.',
-            'data' => [
-                'access_token' => $accessToken,
-                'refresh_token' => $refreshToken,
-                'token_type' => 'Bearer',
-                'expires_in' => 3600,
-                'user' => [
-                    'id' => $admin->id,
-                    'username' => $admin->username,
-                ],
-            ],
-        ]);
+        return $this->authenticationResponse($admin, $accessToken, $refreshToken, 'Admin authenticated successfully.');
     }
 
     public function refresh(Request $request): JsonResponse
@@ -94,6 +81,18 @@ class AdminAuthController
             ], 401);
         }
 
+        if (! $token->tokenable->isActive()) {
+            $this->refreshTokenService->revokeForModel($token->tokenable);
+            $this->securityAuditService->log('inactive_account_attempt', $token->tokenable, 'admin', $token->tokenable->id, [
+                'context' => 'admin_refresh',
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Account is inactive.',
+            ], 403);
+        }
+
         $newRefreshToken = $this->refreshTokenService->rotate($validated['refresh_token']);
         $user = $token->tokenable;
         $accessToken = $user->createToken('admin-api', ['*'])->plainTextToken;
@@ -102,14 +101,19 @@ class AdminAuthController
             'context' => 'admin_refresh',
         ]);
 
+        return $this->authenticationResponse($user, $accessToken, $newRefreshToken, 'Admin token refreshed successfully.');
+    }
+
+    private function authenticationResponse(Admin $user, string $accessToken, string $refreshToken, string $message): JsonResponse
+    {
         return response()->json([
             'success' => true,
-            'message' => 'Admin token refreshed successfully.',
+            'message' => $message,
             'data' => [
                 'access_token' => $accessToken,
-                'refresh_token' => $newRefreshToken,
+                'refresh_token' => $refreshToken,
                 'token_type' => 'Bearer',
-                'expires_in' => 3600,
+                'expires_in' => (int) config('sanctum.expiration', 60) * 60,
                 'user' => [
                     'id' => $user->id,
                     'username' => $user->username,

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Domain\Financial\Exceptions\ImmutableFinancialRecordException;
 use App\Domain\Financial\Rules\DistributionRuleValidator;
 use App\Domain\Financial\Services\DistributionRuleService;
 use App\Services\SecurityAuditService;
@@ -49,6 +50,12 @@ class DistributionRule extends Model
 
     protected static function booted(): void
     {
+        static::deleting(function (self $rule): void {
+            if ($rule->monthlyProfits()->exists()) {
+                throw new ImmutableFinancialRecordException('Distribution rules referenced by a monthly profit period cannot be deleted.');
+            }
+        });
+
         static::saving(function (self $rule) {
             if ($rule->status !== 'active') {
                 return;

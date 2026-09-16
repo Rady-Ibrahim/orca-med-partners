@@ -19,7 +19,14 @@ final class FundTransactionController
     {
         Gate::forUser($request->user())->authorize('view', $fund);
 
-        return response()->json(['success' => true, 'data' => $action->execute($fund)]);
+        return response()->json([
+            'success' => true,
+            'data' => $action->execute(
+                $fund,
+                $request->string('type')->toString() ?: null,
+                (int) $request->integer('per_page', 15),
+            ),
+        ]);
     }
 
     public function store(StoreFundTransactionRequest $request, Fund $fund, CreateFundTransactionAction $action): JsonResponse

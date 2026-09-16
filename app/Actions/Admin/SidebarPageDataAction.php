@@ -42,12 +42,22 @@ final class SidebarPageDataAction
 
         return $query->paginate(15)->withQueryString()->through(function (Participant $participant): array {
             return [
+                'id'         => $participant->getKey(),
                 'name'       => trim($participant->first_name . ' ' . $participant->last_name) ?: $participant->username,
+                'first_name' => $participant->first_name,
+                'last_name'  => $participant->last_name,
                 'username'   => $participant->username,
                 'email'      => $participant->email ?? '—',
                 'status'     => $participant->status,
                 'investment' => DecimalFormatter::money($participant->investments_sum_amount ?? '0'),
                 'joined'     => $participant->created_at?->format('Y-m-d'),
+                'edit_payload' => [
+                    'first_name' => $participant->first_name,
+                    'last_name'  => $participant->last_name,
+                    'username'   => $participant->username,
+                    'email'      => $participant->email ?? '',
+                    'status'     => $participant->status,
+                ],
             ];
         });
     }
@@ -101,6 +111,7 @@ final class SidebarPageDataAction
 
         return $query->paginate(15)->withQueryString()->through(function (CapitalSnapshot $snapshot): array {
             return [
+                'id'     => $snapshot->getKey(),
                 'date'   => $snapshot->snapshot_date?->format('Y-m-d'),
                 'year'   => $snapshot->year,
                 'month'  => $snapshot->month,
@@ -126,8 +137,10 @@ final class SidebarPageDataAction
 
         return $query->paginate(15)->withQueryString()->through(function (MonthlyProfit $profit): array {
             return [
+                'id'          => $profit->getKey(),
                 'period'      => sprintf('%04d / %02d', $profit->year, $profit->month),
                 'gross'       => DecimalFormatter::money($profit->gross_profit),
+                'gross_raw'   => (string) $profit->gross_profit,
                 'distributed' => DecimalFormatter::money($profit->distributed_amount),
                 'management'  => DecimalFormatter::money($profit->management_amount),
                 'status'      => $profit->status,
@@ -149,10 +162,12 @@ final class SidebarPageDataAction
 
         return $query->paginate(15)->withQueryString()->through(function (Settlement $settlement): array {
             return [
+                'id'           => $settlement->getKey(),
                 'year'         => $settlement->year,
                 'participants' => $settlement->items()->count(),
                 'annual_profit'=> DecimalFormatter::money($settlement->participant_profit_share),
                 'amount_due'   => DecimalFormatter::money($settlement->amount_due),
+                'amount_due_raw' => (string) $settlement->amount_due,
                 'paid_amount'  => DecimalFormatter::money($settlement->paid_amount),
                 'status'       => $settlement->status,
             ];
@@ -175,6 +190,7 @@ final class SidebarPageDataAction
 
         return $query->paginate(15)->withQueryString()->through(function (Fund $fund): array {
             return [
+                'id'           => $fund->getKey(),
                 'name'         => $fund->name,
                 'code'         => $fund->code,
                 'balance'      => DecimalFormatter::money($fund->current_balance),
@@ -269,15 +285,36 @@ final class SidebarPageDataAction
 
         return $query->paginate(15)->withQueryString()->through(function (DistributionRule $rule): array {
             return [
-                'name'           => $rule->notes ?: 'قاعدة توزيع',
-                'effective_from' => $rule->effective_from?->format('Y-m-d'),
-                'effective_to'   => $rule->effective_to?->format('Y-m-d') ?? 'مفتوحة',
-                'status'         => $rule->status,
-                'management'     => DecimalFormatter::percent($rule->management_fee_rate),
-                'depreciation'   => DecimalFormatter::percent($rule->depreciation_fund_rate),
-                'growth'         => DecimalFormatter::percent($rule->growth_fund_rate),
-                'incentive'      => DecimalFormatter::percent($rule->incentive_fund_rate),
-                'distributed'    => DecimalFormatter::percent($rule->distributed_share_rate),
+                'id'               => $rule->getKey(),
+                'name'             => $rule->notes ?: 'قاعدة توزيع',
+                'effective_from'   => $rule->effective_from?->format('Y-m-d'),
+                'effective_to'     => $rule->effective_to?->format('Y-m-d') ?? 'مفتوحة',
+                'effective_to_raw' => $rule->effective_to?->format('Y-m-d'),
+                'status'           => $rule->status,
+                'management'       => DecimalFormatter::percent($rule->management_fee_rate),
+                'depreciation'     => DecimalFormatter::percent($rule->depreciation_fund_rate),
+                'growth'           => DecimalFormatter::percent($rule->growth_fund_rate),
+                'incentive'        => DecimalFormatter::percent($rule->incentive_fund_rate),
+                'distributed'      => DecimalFormatter::percent($rule->distributed_share_rate),
+                'management_raw'   => (string) $rule->management_fee_rate,
+                'depreciation_raw' => (string) $rule->depreciation_fund_rate,
+                'growth_raw'       => (string) $rule->growth_fund_rate,
+                'incentive_raw'    => (string) $rule->incentive_fund_rate,
+                'distributed_raw'  => (string) $rule->distributed_share_rate,
+                'notes'            => $rule->notes,
+                'is_default'       => $rule->is_default,
+                'edit_payload'     => [
+                    'effective_from'        => $rule->effective_from?->format('Y-m-d'),
+                    'effective_to'          => $rule->effective_to?->format('Y-m-d'),
+                    'management_fee_rate'   => (string) $rule->management_fee_rate,
+                    'depreciation_fund_rate'=> (string) $rule->depreciation_fund_rate,
+                    'growth_fund_rate'      => (string) $rule->growth_fund_rate,
+                    'incentive_fund_rate'   => (string) $rule->incentive_fund_rate,
+                    'distributed_share_rate'=> (string) $rule->distributed_share_rate,
+                    'status'                => $rule->status,
+                    'is_default'            => $rule->is_default,
+                    'notes'                 => $rule->notes,
+                ],
             ];
         });
     }

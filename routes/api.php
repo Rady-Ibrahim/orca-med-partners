@@ -1,8 +1,12 @@
 <?php
 
 use App\Http\Controllers\Api\Admin\AuditLogController;
+use App\Http\Controllers\Api\Admin\CapitalController;
+use App\Http\Controllers\Api\Admin\DepreciationController;
+use App\Http\Controllers\Api\Admin\DistributionRuleController;
 use App\Http\Controllers\Api\Admin\FundController;
 use App\Http\Controllers\Api\Admin\FundTransactionController;
+use App\Http\Controllers\Api\Admin\SettingsController;
 use App\Http\Controllers\Api\Admin\SettlementController as AdminSettlementController;
 use App\Http\Controllers\Api\Admin\InvestmentController;
 use App\Http\Controllers\Api\Admin\ParticipantController;
@@ -39,9 +43,29 @@ Route::middleware('ensure.admin.context')->group(function () {
     Route::post('/auth/admin/password/change', [AdminAuthController::class, 'changePassword']);
 
     Route::get('/admin/participants', [ParticipantController::class, 'index']);
+    Route::post('/admin/participants', [ParticipantController::class, 'store']);
+    Route::get('/admin/participants/{participant}', [ParticipantController::class, 'show']);
+    Route::put('/admin/participants/{participant}', [ParticipantController::class, 'update']);
+    Route::delete('/admin/participants/{participant}', [ParticipantController::class, 'destroy']);
+    Route::get('/admin/participants/{participant}', [ParticipantController::class, 'show']);
     Route::get('/admin/investments', [InvestmentController::class, 'index']);
+    Route::post('/admin/investments', [InvestmentController::class, 'store']);
     Route::post('/admin/investments/{investment}/approve', [InvestmentController::class, 'approve']);
     Route::get('/admin/audit-logs', [AuditLogController::class, 'index']);
+    Route::get('/admin/capital', [CapitalController::class, 'index']);
+    Route::post('/admin/capital', [CapitalController::class, 'store']);
+    Route::patch('/admin/capital/{capitalSnapshot}', [CapitalController::class, 'update']);
+    Route::get('/admin/depreciation', [DepreciationController::class, 'index']);
+    Route::post('/admin/depreciation', [DepreciationController::class, 'store']);
+    Route::patch('/admin/depreciation/{depreciationNote}', [DepreciationController::class, 'update']);
+    Route::delete('/admin/depreciation/{depreciationNote}', [DepreciationController::class, 'destroy']);
+    Route::get('/admin/distribution-rules', [DistributionRuleController::class, 'index']);
+    Route::get('/admin/distribution-rules/{distributionRule}', [DistributionRuleController::class, 'show']);
+    Route::post('/admin/distribution-rules', [DistributionRuleController::class, 'store']);
+    Route::patch('/admin/distribution-rules/{distributionRule}', [DistributionRuleController::class, 'update']);
+    Route::get('/admin/settings', [SettingsController::class, 'index']);
+    Route::put('/admin/settings', [SettingsController::class, 'update']);
+    Route::get('/admin/monthly-profits', [MonthlyProfitController::class, 'index']);
     Route::get('/admin/funds', [FundController::class, 'index']);
     Route::post('/admin/funds', [FundController::class, 'store']);
     Route::get('/admin/funds/{fund}', [FundController::class, 'show']);

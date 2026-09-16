@@ -19,8 +19,8 @@ final class RoiSimulationController
 
         $result = $calculator->simulate(
             (string) $input['base_capital'],
-            (int) $input['years'],
-            (string) $input['expected_annual_rate'],
+            (int) $input['months'],
+            (string) $input['expected_monthly_rate'],
         );
 
         return response()->json([

@@ -6,13 +6,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
 class Participant extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
 
     protected $table = 'participants';
 
@@ -42,6 +43,7 @@ class Participant extends Authenticatable
             'permissions' => 'array',
             'two_factor_enabled' => 'boolean',
             'two_factor_enabled_at' => 'datetime',
+            'deleted_at' => 'datetime',
         ];
     }
 
@@ -53,6 +55,53 @@ class Participant extends Authenticatable
     public function investments(): HasMany
     {
         return $this->hasMany(Investment::class);
+    }
+
+    public function capitalSnapshotItems(): HasMany
+    {
+        return $this->hasMany(CapitalSnapshotItem::class);
+    }
+
+    public function profitAllocations(): HasMany
+    {
+        return $this->hasMany(ParticipantProfitAllocation::class);
+    }
+
+    public function fundAllocations(): HasMany
+    {
+        return $this->hasMany(ParticipantFundAllocation::class);
+    }
+
+    public function depreciationNotes(): HasMany
+    {
+        return $this->hasMany(DepreciationNote::class);
+    }
+
+    public function settlementItems(): HasMany
+    {
+        return $this->hasMany(SettlementItem::class);
+    }
+
+    public function notifications(): HasMany
+    {
+        return $this->hasMany(Notification::class);
+    }
+
+    public function supportTickets(): HasMany
+    {
+        return $this->hasMany(SupportTicket::class);
+    }
+
+    public function settlements(): \Illuminate\Database\Eloquent\Relations\HasManyThrough
+    {
+        return $this->hasManyThrough(
+            Settlement::class,
+            SettlementItem::class,
+            'participant_id',
+            'id',
+            'id',
+            'settlement_id'
+        );
     }
 
     public function hasPermission(string $permission): bool

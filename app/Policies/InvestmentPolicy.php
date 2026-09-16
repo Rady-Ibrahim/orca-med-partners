@@ -28,6 +28,24 @@ class InvestmentPolicy
         return $user instanceof Participant && $investment->participant_id === $user->id;
     }
 
+    public function create(Admin|Participant $user): bool
+    {
+        if ($user instanceof Admin) {
+            return $user->hasPermission('investments.create') || $user->is_super_admin;
+        }
+
+        return false;
+    }
+
+    public function approve(Admin|Participant $user, Investment $investment): bool
+    {
+        if ($user instanceof Admin) {
+            return $user->hasPermission('investments.update') || $user->is_super_admin;
+        }
+
+        return false;
+    }
+
     public function update(Admin|Participant $user, Investment $investment): bool
     {
         if ($user instanceof Admin) {

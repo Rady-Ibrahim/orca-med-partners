@@ -5,30 +5,29 @@ declare(strict_types=1);
 namespace App\Actions\Settlements;
 
 use App\Domain\Financial\Exceptions\InvalidAnnualSettlementException;
+use App\Enums\SettlementStatus;
 use App\Models\Admin;
 use App\Models\Settlement;
 use App\Models\SettlementPayment;
 use App\Services\SecurityAuditService;
-use App\Domain\Financial\Services\SettlementAmountDueService;
 use Illuminate\Support\Facades\DB;
 
 final class RecordSettlementPaymentAction
 {
-    public function __construct(private SecurityAuditService $audit, private SettlementAmountDueService $amountDue) {}
+    public function __construct(private SecurityAuditService $audit) {}
 
     public function execute(Admin $admin, Settlement $settlement, array $attributes): Settlement
     {
         return DB::transaction(function () use ($admin, $settlement, $attributes): Settlement {
             $locked = Settlement::query()->lockForUpdate()->findOrFail($settlement->id);
-            if (! in_array($locked->status, ['approved', 'partially_paid'], true)) {
+            if (! in_array($locked->status, [SettlementStatus::APPROVED->value, SettlementStatus::PARTIALLY_PAID->value], true)) {
                 throw new InvalidAnnualSettlementException('Only approved or partially paid settlements can receive payments.');
             }
 
             $amount = (string) $attributes['amount'];
             $paid = (string) $locked->payments()->sum('amount');
-            $calculation = $this->amountDue->calculate($locked->participant_profit_share, $locked->participant_fund_share, '0.00');
             $newPaid = bcadd($paid, $amount, 2);
-            if (bccomp($newPaid, $calculation['amount_due'], 2) > 0) {
+            if (bccomp($newPaid, (string) $locked->amount_due, 2) > 0) {
                 throw new InvalidAnnualSettlementException('Payment amount exceeds settlement amount due.');
             }
 
@@ -43,7 +42,9 @@ final class RecordSettlementPaymentAction
                 'created_by_admin_id' => $admin->id,
             ]);
 
-            $status = bccomp($newPaid, (string) $locked->amount_due, 2) === 0 ? 'paid' : 'partially_paid';
+            $status = bccomp($newPaid, (string) $locked->amount_due, 2) === 0
+                ? SettlementStatus::PAID->value
+                : SettlementStatus::PARTIALLY_PAID->value;
             $locked->forceFill([
                 'status' => $status,
                 'paid_by_admin_id' => $admin->id,

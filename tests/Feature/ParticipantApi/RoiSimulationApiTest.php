@@ -21,36 +21,40 @@ final class RoiSimulationApiTest extends TestCase
         $response = $this->withToken($this->token($participant))
             ->postJson('/api/v1/me/tools/roi-simulation', [
                 'base_capital' => '1000000.00',
-                'years' => 5,
-                'expected_annual_rate' => '0.15',
+                'months' => 5,
+                'expected_monthly_rate' => '0.15',
             ])
             ->assertOk();
 
         $data = $response->json('data');
 
         self::assertSame('1000000.00', $data['base_capital']);
-        self::assertSame(5, $data['years']);
-        self::assertSame('0.1500', $data['expected_annual_rate']);
+        self::assertSame(5, $data['months']);
+        self::assertSame('0.1500', $data['expected_monthly_rate']);
         self::assertCount(5, $data['schedule']);
-        self::assertMatchesRegularExpression('/^\d+\.\d{2}$/', $data['projected_capital']);
-        self::assertMatchesRegularExpression('/^\d+\.\d{2}$/', $data['projected_profit']);
+        self::assertMatchesRegularExpression('/^-?\d+\.\d{2}$/', $data['projected_capital']);
+        self::assertMatchesRegularExpression('/^-?\d+\.\d{2}$/', $data['projected_profit']);
+        self::assertMatchesRegularExpression('/^-?\d+\.\d{2}$/', $data['average_monthly_profit']);
         self::assertArrayHasKey('disclaimer', $data);
 
         $last = last($data['schedule']);
-        self::assertSame($data['projected_capital'], $last['closing_capital']);
-        self::assertSame($data['projected_profit'], sprintf('%0.2f', (float) $data['projected_capital'] - (float) $data['base_capital']));
+        self::assertSame($data['projected_capital'], $last['capital']);
+        self::assertSame($data['average_monthly_profit'], (new FinancialRoundingService())->money(bcdiv($data['projected_profit'], '5', 10)));
+        self::assertSame(
+            $data['projected_profit'],
+            (new FinancialRoundingService())->money(bcsub($data['projected_capital'], $data['base_capital'], 2))
+        );
 
-        $expected = '1000000.00';
         $rounding = new FinancialRoundingService();
+        $carry = '1000000.00';
         foreach ($data['schedule'] as $row) {
-            self::assertSame($expected, $row['opening_capital']);
+            self::assertArrayHasKey('month', $row);
 
-            $profit = bcmul($expected, '0.15', 10);
+            $profit = bcmul($carry, '0.15', 10);
+            $closing = bcadd($carry, $profit, 10);
             self::assertSame($rounding->money($profit), $row['profit']);
-
-            $closing = $rounding->money(bcadd($expected, $profit, 10));
-            self::assertSame($closing, $row['closing_capital']);
-            $expected = $closing;
+            self::assertSame($rounding->money($closing), $row['capital']);
+            $carry = $closing;
         }
     }
 
@@ -59,21 +63,25 @@ final class RoiSimulationApiTest extends TestCase
         $participant = $this->createParticipant();
 
         $this->withToken($this->token($participant))
-            ->postJson('/api/v1/me/tools/roi-simulation', ['base_capital' => '0', 'years' => 5, 'expected_annual_rate' => '0.15'])
+            ->postJson('/api/v1/me/tools/roi-simulation', ['base_capital' => '0', 'months' => 5, 'expected_monthly_rate' => '0.15'])
             ->assertStatus(422);
 
         $this->withToken($this->token($participant))
-            ->postJson('/api/v1/me/tools/roi-simulation', ['base_capital' => '100.00', 'years' => 0, 'expected_annual_rate' => '0.15'])
+            ->postJson('/api/v1/me/tools/roi-simulation', ['base_capital' => '100.00', 'months' => 0, 'expected_monthly_rate' => '0.15'])
             ->assertStatus(422);
 
         $this->withToken($this->token($participant))
-            ->postJson('/api/v1/me/tools/roi-simulation', ['base_capital' => '100.00', 'years' => 5, 'expected_annual_rate' => '2'])
+            ->postJson('/api/v1/me/tools/roi-simulation', ['base_capital' => '100.00', 'months' => 361, 'expected_monthly_rate' => '0.15'])
+            ->assertStatus(422);
+
+        $this->withToken($this->token($participant))
+            ->postJson('/api/v1/me/tools/roi-simulation', ['base_capital' => '100.00', 'months' => 5, 'expected_monthly_rate' => '2'])
             ->assertStatus(422);
     }
 
     public function test_roi_simulation_requires_authentication(): void
     {
-        $this->postJson('/api/v1/me/tools/roi-simulation', ['base_capital' => '100.00', 'years' => 1, 'expected_annual_rate' => '0.10'])->assertUnauthorized();
+        $this->postJson('/api/v1/me/tools/roi-simulation', ['base_capital' => '100.00', 'months' => 1, 'expected_monthly_rate' => '0.10'])->assertUnauthorized();
     }
 
     private function createParticipant(): Participant

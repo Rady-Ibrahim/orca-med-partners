@@ -12,6 +12,10 @@ use Symfony\Component\HttpFoundation\Response;
 
 class EnsureParticipantContext
 {
+    private function isExpired(PersonalAccessToken $token): bool
+    {
+        return $token->expires_at !== null && $token->expires_at->isPast();
+    }
     public function handle(Request $request, Closure $next): Response
     {
         $bearerToken = $request->bearerToken();
@@ -24,6 +28,12 @@ class EnsureParticipantContext
 
         if (! $token || ! $token->tokenable instanceof Participant) {
             abort(403, 'Participant access required.');
+        }
+
+        if ($this->isExpired($token) || ! $token->tokenable->isActive()) {
+            $token->delete();
+
+            abort(401, 'Access token expired or account is inactive.');
         }
 
         $request->setUserResolver(fn() => $token->tokenable);

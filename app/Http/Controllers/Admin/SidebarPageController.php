@@ -35,7 +35,15 @@ final class SidebarPageController
     public function capital(Request $request, SidebarPageDataAction $action): View
     {
         return view('admin.pages.capital', [
-            'items'   => $action->capitalSnapshots($request->only(['year', 'month', 'status'])),
+            'items'        => $action->capitalSnapshots($request->only(['year', 'month', 'status'])),
+            'participants' => \App\Models\Participant::query()
+                ->orderBy('first_name')
+                ->orderBy('last_name')
+                ->get()
+                ->map(fn(\App\Models\Participant $p): array => [
+                    'id'   => $p->getKey(),
+                    'name' => trim($p->first_name . ' ' . $p->last_name) ?: $p->username,
+                ]),
             'title'   => 'رأس المال',
             'filters' => $request->only(['year', 'month', 'status']),
         ]);
@@ -44,7 +52,24 @@ final class SidebarPageController
     public function monthlyProfits(Request $request, SidebarPageDataAction $action): View
     {
         return view('admin.pages.monthly-profits', [
-            'items'   => $action->monthlyProfits($request->only(['year', 'month', 'status'])),
+            'items'             => $action->monthlyProfits($request->only(['year', 'month', 'status'])),
+            'capitalSnapshots'  => \App\Models\CapitalSnapshot::query()
+                ->with('items')
+                ->latest('snapshot_date')
+                ->get()
+                ->map(fn(\App\Models\CapitalSnapshot $s): array => [
+                    'id'     => $s->getKey(),
+                    'period' => sprintf('%04d / %02d', $s->year, $s->month),
+                    'status' => $s->status,
+                ]),
+            'distributionRules' => \App\Models\DistributionRule::query()
+                ->latest('effective_from')
+                ->get()
+                ->map(fn(\App\Models\DistributionRule $r): array => [
+                    'id'    => $r->getKey(),
+                    'label' => $r->notes ?: sprintf('قاعدة توزيع — %s', $r->effective_from?->format('Y-m-d') ?? 'غير محددة'),
+                    'status'=> $r->status,
+                ]),
             'title'   => 'الأرباح الشهرية',
             'filters' => $request->only(['year', 'month', 'status']),
         ]);
