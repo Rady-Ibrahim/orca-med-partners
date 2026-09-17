@@ -34,6 +34,9 @@
         @method('PUT')
     @endif
 
+    {{-- DIAGNOSTIC MARKER (remove after debugging) --}}
+    <div style="display:none" data-diag-form-version="debug-2026-09-17-v1" data-diag-participant-id="{{ $participant?->getKey() }}"></div>
+
     <div class="settings-section-title">◉ البيانات الشخصية</div>
     <div class="settings-grid">
         <div class="settings-field">
