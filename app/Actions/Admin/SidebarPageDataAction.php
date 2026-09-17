@@ -86,25 +86,36 @@ final class SidebarPageDataAction
 
         return $query->paginate(15)->withQueryString()->through(function (Investment $investment): array {
             return [
-                'id'          => $investment->getKey(),
-                'participant' => trim(($investment->participant?->first_name ?? '') . ' ' . ($investment->participant?->last_name ?? '')) ?: ($investment->participant?->username ?? '—'),
-                'amount'      => DecimalFormatter::money($investment->amount),
-                'status'      => $investment->status,
-                'date'        => $investment->invested_at?->format('Y-m-d'),
-                'notes'       => $investment->notes ?: '—',
+                'id'             => $investment->getKey(),
+                'participant'    => trim(($investment->participant?->first_name ?? '') . ' ' . ($investment->participant?->last_name ?? '')) ?: ($investment->participant?->username ?? '—'),
+                'participant_id' => $investment->participant_id,
+                'amount'         => DecimalFormatter::money($investment->amount),
+                'amount_raw'     => (string) $investment->amount,
+                'status'         => $investment->status,
+                'date'           => $investment->invested_at?->format('Y-m-d'),
+                'invested_at'    => $investment->invested_at?->format('Y-m-d'),
+                'notes'          => $investment->notes ?: '—',
+                'notes_raw'      => $investment->notes ?? '',
+                'edit_payload'   => [
+                    'participant_id' => $investment->participant_id,
+                    'amount'         => (string) $investment->amount,
+                    'invested_at'    => $investment->invested_at?->format('Y-m-d'),
+                    'notes'          => $investment->notes ?? '',
+                    'status'         => $investment->status,
+                ],
             ];
         });
     }
 
     public function capitalSnapshots(array $filters = []): LengthAwarePaginator
     {
-        $query = CapitalSnapshot::query()->latest('snapshot_date');
+        $query = CapitalSnapshot::query()->with('items')->latest('snapshot_date');
 
         if (!empty($filters['year'])) {
             $query->where('year', $filters['year']);
         }
         if (!empty($filters['month'])) {
-            $query->where('month', $filters['month']);
+            $query->where('month', $ilters['month']);
         }
         if (!empty($filters['status'])) {
             $query->where('status', $filters['status']);
@@ -117,7 +128,18 @@ final class SidebarPageDataAction
                 'year'   => $snapshot->year,
                 'month'  => $snapshot->month,
                 'total'  => DecimalFormatter::money($snapshot->total_capital),
+                'total_raw' => (string) $snapshot->total_capital,
                 'status' => $snapshot->status,
+                'items'  => $snapshot->items->map(fn($item): array => [
+                    'participant_id' => $item->participant_id,
+                    'capital'        => (string) $item->participant_capital_snapshot,
+                ])->values()->toArray(),
+                'edit_payload' => [
+                    'snapshot_date' => $snapshot->snapshot_date?->format('Y-m-d'),
+                    'year'          => $snapshot->year,
+                    'month'         => $snapshot->month,
+                    'total_capital' => (string) $snapshot->total_capital,
+                ],
             ];
         });
     }
@@ -177,7 +199,10 @@ final class SidebarPageDataAction
 
     public function funds(array $filters = []): LengthAwarePaginator
     {
-        $query = Fund::query()->withCount('transactions')->orderBy('code');
+        $query = Fund::query()
+            ->withCount('transactions')
+            ->with(['transactions' => fn ($q) => $q->orderBy('id')])
+            ->orderBy('code');
 
         if (!empty($filters['status'])) {
             $query->where('status', $filters['status']);
@@ -197,6 +222,32 @@ final class SidebarPageDataAction
                 'balance'      => DecimalFormatter::money($fund->current_balance),
                 'status'       => $fund->status,
                 'transactions' => $fund->transactions_count,
+                'description'  => $fund->description ?? '',
+                'system_group' => in_array($fund->code, ['depreciation_fund', 'growth_fund', 'incentive_fund'], true),
+                'transaction_items' => $fund->transactions->map(fn ($t): array => [
+                    'id'                => $t->getKey(),
+                    'type'              => $t->transaction_type,
+                    'amount'            => DecimalFormatter::money($t->amount),
+                    'amount_raw'        => (string) $t->amount,
+                    'resulting_balance' => DecimalFormatter::money($t->resulting_balance),
+                    'date'              => $t->transaction_date?->format('Y-m-d') ?? '—',
+                    'reference'         => $t->reference ?? '',
+                    'description'       => $t->description ?? '',
+                    'notes'             => $t->notes ?? '',
+                    'linked'            => $t->monthly_profit_id !== null,
+                    'edit_payload'      => [
+                        'reference'        => $t->reference ?? '',
+                        'description'      => $t->description ?? '',
+                        'notes'            => $t->notes ?? '',
+                        'transaction_date' => $t->transaction_date?->format('Y-m-d'),
+                    ],
+                ])->values()->all(),
+                'edit_payload' => [
+                    'name'        => $fund->name,
+                    'code'        => $fund->code,
+                    'status'      => $fund->status,
+                    'description' => $fund->description ?? '',
+                ],
             ];
         });
     }
@@ -219,12 +270,30 @@ final class SidebarPageDataAction
 
         return $query->paginate(15)->withQueryString()->through(function (DepreciationNote $note): array {
             return [
-                'period'      => sprintf('%04d / %02d', $note->year, $note->month),
-                'amount'      => DecimalFormatter::money($note->amount),
-                'rate'        => $note->rate ? DecimalFormatter::percent($note->rate) : '—',
-                'date'        => $note->transaction_date?->format('Y-m-d'),
-                'description' => $note->description,
-                'fund'        => $note->fund?->name ?? '—',
+                'id'               => $note->getKey(),
+                'period'           => sprintf('%04d / %02d', $note->year, $note->month),
+                'amount'           => DecimalFormatter::money($note->amount),
+                'amount_raw'       => (string) $note->amount,
+                'rate'             => $note->rate ? DecimalFormatter::percent($note->rate) : '—',
+                'rate_raw'         => (string) $note->rate,
+                'date'             => $note->transaction_date?->format('Y-m-d'),
+                'transaction_date' => $note->transaction_date?->format('Y-m-d'),
+                'description'      => $note->description ?? '',
+                'fund'             => $note->fund?->name ?? '—',
+                'fund_id'          => $note->fund_id,
+                'participant_id'   => $note->participant_id,
+                'year'             => $note->year,
+                'month'            => $note->month,
+                'edit_payload'     => [
+                    'amount'             => (string) $note->amount,
+                    'rate'               => (string) $note->rate,
+                    'transaction_date'   => $note->transaction_date?->format('Y-m-d'),
+                    'year'               => $note->year,
+                    'month'              => $note->month,
+                    'description'        => $note->description ?? '',
+                    'fund_id'            => $note->fund_id,
+                    'participant_id'     => $note->participant_id,
+                ],
             ];
         });
     }

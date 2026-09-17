@@ -72,6 +72,12 @@
                                         <button type="button" class="action-approve" data-post
                                             data-url="{{ route('admin.investments.approve', $item['id']) }}"
                                             data-confirm="هل أنت متأكد من اعتماد استثمار «{{ $item['participant'] }}» بقيمة {{ $item['amount'] }} ر.س؟">اعتماد</button>
+                                        <button type="button" class="action-edit" data-fill-modal="modal-investment-edit"
+                                            data-action-url="{{ route('admin.investments.update', $item['id']) }}"
+                                            data-edit='@json($item["edit_payload"])'>تعديل</button>
+                                        <button type="button" class="action-danger" data-post data-method="DELETE"
+                                            data-url="{{ route('admin.investments.destroy', $item['id']) }}"
+                                            data-confirm="سيتم حذف استثمار «{{ $item['participant'] }}» بقيمة {{ $item['amount'] }} ر.س. متابعة؟">حذف</button>
                                     @endif
                                 </div>
                             </td>
@@ -124,6 +130,49 @@
             <div class="modal-footer">
                 <button type="button" class="secondary-button" data-modal-close>إلغاء</button>
                 <button type="submit" class="primary-button" data-submit>إنشاء الاستثمار</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{-- ── تعديل استثمار ── --}}
+<div class="modal-backdrop" id="modal-investment-edit" hidden>
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3>تعديل الاستثمار</h3>
+            <button type="button" class="modal-close" data-modal-close aria-label="إغلاق">×</button>
+        </div>
+        <form data-ajax-form action="" method="POST" novalidate>
+            @csrf
+            @method('PATCH')
+            <div class="modal-body">
+                <div class="modal-grid">
+                    <div class="om-field full">
+                        <label for="inv_edit_participant">المشارك</label>
+                        <select id="inv_edit_participant" name="participant_id" required>
+                            <option value="">اختر مشارك...</option>
+                            @foreach ($participants as $participant)
+                                <option value="{{ $participant['id'] }}">{{ $participant['name'] }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="om-field">
+                        <label for="inv_edit_amount">المبلغ (ر.س)</label>
+                        <input id="inv_edit_amount" name="amount" type="number" min="0.01" step="0.01" dir="ltr" placeholder="0.00">
+                    </div>
+                    <div class="om-field">
+                        <label for="inv_edit_date">تاريخ الاستثمار</label>
+                        <input id="inv_edit_date" name="invested_at" type="date">
+                    </div>
+                    <div class="om-field full">
+                        <label for="inv_edit_notes">ملاحظات</label>
+                        <textarea id="inv_edit_notes" name="notes" rows="2"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="secondary-button" data-modal-close>إلغاء</button>
+                <button type="submit" class="primary-button" data-submit>حفظ التعديلات</button>
             </div>
         </form>
     </div>

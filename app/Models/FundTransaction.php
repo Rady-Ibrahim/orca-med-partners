@@ -36,8 +36,13 @@ class FundTransaction extends Model
 
     protected static function booted(): void
     {
-        static::updating(function () {
-            throw new ImmutableFinancialRecordException('Fund transactions are immutable; create a new adjustment instead.');
+        static::updating(function (FundTransaction $transaction): void {
+            $lockedFinancialFields = ['fund_id', 'monthly_profit_id', 'transaction_type', 'amount', 'resulting_balance', 'created_by_admin_id'];
+            foreach ($lockedFinancialFields as $field) {
+                if ($transaction->isDirty($field)) {
+                    throw new ImmutableFinancialRecordException('Fund transaction financial fields are immutable; only reference, description, notes and transaction date can be edited.');
+                }
+            }
         });
 
         static::deleting(function () {

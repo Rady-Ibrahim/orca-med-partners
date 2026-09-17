@@ -139,22 +139,22 @@
             <h3>تعديل بيانات المشارك</h3>
             <button type="button" class="modal-close" data-modal-close aria-label="إغلاق">×</button>
         </div>
-        <form data-ajax-form action="" method="POST">
+        <form data-ajax-form action="" method="POST" novalidate>
             @csrf
             @method('PUT')
             <div class="modal-body">
                 <div class="modal-grid">
                     <div class="om-field">
                         <label for="pe_first_name">الاسم الأول</label>
-                        <input id="pe_first_name" name="first_name" required>
+                        <input id="pe_first_name" name="first_name">
                     </div>
                     <div class="om-field">
                         <label for="pe_last_name">اسم العائلة</label>
-                        <input id="pe_last_name" name="last_name" required>
+                        <input id="pe_last_name" name="last_name">
                     </div>
                     <div class="om-field">
                         <label for="pe_username">اسم المستخدم</label>
-                        <input id="pe_username" name="username" required dir="ltr">
+                        <input id="pe_username" name="username" dir="ltr">
                     </div>
                     <div class="om-field">
                         <label for="pe_email">البريد الإلكتروني</label>
@@ -162,7 +162,7 @@
                     </div>
                     <div class="om-field">
                         <label for="pe_status">الحالة</label>
-                        <select id="pe_status" name="status" required>
+                        <select id="pe_status" name="status">
                             <option value="active">نشط</option>
                             <option value="inactive">غير نشط</option>
                         </select>

@@ -71,9 +71,17 @@ final class AdminParticipantController
         ]);
     }
 
-    public function update(UpdateParticipantRequest $request, Participant $participant): RedirectResponse|Redirector
+    public function update(UpdateParticipantRequest $request, Participant $participant): RedirectResponse|Redirector|JsonResponse
     {
         $data = $request->validated();
+
+        if (empty($data)) {
+            if ($request->wantsJson()) {
+                return response()->json(['success' => true, 'message' => 'لا توجد تغييرات.']);
+            }
+
+            return redirect()->route('admin.participants')->with('success', 'لا توجد تغييرات.');
+        }
 
         $oldValues = [
             'first_name' => $participant->first_name,
@@ -83,13 +91,7 @@ final class AdminParticipantController
             'status'     => $participant->status,
         ];
 
-        $participant->update([
-            'first_name' => $data['first_name'],
-            'last_name'  => $data['last_name'],
-            'username'   => $data['username'],
-            'email'      => $data['email'] ?? null,
-            'status'     => $data['status'],
-        ]);
+        $participant->update($data);
 
         $this->audit->log(
             'participant_updated',
@@ -107,6 +109,10 @@ final class AdminParticipantController
                 ],
             ],
         );
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'تم تحديث بيانات المشارك "' . $participant->username . '" بنجاح.']);
+        }
 
         return redirect()->route('admin.participants')->with('success', 'تم تحديث بيانات المشارك "' . $participant->username . '" بنجاح.');
     }

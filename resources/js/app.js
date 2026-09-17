@@ -231,12 +231,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const errBox = form.querySelector('.form-error-box');
         if (errBox) errBox.setAttribute('hidden', '');
 
-        const method = form.querySelector('[name="_method"]')?.value || 'POST';
         const url = form.action;
         const headers = { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken() };
         const body = new FormData(form);
 
-        fetch(url, { method: method.toUpperCase(), headers, body })
+        fetch(url, { method: 'POST', headers, body })
             .then(async res => {
                 const contentType = res.headers.get('content-type') || '';
                 const payload = contentType.includes('application/json') ? await res.json() : null;
@@ -275,7 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.dataset.busy = '1';
             btn.setAttribute('data-submitting', '');
             fetch(btn.dataset.url, {
-                method: 'POST',
+                method: btn.dataset.method || 'POST',
                 headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken() },
             })
                 .then(res => res.json().catch(() => null))
@@ -313,6 +312,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 else el.value = value ?? '';
             }
         });
+        if (btn.dataset.capitalValues) {
+            let capitals;
+            try { capitals = JSON.parse(btn.dataset.capitalValues || '[]'); } catch { capitals = []; }
+            const map = {};
+            capitals.forEach(c => { map[c.participant_id] = c.capital; });
+            target.querySelectorAll('[data-capital-for]').forEach(el => {
+                el.value = map[el.dataset.capitalFor] !== undefined ? map[el.dataset.capitalFor] : '';
+            });
+            const first = target.querySelector('[data-capital-for]');
+            if (first) first.dispatchEvent(new Event('input', { bubbles: true }));
+        }
         target.removeAttribute('hidden');
         target.querySelector('input, select, textarea')?.focus?.();
     });
@@ -320,7 +330,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('input', e => {
         if (!e.target.classList?.contains('js-capital-input')) return;
         const form = e.target.closest('form[data-ajax-form]');
-        const total = form?.querySelector('#capitalTotal');
+        const total = form?.querySelector('[data-capital-total]');
         if (!total) return;
         let sum = 0;
         form.querySelectorAll('.js-capital-input').forEach(el => {

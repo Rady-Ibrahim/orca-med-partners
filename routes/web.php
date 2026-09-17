@@ -24,9 +24,13 @@ Route::middleware('ensure.web.admin')->prefix('admin')->name('admin.')->group(fu
     Route::post('/participants/{participant}/revoke-tokens', [AdminParticipantController::class, 'revokeTokens'])->name('participants.revoke-tokens');
     Route::get('/investments', [SidebarPageController::class, 'investments'])->name('investments');
     Route::post('/investments', [AdminActionsController::class, 'storeInvestment'])->name('investments.store');
+    Route::patch('/investments/{investment}', [AdminActionsController::class, 'updateInvestment'])->name('investments.update');
+    Route::delete('/investments/{investment}', [AdminActionsController::class, 'destroyInvestment'])->name('investments.destroy');
     Route::post('/investments/{investment}/approve', [AdminActionsController::class, 'approveInvestment'])->name('investments.approve');
     Route::get('/capital', [SidebarPageController::class, 'capital'])->name('capital');
     Route::post('/capital', [AdminActionsController::class, 'storeCapitalSnapshot'])->name('capital.store');
+    Route::patch('/capital/{capitalSnapshot}', [AdminActionsController::class, 'updateCapitalSnapshot'])->name('capital.update');
+    Route::delete('/capital/{capitalSnapshot}', [AdminActionsController::class, 'destroyCapitalSnapshot'])->name('capital.destroy');
     Route::get('/monthly-profits', [SidebarPageController::class, 'monthlyProfits'])->name('monthly-profits');
     Route::post('/monthly-profits', [AdminActionsController::class, 'storeMonthlyProfit'])->name('monthly-profits.store');
     Route::post('/monthly-profits/{monthlyProfit}/approve', [AdminActionsController::class, 'approveMonthlyProfit'])->name('monthly-profits.approve');
@@ -38,8 +42,14 @@ Route::middleware('ensure.web.admin')->prefix('admin')->name('admin.')->group(fu
     Route::post('/settlements/{settlement}/revision', [AdminActionsController::class, 'reviseSettlement'])->name('settlements.revise');
     Route::get('/funds', [SidebarPageController::class, 'funds'])->name('funds');
     Route::post('/funds', [AdminActionsController::class, 'storeFund'])->name('funds.store');
+    Route::patch('/funds/{fund}', [AdminActionsController::class, 'updateFund'])->name('funds.update');
+    Route::delete('/funds/{fund}', [AdminActionsController::class, 'destroyFund'])->name('funds.destroy');
     Route::post('/funds/{fund}/transactions', [AdminActionsController::class, 'storeFundTransaction'])->name('funds.transactions.store');
+    Route::patch('/funds/{fund}/transactions/{fundTransaction}', [AdminActionsController::class, 'updateFundTransaction'])->name('funds.transactions.update');
     Route::get('/depreciation', [SidebarPageController::class, 'depreciation'])->name('depreciation');
+    Route::post('/depreciation', [AdminActionsController::class, 'storeDepreciation'])->name('depreciation.store');
+    Route::patch('/depreciation/{depreciationNote}', [AdminActionsController::class, 'updateDepreciation'])->name('depreciation.update');
+    Route::delete('/depreciation/{depreciationNote}', [AdminActionsController::class, 'destroyDepreciation'])->name('depreciation.destroy');
     Route::get('/reports', [SidebarPageController::class, 'reports'])->name('reports');
     Route::get('/reports/{report}/export/excel', [ReportController::class, 'excel'])->name('reports.export.excel');
     Route::get('/reports/{report}/export/pdf', [ReportController::class, 'pdf'])->name('reports.export.pdf');
@@ -48,6 +58,7 @@ Route::middleware('ensure.web.admin')->prefix('admin')->name('admin.')->group(fu
     Route::get('/distribution-rules', [SidebarPageController::class, 'distributionRules'])->name('distribution-rules');
     Route::post('/distribution-rules', [AdminActionsController::class, 'storeDistributionRule'])->name('distribution-rules.store');
     Route::patch('/distribution-rules/{distributionRule}', [AdminActionsController::class, 'updateDistributionRule'])->name('distribution-rules.update');
+    Route::delete('/distribution-rules/{distributionRule}', [AdminActionsController::class, 'destroyDistributionRule'])->name('distribution-rules.destroy');
     Route::get('/settings', [SidebarPageController::class, 'settings'])->name('settings');
     Route::get('/audit-logs', [SidebarPageController::class, 'auditLogs'])->name('audit-logs');
     Route::get('/audit-logs/{auditLog}', [SidebarPageController::class, 'auditLogDetails'])->name('audit-logs.show');

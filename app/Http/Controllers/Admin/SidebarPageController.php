@@ -105,6 +105,21 @@ final class SidebarPageController
     {
         return view('admin.pages.depreciation', [
             'items'   => $action->depreciationNotes($request->only(['year', 'month', 'fund'])),
+            'participants' => \App\Models\Participant::query()
+                ->orderBy('first_name')
+                ->orderBy('last_name')
+                ->get()
+                ->map(fn(\App\Models\Participant $p): array => [
+                    'id'   => $p->getKey(),
+                    'name' => trim($p->first_name . ' ' . $p->last_name) ?: $p->username,
+                ]),
+            'funds' => \App\Models\Fund::query()
+                ->orderBy('name')
+                ->get()
+                ->map(fn(\App\Models\Fund $f): array => [
+                    'id'   => $f->getKey(),
+                    'name' => $f->name,
+                ]),
             'title'   => 'الإهلاك',
             'filters' => $request->only(['year', 'month', 'fund']),
         ]);

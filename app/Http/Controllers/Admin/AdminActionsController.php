@@ -9,6 +9,7 @@ use App\Actions\Financial\CreateMonthlyProfitAction;
 use App\Actions\Financial\CreateMonthlyProfitRevisionAction;
 use App\Actions\Funds\CreateFundAction;
 use App\Actions\Funds\CreateFundTransactionAction;
+use App\Actions\Funds\UpdateFundAction;
 use App\Actions\Investment\ApproveInvestmentAction;
 use App\Actions\Settlements\ApproveSettlementAction;
 use App\Actions\Settlements\CreateAnnualSettlementAction;
@@ -23,9 +24,13 @@ use App\Domain\Financial\Rules\DistributionRuleValidator;
 use App\Http\Requests\StoreFundRequest;
 use App\Http\Requests\StoreFundTransactionRequest;
 use App\Http\Requests\StoreSettlementPaymentRequest;
+use App\Http\Requests\UpdateFundRequest;
 use App\Models\CapitalSnapshot;
+use App\Models\CapitalSnapshotItem;
+use App\Models\DepreciationNote;
 use App\Models\DistributionRule;
 use App\Models\Fund;
+use App\Models\FundTransaction;
 use App\Models\Investment;
 use App\Models\MonthlyProfit;
 use App\Models\Settlement;
@@ -123,6 +128,44 @@ final class AdminActionsController
         return redirect()->route('admin.funds')->with('success', 'تم إنشاء الصندوق بنجاح.');
     }
 
+    public function updateFund(UpdateFundRequest $request, Fund $fund, UpdateFundAction $action): JsonResponse|RedirectResponse
+    {
+        Gate::forUser($request->user())->authorize('manage', $fund);
+
+        try {
+            $fund = $action->execute($request->user(), $fund, $request->validated());
+        } catch (Throwable $e) {
+            return $this->fail($request, $e, 'تعذر تحديث الصندوق.');
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'تم تحديث الصندوق.', 'data' => ['id' => $fund->id]]);
+        }
+
+        return redirect()->route('admin.funds')->with('success', 'تم تحديث الصندوق.');
+    }
+
+    public function destroyFund(Request $request, Fund $fund): JsonResponse|RedirectResponse
+    {
+        Gate::forUser($request->user())->authorize('manage', $fund);
+
+        try {
+            if (in_array($fund->code, ['depreciation_fund', 'growth_fund', 'incentive_fund'], true)) {
+                throw new \App\Domain\Financial\Exceptions\ImmutableFinancialRecordException('لا يمكن حذف الصناديق البرمجية الأساسية.');
+            }
+
+            $fund->delete();
+        } catch (Throwable $e) {
+            return $this->fail($request, $e, 'تعذر حذف الصندوق.');
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'تم حذف الصندوق.']);
+        }
+
+        return redirect()->route('admin.funds')->with('success', 'تم حذف الصندوق.');
+    }
+
     public function storeFundTransaction(StoreFundTransactionRequest $request, Fund $fund, CreateFundTransactionAction $action): JsonResponse|RedirectResponse
     {
         Gate::forUser($request->user())->authorize('manage', $fund);
@@ -142,6 +185,54 @@ final class AdminActionsController
         }
 
         return redirect()->route('admin.funds')->with('success', 'تم تسجيل الحركة المالية.');
+    }
+
+    public function updateFundTransaction(Request $request, Fund $fund, FundTransaction $fundTransaction): JsonResponse|RedirectResponse
+    {
+        Gate::forUser($request->user())->authorize('manage', $fund);
+
+        $this->ensureTransactionBelongsToFund($fundTransaction, $fund);
+
+        $data = $request->validate([
+            'reference' => ['nullable', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:255'],
+            'notes' => ['nullable', 'string'],
+            'transaction_date' => ['sometimes', 'date'],
+        ]);
+
+        $old = $fundTransaction->only(['reference', 'description', 'notes', 'transaction_date']);
+
+        try {
+            $fundTransaction->fill([
+                'reference' => $data['reference'] ?? null,
+                'description' => $data['description'] ?? null,
+                'notes' => $data['notes'] ?? null,
+                'transaction_date' => $data['transaction_date'] ?? $fundTransaction->transaction_date?->toDateString(),
+            ])->save();
+        } catch (ImmutableFinancialRecordException $e) {
+            return $this->fail($request, $e, 'لا يمكن تعديل المبلغ أو النوع أو رصيد الحركة المالية.');
+        } catch (Throwable $e) {
+            return $this->fail($request, $e, 'تعذر تحديث الحركة المالية.');
+        }
+
+        app(\App\Services\SecurityAuditService::class)->log('fund_transaction_updated', $request->user(), 'fund_transaction', $fundTransaction->id, [
+            'fund_id' => $fund->id,
+            'old' => $old,
+            'new' => $fundTransaction->only(['reference', 'description', 'notes', 'transaction_date']),
+        ]);
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'تم تحديث الحركة المالية.', 'data' => ['id' => $fundTransaction->id]]);
+        }
+
+        return redirect()->route('admin.funds')->with('success', 'تم تحديث الحركة المالية.');
+    }
+
+    private function ensureTransactionBelongsToFund(FundTransaction $fundTransaction, Fund $fund): void
+    {
+        if ((int) $fundTransaction->fund_id !== (int) $fund->getKey()) {
+            abort(404, 'Transaction not found in this fund.');
+        }
     }
 
     public function storeInvestment(Request $request): JsonResponse|RedirectResponse
@@ -320,6 +411,78 @@ final class AdminActionsController
         return redirect()->route('admin.capital')->with('success', 'تم إنشاء لقطة رأس المال.');
     }
 
+    public function updateCapitalSnapshot(Request $request, CapitalSnapshot $capitalSnapshot): JsonResponse|RedirectResponse
+    {
+        abort_if($request->user()->cannot('capital.manage'), 403, 'Forbidden.');
+
+        $data = $request->validate([
+            'snapshot_date' => ['sometimes', 'date'],
+            'year' => ['sometimes', 'integer', 'min:2000', 'max:2100'],
+            'month' => ['sometimes', 'integer', 'min:1', 'max:12'],
+            'total_capital' => ['sometimes', 'nullable', 'numeric', 'min:0'],
+            'items' => ['sometimes', 'array', 'min:1'],
+            'items.*.participant_id' => ['sometimes', 'integer', 'exists:participants,id'],
+            'items.*.capital' => ['sometimes', 'numeric', 'min:0'],
+        ]);
+
+        try {
+            \Illuminate\Support\Facades\DB::transaction(function () use ($data, $capitalSnapshot): void {
+                $capitalSnapshot->fill($data)->save();
+
+                if (array_key_exists('items', $data) && $data['items'] !== null) {
+                    $totalCapital = '0.00';
+                    foreach ($data['items'] as $item) {
+                        $totalCapital = bcadd($totalCapital, number_format((float) $item['capital'], 2, '.', ''), 2);
+                    }
+
+                    $capitalSnapshot->items()->delete();
+
+                    foreach ($data['items'] as $index => $item) {
+                        $capital = number_format((float) $item['capital'], 2, '.', '');
+                        $ratio = bccomp($totalCapital, '0.00', 2) === 0
+                            ? '0.0000'
+                            : bcdiv($capital, $totalCapital, 4);
+
+                        CapitalSnapshotItem::query()->create([
+                            'capital_snapshot_id' => $capitalSnapshot->id,
+                            'participant_id' => (int) $item['participant_id'],
+                            'participant_capital_snapshot' => $capital,
+                            'participant_ratio_snapshot' => $ratio,
+                            'calculation_metadata' => ['index' => $index],
+                        ]);
+                    }
+
+                    $capitalSnapshot->update(['total_capital' => $totalCapital]);
+                }
+            });
+        } catch (Throwable $e) {
+            return $this->fail($request, $e, 'تعذر تحديث لقطة رأس المال.');
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'تم تحديث لقطة رأس المال.', 'data' => ['id' => $capitalSnapshot->id]]);
+        }
+
+        return redirect()->route('admin.capital')->with('success', 'تم تحديث لقطة رأس المال.');
+    }
+
+    public function destroyCapitalSnapshot(Request $request, CapitalSnapshot $capitalSnapshot): JsonResponse|RedirectResponse
+    {
+        abort_if($request->user()->cannot('capital.manage'), 403, 'Forbidden.');
+
+        try {
+            $capitalSnapshot->delete();
+        } catch (Throwable $e) {
+            return $this->fail($request, $e, 'تعذر حذف لقطة رأس المال.');
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'تم حذف لقطة رأس المال.']);
+        }
+
+        return redirect()->route('admin.capital')->with('success', 'تم حذف لقطة رأس المال.');
+    }
+
     public function storeDistributionRule(Request $request): JsonResponse|RedirectResponse
     {
         Gate::forUser($request->user())->authorize('create', DistributionRule::class);
@@ -387,6 +550,177 @@ final class AdminActionsController
         }
 
         return redirect()->route('admin.distribution-rules')->with('success', 'تم تحديث قاعدة التوزيع.');
+    }
+
+    public function destroyDistributionRule(Request $request, DistributionRule $distributionRule): JsonResponse|RedirectResponse
+    {
+        Gate::forUser($request->user())->authorize('update', $distributionRule);
+
+        try {
+            $distributionRule->delete();
+        } catch (Throwable $e) {
+            return $this->fail($request, $e, 'تعذر حذف قاعدة التوزيع.');
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'تم حذف قاعدة التوزيع.']);
+        }
+
+        return redirect()->route('admin.distribution-rules')->with('success', 'تم حذف قاعدة التوزيع.');
+    }
+
+    public function storeDepreciation(Request $request): JsonResponse|RedirectResponse
+    {
+        Gate::forUser($request->user())->authorize('depreciation.create');
+
+        $data = $request->validate([
+            'amount' => ['required', 'numeric', 'min:0', 'regex:/^\d+(?:\.\d{1,2})?$/'],
+            'rate' => ['required', 'numeric', 'min:0', 'max:1'],
+            'transaction_date' => ['required', 'date'],
+            'year' => ['required', 'integer', 'min:2000', 'max:2100'],
+            'month' => ['required', 'integer', 'min:1', 'max:12'],
+            'description' => ['nullable', 'string', 'max:500'],
+            'admin_note' => ['nullable', 'string', 'max:1000'],
+            'participant_id' => ['nullable', 'integer', 'exists:participants,id'],
+            'fund_id' => ['nullable', 'integer', 'exists:funds,id'],
+        ]);
+
+        try {
+            $note = DepreciationNote::query()->create([
+                'participant_id' => isset($data['participant_id']) && $data['participant_id'] !== '' && $data['participant_id'] !== null ? (int) $data['participant_id'] : null,
+                'fund_id' => isset($data['fund_id']) && $data['fund_id'] !== '' && $data['fund_id'] !== null
+                    ? (int) $data['fund_id']
+                    : Fund::query()->where('code', 'depreciation_fund')->value('id'),
+                'amount' => (string) $data['amount'],
+                'rate' => (string) $data['rate'],
+                'transaction_date' => $data['transaction_date'],
+                'year' => (int) $data['year'],
+                'month' => (int) $data['month'],
+                'description' => $data['description'] ?? '',
+                'admin_note' => $data['admin_note'] ?? null,
+                'created_by_admin_id' => $request->user()->id,
+            ]);
+        } catch (Throwable $e) {
+            return $this->fail($request, $e, 'تعذر إنشاء مذكرة الإهلاك.');
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'تم إنشاء مذكرة الإهلاك.', 'data' => ['id' => $note->id]], 201);
+        }
+
+        return redirect()->route('admin.depreciation')->with('success', 'تم إنشاء مذكرة الإهلاك.');
+    }
+
+    public function updateDepreciation(Request $request, DepreciationNote $depreciationNote): JsonResponse|RedirectResponse
+    {
+        Gate::forUser($request->user())->authorize('depreciation.update');
+
+        $data = $request->validate([
+            'amount' => ['sometimes', 'required', 'numeric', 'min:0', 'regex:/^\d+(?:\.\d{1,2})?$/'],
+            'rate' => ['sometimes', 'required', 'numeric', 'min:0', 'max:1'],
+            'transaction_date' => ['sometimes', 'required', 'date'],
+            'year' => ['sometimes', 'required', 'integer', 'min:2000', 'max:2100'],
+            'month' => ['sometimes', 'required', 'integer', 'min:1', 'max:12'],
+            'description' => ['nullable', 'string', 'max:500'],
+            'admin_note' => ['nullable', 'string', 'max:1000'],
+            'participant_id' => ['nullable', 'integer', 'exists:participants,id'],
+            'fund_id' => ['nullable', 'integer', 'exists:funds,id'],
+        ]);
+
+        $fillable = array_filter([
+            'amount' => isset($data['amount']) ? (string) $data['amount'] : null,
+            'rate' => isset($data['rate']) ? (string) $data['rate'] : null,
+            'transaction_date' => $data['transaction_date'] ?? null,
+            'year' => isset($data['year']) ? (int) $data['year'] : null,
+            'month' => isset($data['month']) ? (int) $data['month'] : null,
+            'description' => $data['description'] ?? $depreciationNote->description,
+            'admin_note' => $data['admin_note'] ?? $depreciationNote->admin_note,
+            'participant_id' => array_key_exists('participant_id', $data)
+                ? (($data['participant_id'] === '' || $data['participant_id'] === null) ? null : (int) $data['participant_id'])
+                : $depreciationNote->participant_id,
+            'fund_id' => array_key_exists('fund_id', $data)
+                ? (($data['fund_id'] === '' || $data['fund_id'] === null) ? null : (int) $data['fund_id'])
+                : $depreciationNote->fund_id,
+        ], fn($value) => $value !== null);
+
+        try {
+            $depreciationNote->fill($fillable)->save();
+        } catch (Throwable $e) {
+            return $this->fail($request, $e, 'تعذر تحديث مذكرة الإهلاك.');
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'تم تحديث مذكرة الإهلاك.', 'data' => ['id' => $depreciationNote->id]]);
+        }
+
+        return redirect()->route('admin.depreciation')->with('success', 'تم تحديث مذكرة الإهلاك.');
+    }
+
+    public function destroyDepreciation(Request $request, DepreciationNote $depreciationNote): JsonResponse|RedirectResponse
+    {
+        Gate::forUser($request->user())->authorize('depreciation.update');
+
+        try {
+            $depreciationNote->delete();
+        } catch (Throwable $e) {
+            return $this->fail($request, $e, 'تعذر حذف مذكرة الإهلاك.');
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'تم حذف مذكرة الإهلاك.']);
+        }
+
+        return redirect()->route('admin.depreciation')->with('success', 'تم حذف مذكرة الإهلاك.');
+    }
+
+    public function updateInvestment(Request $request, Investment $investment): JsonResponse|RedirectResponse
+    {
+        abort_if($request->user()->cannot('update', $investment), 403, 'Forbidden.');
+        abort_if($investment->status !== 'pending', 403, 'يمكن تعديل الاستثمارات قيد الانتظار فقط.');
+
+        $data = $request->validate([
+            'participant_id' => ['sometimes', 'required', 'integer', 'exists:participants,id'],
+            'amount' => ['sometimes', 'required', 'numeric', 'min:0.01', 'regex:/^\d+(?:\.\d{1,2})?$/'],
+            'invested_at' => ['sometimes', 'nullable', 'date'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        try {
+            $investment->fill(array_filter([
+                'participant_id' => isset($data['participant_id']) ? (int) $data['participant_id'] : $investment->participant_id,
+                'amount' => isset($data['amount']) ? (string) $data['amount'] : $investment->amount,
+                'invested_at' => array_key_exists('invested_at', $data)
+                    ? ($data['invested_at'] ?: now()->toDateString())
+                    : $investment->invested_at,
+                'notes' => array_key_exists('notes', $data) ? $data['notes'] : $investment->notes,
+            ], fn($value) => $value !== null))->save();
+        } catch (Throwable $e) {
+            return $this->fail($request, $e, 'تعذر تحديث الاستثمار.');
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'تم تحديث الاستثمار.', 'data' => ['id' => $investment->id]]);
+        }
+
+        return redirect()->route('admin.investments')->with('success', 'تم تحديث الاستثمار.');
+    }
+
+    public function destroyInvestment(Request $request, Investment $investment): JsonResponse|RedirectResponse
+    {
+        abort_if($request->user()->cannot('update', $investment), 403, 'Forbidden.');
+        abort_if($investment->status !== 'pending', 403, 'يمكن حذف الاستثمارات قيد الانتظار فقط.');
+
+        try {
+            $investment->delete();
+        } catch (Throwable $e) {
+            return $this->fail($request, $e, 'تعذر حذف الاستثمار.');
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'تم حذف الاستثمار.']);
+        }
+
+        return redirect()->route('admin.investments')->with('success', 'تم حذف الاستثمار.');
     }
 
     private function validateDistributionRates(array $data): void

@@ -73,6 +73,10 @@
                                     <button type="button" class="action-edit" data-fill-modal="modal-rule-edit"
                                         data-action-url="{{ route('admin.distribution-rules.update', $item['id']) }}"
                                         data-edit='@json($item["edit_payload"])'>تعديل</button>
+                                    <button type="button" class="action-delete" data-post
+                                        data-method="DELETE"
+                                        data-url="{{ route('admin.distribution-rules.destroy', $item['id']) }}"
+                                        data-confirm="هل أنت متأكد من حذف قاعدة التوزيع؟">حذف</button>
                                 </div>
                             </td>
                         </tr>

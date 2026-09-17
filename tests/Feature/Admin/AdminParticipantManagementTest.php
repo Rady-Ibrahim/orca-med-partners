@@ -165,6 +165,58 @@ final class AdminParticipantManagementTest extends TestCase
             ->assertRedirect(route('admin.participants'));
     }
 
+    public function test_partial_update_changes_only_provided_fields(): void
+    {
+        $admin = $this->admin();
+        $participant = Participant::factory()->create([
+            'first_name' => 'أحمد',
+            'last_name' => 'محمد',
+            'username' => 'ahmed.partial',
+            'email' => null,
+            'status' => 'active',
+        ]);
+
+        $this->withSession(['web_admin_id' => $admin->id])
+            ->putJson("/admin/participants/{$participant->id}", [
+                'first_name' => 'أحمدي',
+            ])
+            ->assertOk()
+            ->assertJsonPath('success', true);
+
+        $participant->refresh();
+        $this->assertSame('أحمدي', $participant->first_name);
+        $this->assertSame('محمد', $participant->last_name);
+        $this->assertSame('ahmed.partial', $participant->username);
+        $this->assertSame('active', $participant->status);
+
+        $this->assertDatabaseHas('audit_logs', [
+            'auditable_type' => Participant::class,
+            'auditable_id' => $participant->id,
+            'action' => 'participant_updated',
+            'actor_id' => $admin->id,
+        ]);
+    }
+
+    public function test_update_accepts_empty_email_as_removal(): void
+    {
+        $admin = $this->admin();
+        $participant = Participant::factory()->create([
+            'email' => 'remove@example.com',
+        ]);
+
+        $this->withSession(['web_admin_id' => $admin->id])
+            ->put("/admin/participants/{$participant->id}", [
+                'first_name' => $participant->first_name,
+                'last_name' => $participant->last_name,
+                'username' => $participant->username,
+                'email' => '',
+                'status' => 'active',
+            ])
+            ->assertRedirect(route('admin.participants'));
+
+        $this->assertNull($participant->fresh()->email);
+    }
+
     public function test_admin_can_change_participant_password_and_revoke_tokens(): void
     {
         $admin = $this->admin();

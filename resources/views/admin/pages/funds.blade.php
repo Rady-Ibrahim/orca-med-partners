@@ -62,9 +62,19 @@
                             <td>{{ $item['transactions'] }}</td>
                             <td>
                                 <div class="row-actions">
+                                    <button type="button" class="action-edit" data-fill-modal="modal-fund-edit"
+                                        data-action-url="{{ route('admin.funds.update', $item['id']) }}"
+                                        data-edit='@json($item["edit_payload"])'>تعديل</button>
+                                    @if (!$item['system_group'])
+                                        <button type="button" class="action-delete" data-post
+                                            data-method="DELETE"
+                                            data-url="{{ route('admin.funds.destroy', $item['id']) }}"
+                                            data-confirm="هل أنت متأكد من حذف هذا الصندوق؟">حذف</button>
+                                    @endif
                                     <button type="button" class="action-neutral" data-modal-open="modal-fund-transaction"
                                         data-action-url="{{ route('admin.funds.transactions.store', $item['id']) }}"
                                         data-orca-label='{"#txnFundCaption":"{{ $item['name'] }}"}'>تسجيل حركة</button>
+                                    <button type="button" class="action-neutral" data-modal-open="modal-fund-txn-list-{{ $item['id'] }}">الحركات</button>
                                 </div>
                             </td>
                         </tr>
@@ -117,6 +127,48 @@
     </div>
 </div>
 
+{{-- ── تعديل صندوق ── --}}
+<div class="modal-backdrop" id="modal-fund-edit" hidden>
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3>تعديل صندوق</h3>
+            <button type="button" class="modal-close" data-modal-close aria-label="إغلاق">×</button>
+        </div>
+        <form data-ajax-form action="" method="POST">
+            @csrf
+            @method('PATCH')
+            <div class="modal-body">
+                <div class="modal-grid">
+                    <div class="om-field">
+                        <label for="fund_edit_code">الكود</label>
+                        <input id="fund_edit_code" name="code" required dir="ltr" placeholder="growth_fund">
+                        <span class="hint">كود فريد يُستخدم برمجياً</span>
+                    </div>
+                    <div class="om-field">
+                        <label for="fund_edit_name">الاسم</label>
+                        <input id="fund_edit_name" name="name" required>
+                    </div>
+                    <div class="om-field">
+                        <label for="fund_edit_status">الحالة</label>
+                        <select id="fund_edit_status" name="status">
+                            <option value="active">نشط</option>
+                            <option value="inactive">غير نشط</option>
+                        </select>
+                    </div>
+                    <div class="om-field full">
+                        <label for="fund_edit_description">الوصف</label>
+                        <textarea id="fund_edit_description" name="description" rows="2"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="secondary-button" data-modal-close>إلغاء</button>
+                <button type="submit" class="primary-button" data-submit>حفظ التعديلات</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 {{-- ── تسجيل حركة صندوق ── --}}
 <div class="modal-backdrop" id="modal-fund-transaction" hidden>
     <div class="modal-card">
@@ -160,6 +212,107 @@
             <div class="modal-footer">
                 <button type="button" class="secondary-button" data-modal-close>إلغاء</button>
                 <button type="submit" class="primary-button" data-submit>تسجيل الحركة</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@foreach ($items as $item)
+    {{-- ── حركات الصندوق ── --}}
+    <div class="modal-backdrop" id="modal-fund-txn-list-{{ $item['id'] }}" hidden>
+        <div class="modal-card wide">
+            <div class="modal-header">
+                <div>
+                    <h3>حركات الصندوق — {{ $item['name'] }}</h3>
+                    <span class="hint" style="color:var(--text-faint);font-size:11px">{{ $item['code'] }}</span>
+                </div>
+                <button type="button" class="modal-close" data-modal-close aria-label="إغلاق">×</button>
+            </div>
+            <div class="modal-body">
+                @if (empty($item['transaction_items']))
+                    <div class="empty-state panel"><span>◌</span><p>لا توجد حركات مسجلة على هذا الصندوق.</p></div>
+                @else
+                    <div class="table-scroll">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>النوع</th>
+                                    <th>المبلغ</th>
+                                    <th>الرصيد بعد الحركة</th>
+                                    <th>التاريخ</th>
+                                    <th>المرجع</th>
+                                    <th>الوصف</th>
+                                    <th>إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($item['transaction_items'] as $txn)
+                                    <tr>
+                                        <td>
+                                            <span class="status-badge status-{{ $txn['type'] === 'deposit' ? 'approved' : ($txn['type'] === 'withdrawal' ? 'rejected' : 'pending') }}">
+                                                {{ match($txn['type']) { 'deposit' => 'إيداع', 'withdrawal' => 'سحب', 'adjustment' => 'تسوية', default => $txn['type'] } }}
+                                            </span>
+                                        </td>
+                                        <td class="numeric">{{ $txn['type'] === 'deposit' ? '+' : ($txn['type'] === 'withdrawal' ? '−' : '±') }} {{ $txn['amount'] }} ر.س</td>
+                                        <td class="numeric muted">{{ $txn['resulting_balance'] }} ر.س</td>
+                                        <td class="muted">{{ $txn['date'] }}</td>
+                                        <td>{{ $txn['reference'] ?: '—' }}</td>
+                                        <td>{{ $txn['description'] ?: $txn['notes'] ?: '—' }}</td>
+                                        <td>
+                                            <div class="row-actions">
+                                                <button type="button" class="action-edit" data-fill-modal="modal-transaction-edit"
+                                                    data-action-url="{{ route('admin.funds.transactions.update', [$item['id'], $txn['id']]) }}"
+                                                    data-edit='@json($txn["edit_payload"])'>تعديل</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="secondary-button" data-modal-close>إغلاق</button>
+            </div>
+        </div>
+    </div>
+@endforeach
+
+{{-- ── تعديل حركة مالية (بيانات وصفية فقط) ── --}}
+<div class="modal-backdrop" id="modal-transaction-edit" hidden>
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3>تعديل الحركة المالية</h3>
+            <button type="button" class="modal-close" data-modal-close aria-label="إغلاق">×</button>
+        </div>
+        <form data-ajax-form action="" method="POST">
+            @csrf
+            @method('PATCH')
+            <div class="modal-body">
+                <p class="hint" style="margin-bottom:12px">المبلغ والنوع والرصيد محميّان ولا يمكن تغييرهما؛ يمكن تعديل البيانات الوصفية فقط.</p>
+                <div class="modal-grid">
+                    <div class="om-field">
+                        <label for="txn_ref">المرجع</label>
+                        <input id="txn_ref" name="reference" dir="ltr" placeholder="INV-2025-001">
+                    </div>
+                    <div class="om-field">
+                        <label for="txn_edit_date">التاريخ</label>
+                        <input id="txn_edit_date" name="transaction_date" type="date">
+                    </div>
+                    <div class="om-field full">
+                        <label for="txn_desc">الوصف</label>
+                        <textarea id="txn_desc" name="description" rows="2"></textarea>
+                    </div>
+                    <div class="om-field full">
+                        <label for="txn_notes">ملاحظات</label>
+                        <textarea id="txn_notes" name="notes" rows="2"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="secondary-button" data-modal-close>إلغاء</button>
+                <button type="submit" class="primary-button" data-submit>حفظ التعديلات</button>
             </div>
         </form>
     </div>

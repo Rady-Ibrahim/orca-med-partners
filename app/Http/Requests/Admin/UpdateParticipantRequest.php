@@ -14,16 +14,23 @@ final class UpdateParticipantRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->exists('email') && ($this->email === '' || $this->email === null)) {
+            $this->merge(['email' => null]);
+        }
+    }
+
     public function rules(): array
     {
         $participantId = $this->route('participant')?->getKey();
 
         return [
-            'first_name' => ['required', 'string', 'max:255'],
-            'last_name' => ['required', 'string', 'max:255'],
-            'username' => ['required', 'string', 'min:3', 'max:50', 'regex:/^[a-zA-Z0-9._-]+$/', Rule::unique('participants', 'username')->ignore($participantId)],
-            'email' => ['nullable', 'string', 'email', 'max:255', Rule::unique('participants', 'email')->ignore($participantId)],
-            'status' => ['required', 'string', Rule::in(['active', 'inactive'])],
+            'first_name' => ['sometimes', 'required', 'string', 'max:255'],
+            'last_name' => ['sometimes', 'required', 'string', 'max:255'],
+            'username' => ['sometimes', 'required', 'string', 'min:3', 'max:50', 'regex:/^[a-zA-Z0-9._-]+$/', Rule::unique('participants', 'username')->ignore($participantId)],
+            'email' => ['nullable', 'string', 'max:255', Rule::unique('participants', 'email')->ignore($participantId)],
+            'status' => ['sometimes', 'required', 'string', Rule::in(['active', 'inactive'])],
         ];
     }
 
