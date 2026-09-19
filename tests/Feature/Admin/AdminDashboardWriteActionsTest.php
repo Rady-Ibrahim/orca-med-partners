@@ -257,11 +257,11 @@ final class AdminDashboardWriteActionsTest extends TestCase
             ->postJson('/admin/distribution-rules', [
                 'effective_from' => '2026-01-01',
                 'effective_to' => '2026-12-31',
-                'management_fee_rate' => '0.2500',
-                'depreciation_fund_rate' => '0.0500',
-                'growth_fund_rate' => '0.0250',
-                'incentive_fund_rate' => '0.0250',
-                'distributed_share_rate' => '0.6500',
+                'management_fee_rate' => '25',
+                'depreciation_fund_rate' => '5',
+                'growth_fund_rate' => '2.5',
+                'incentive_fund_rate' => '2.5',
+                'distributed_share_rate' => '65',
                 'status' => 'draft',
                 'notes' => 'قاعدة 2026',
             ])
@@ -272,8 +272,8 @@ final class AdminDashboardWriteActionsTest extends TestCase
 
         $this->withSession(['web_admin_id' => $admin->id])
             ->patchJson("/admin/distribution-rules/{$rule->id}", [
-                'management_fee_rate' => '0.2000',
-                'distributed_share_rate' => '0.7000',
+                'management_fee_rate' => '20',
+                'distributed_share_rate' => '70',
                 'status' => 'active',
             ])
             ->assertOk()
@@ -313,11 +313,11 @@ final class AdminDashboardWriteActionsTest extends TestCase
         $this->withSession(['web_admin_id' => $admin->id])
             ->postJson('/admin/distribution-rules', [
                 'effective_from' => '2026-01-01',
-                'management_fee_rate' => '0.9000',
-                'depreciation_fund_rate' => '0.9000',
-                'growth_fund_rate' => '0.9000',
-                'incentive_fund_rate' => '0.9000',
-                'distributed_share_rate' => '0.9000',
+                'management_fee_rate' => '90',
+                'depreciation_fund_rate' => '90',
+                'growth_fund_rate' => '90',
+                'incentive_fund_rate' => '90',
+                'distributed_share_rate' => '90',
                 'status' => 'draft',
             ])
             ->assertStatus(422)

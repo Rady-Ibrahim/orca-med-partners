@@ -34,11 +34,11 @@ final class AdminBackendControlApiTest extends TestCase
 
     public function test_guest_cannot_access_admin_endpoints(): void
     {
-        $this->getJson('/api/admin/capital')->assertStatus(401);
-        $this->getJson('/api/admin/depreciation')->assertStatus(401);
-        $this->getJson('/api/admin/distribution-rules')->assertStatus(401);
-        $this->getJson('/api/admin/settings')->assertStatus(401);
-        $this->getJson('/api/admin/monthly-profits')->assertStatus(401);
+        $this->getJson('/api/v1/admin/capital')->assertStatus(401);
+        $this->getJson('/api/v1/admin/depreciation')->assertStatus(401);
+        $this->getJson('/api/v1/admin/distribution-rules')->assertStatus(401);
+        $this->getJson('/api/v1/admin/settings')->assertStatus(401);
+        $this->getJson('/api/v1/admin/monthly-profits')->assertStatus(401);
     }
 
     public function test_participant_listing_supports_search_and_pagination(): void
@@ -48,14 +48,14 @@ final class AdminBackendControlApiTest extends TestCase
         Participant::factory()->create();
 
         $this->withToken($token)
-            ->getJson('/api/admin/participants?search=unique.search.target')
+            ->getJson('/api/v1/admin/participants?search=unique.search.target')
             ->assertOk()
             ->assertJsonPath('success', true)
             ->assertJsonPath('data.total', 1)
             ->assertJsonPath('data.data.0.username', 'unique.search.target');
 
         $this->withToken($token)
-            ->getJson('/api/admin/participants?per_page=1')
+            ->getJson('/api/v1/admin/participants?per_page=1')
             ->assertOk()
             ->assertJsonPath('data.per_page', 1);
     }
@@ -66,7 +66,7 @@ final class AdminBackendControlApiTest extends TestCase
         $first = Participant::factory()->create();
         $second = Participant::factory()->create();
 
-        $create = $this->withToken($token)->postJson('/api/admin/capital', [
+        $create = $this->withToken($token)->postJson('/api/v1/admin/capital', [
             'snapshot_date' => '2026-05-31',
             'year' => 2026,
             'month' => 5,
@@ -101,12 +101,12 @@ final class AdminBackendControlApiTest extends TestCase
         ]);
 
         $this->withToken($token)
-            ->getJson('/api/admin/capital?year=2026&month=5')
+            ->getJson('/api/v1/admin/capital?year=2026&month=5')
             ->assertOk()
             ->assertJsonPath('data.total', 1);
 
         $this->withToken($token)
-            ->patchJson("/api/admin/capital/{$snapshotId}", [
+            ->patchJson("/api/v1/admin/capital/{$snapshotId}", [
                 'items' => [
                     ['participant_id' => $first->id, 'capital' => '75000.00'],
                     ['participant_id' => $second->id, 'capital' => '25000.00'],
@@ -141,7 +141,7 @@ final class AdminBackendControlApiTest extends TestCase
         ]);
 
         $this->withToken($token)
-            ->patchJson("/api/admin/capital/{$snapshot->id}", ['total_capital' => '200.00'])
+            ->patchJson("/api/v1/admin/capital/{$snapshot->id}", ['total_capital' => '200.00'])
             ->assertOk();
 
         $rule = DistributionRule::query()->create([
@@ -157,7 +157,7 @@ final class AdminBackendControlApiTest extends TestCase
         app(\App\Actions\Financial\ApproveMonthlyProfitAction::class)->execute(Admin::query()->first(), $profit);
 
         $this->withToken($token)
-            ->patchJson("/api/admin/capital/{$snapshot->id}", ['total_capital' => '300.00'])
+            ->patchJson("/api/v1/admin/capital/{$snapshot->id}", ['total_capital' => '300.00'])
             ->assertStatus(422)
             ->assertJsonPath('success', false);
     }
@@ -167,7 +167,7 @@ final class AdminBackendControlApiTest extends TestCase
         $token = $this->adminToken();
         Fund::query()->create(['code' => 'depreciation_fund', 'name' => 'Depreciation Fund', 'current_balance' => '0.00', 'status' => 'active']);
 
-        $store = $this->withToken($token)->postJson('/api/admin/depreciation', [
+        $store = $this->withToken($token)->postJson('/api/v1/admin/depreciation', [
             'amount' => '500.00',
             'rate' => '0.0500',
             'transaction_date' => '2026-07-31',
@@ -182,18 +182,18 @@ final class AdminBackendControlApiTest extends TestCase
         $this->assertSame('depreciation_fund', Fund::query()->find($store->json('data.fund_id'))->code);
 
         $this->withToken($token)
-            ->patchJson("/api/admin/depreciation/{$noteId}", ['description' => 'Updated', 'amount' => '600.00'])
+            ->patchJson("/api/v1/admin/depreciation/{$noteId}", ['description' => 'Updated', 'amount' => '600.00'])
             ->assertOk()
             ->assertJsonPath('data.description', 'Updated')
             ->assertJsonPath('data.amount', '600.00');
 
         $this->withToken($token)
-            ->getJson('/api/admin/depreciation?year=2026')
+            ->getJson('/api/v1/admin/depreciation?year=2026')
             ->assertOk()
             ->assertJsonPath('data.total', 1);
 
         $this->withToken($token)
-            ->deleteJson("/api/admin/depreciation/{$noteId}")
+            ->deleteJson("/api/v1/admin/depreciation/{$noteId}")
             ->assertOk()
             ->assertJsonPath('success', true);
         $this->assertDatabaseMissing('depreciation_notes', ['id' => $noteId]);
@@ -231,7 +231,7 @@ final class AdminBackendControlApiTest extends TestCase
         $note = DepreciationNote::query()->where('monthly_profit_id', $profit->id)->firstOrFail();
 
         $this->withToken($token)
-            ->deleteJson("/api/admin/depreciation/{$note->id}")
+            ->deleteJson("/api/v1/admin/depreciation/{$note->id}")
             ->assertStatus(422)
             ->assertJsonPath('success', false);
     }
@@ -240,7 +240,7 @@ final class AdminBackendControlApiTest extends TestCase
     {
         $token = $this->adminToken();
 
-        $store = $this->withToken($token)->postJson('/api/admin/distribution-rules', [
+        $store = $this->withToken($token)->postJson('/api/v1/admin/distribution-rules', [
             'effective_from' => '2026-09-01',
             'management_fee_rate' => '0.2000',
             'depreciation_fund_rate' => '0.0500',
@@ -255,17 +255,17 @@ final class AdminBackendControlApiTest extends TestCase
         $ruleId = $store->json('data.id');
 
         $this->withToken($token)
-            ->getJson('/api/admin/distribution-rules')
+            ->getJson('/api/v1/admin/distribution-rules')
             ->assertOk()
             ->assertJsonPath('data.total', 1);
 
         $this->withToken($token)
-            ->getJson("/api/admin/distribution-rules/{$ruleId}")
+            ->getJson("/api/v1/admin/distribution-rules/{$ruleId}")
             ->assertOk()
             ->assertJsonPath('data.id', $ruleId);
 
         $this->withToken($token)
-            ->patchJson("/api/admin/distribution-rules/{$ruleId}", [
+            ->patchJson("/api/v1/admin/distribution-rules/{$ruleId}", [
                 'status' => 'active',
                 'distributed_share_rate' => '0.6800',
                 'management_fee_rate' => '0.2200',
@@ -280,7 +280,7 @@ final class AdminBackendControlApiTest extends TestCase
         $token = $this->adminToken();
 
         $this->withToken($token)
-            ->postJson('/api/admin/distribution-rules', [
+            ->postJson('/api/v1/admin/distribution-rules', [
                 'effective_from' => '2026-10-01',
                 'management_fee_rate' => '0.9000',
                 'depreciation_fund_rate' => '0.0500',
@@ -299,12 +299,12 @@ final class AdminBackendControlApiTest extends TestCase
         AppSetting::query()->create(['key' => 'company_name', 'value' => 'Orca Med Partners', 'description' => 'Compañía']);
 
         $this->withToken($token)
-            ->getJson('/api/admin/settings')
+            ->getJson('/api/v1/admin/settings')
             ->assertOk()
             ->assertJsonPath('data.company_name', 'Orca Med Partners');
 
         $this->withToken($token)
-            ->putJson('/api/admin/settings', [
+            ->putJson('/api/v1/admin/settings', [
                 'settings' => [
                     'company_name' => 'Orca Med',
                     'support_email' => 'support@orcam.com',
@@ -322,13 +322,13 @@ final class AdminBackendControlApiTest extends TestCase
         $token = $this->adminToken();
 
         $this->withToken($token)
-            ->postJson('/api/admin/capital', [])
+            ->postJson('/api/v1/admin/capital', [])
             ->assertStatus(422)
             ->assertJsonPath('success', false)
             ->assertJsonStructure(['success', 'message', 'errors']);
 
         $this->withToken($token)
-            ->patchJson('/api/admin/capital/999999', [])
+            ->patchJson('/api/v1/admin/capital/999999', [])
             ->assertStatus(404)
             ->assertJsonPath('success', false)
             ->assertJsonStructure(['success', 'message']);
@@ -345,8 +345,8 @@ final class AdminBackendControlApiTest extends TestCase
         ]);
         $token = $employee->createToken('admin-api', ['*'])->plainTextToken;
 
-        $this->withToken($token)->getJson('/api/admin/participants')->assertOk();
-        $this->withToken($token)->getJson('/api/admin/settings')->assertForbidden();
-        $this->withToken($token)->postJson('/api/admin/capital', ['year' => 2026, 'month' => 1, 'snapshot_date' => '2026-01-31'])->assertForbidden();
+        $this->withToken($token)->getJson('/api/v1/admin/participants')->assertOk();
+        $this->withToken($token)->getJson('/api/v1/admin/settings')->assertForbidden();
+        $this->withToken($token)->postJson('/api/v1/admin/capital', ['year' => 2026, 'month' => 1, 'snapshot_date' => '2026-01-31'])->assertForbidden();
     }
 }

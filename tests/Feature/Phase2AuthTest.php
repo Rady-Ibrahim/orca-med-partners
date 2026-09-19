@@ -23,7 +23,7 @@ class Phase2AuthTest extends TestCase
             'status' => 'active',
         ]);
 
-        $response = $this->postJson('/api/auth/admin/login', [
+        $response = $this->postJson('/api/v1/auth/admin/login', [
             'username' => 'superadmin',
             'password' => 'secret123',
         ]);
@@ -56,7 +56,7 @@ class Phase2AuthTest extends TestCase
             'status' => 'active',
         ]);
 
-        $response = $this->postJson('/api/auth/participant/login', [
+        $response = $this->postJson('/api/v1/auth/participant/login', [
             'username' => 'participant01',
             'password' => 'secret123',
         ]);
@@ -87,7 +87,7 @@ class Phase2AuthTest extends TestCase
 
         $token = $participant->createToken('participant-api', ['*'])->plainTextToken;
 
-        $response = $this->withToken($token)->getJson('/api/admin/participants');
+        $response = $this->withToken($token)->getJson('/api/v1/admin/participants');
 
         $response->assertStatus(403);
     }
@@ -107,7 +107,7 @@ class Phase2AuthTest extends TestCase
 
         $token = $owner->createToken('participant-api', ['*'])->plainTextToken;
 
-        $response = $this->withToken($token)->getJson('/api/me');
+        $response = $this->withToken($token)->getJson('/api/v1/me');
 
         $response->assertOk();
         $response->assertJsonPath('data.id', $owner->id);
@@ -133,8 +133,8 @@ class Phase2AuthTest extends TestCase
         $adminToken = $admin->createToken('admin-api', ['*'])->plainTextToken;
         $participantToken = $participant->createToken('participant-api', ['*'])->plainTextToken;
 
-        $adminRoute = $this->withToken($adminToken)->getJson('/api/admin/participants');
-        $participantRoute = $this->withToken($participantToken)->getJson('/api/admin/participants');
+        $adminRoute = $this->withToken($adminToken)->getJson('/api/v1/admin/participants');
+        $participantRoute = $this->withToken($participantToken)->getJson('/api/v1/admin/participants');
 
         $adminRoute->assertStatus(200);
         $participantRoute->assertStatus(403);

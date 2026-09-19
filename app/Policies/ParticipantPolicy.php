@@ -9,23 +9,23 @@ use App\Models\Participant;
 
 class ParticipantPolicy
 {
-    public function viewAny(Admin $user): bool
+    public function viewAny(Admin|Participant $user): bool
     {
-        return $user->hasPermission('participants.view') || $user->is_super_admin;
+        return $user instanceof Admin && ($user->hasPermission('participants.view') || $user->is_super_admin);
     }
 
-    public function view(Admin $user, Participant $participant): bool
+    public function view(Admin|Participant $user, Participant $participant): bool
     {
-        return $user->hasPermission('participants.view') || $user->is_super_admin;
+        return $user instanceof Admin && ($user->hasPermission('participants.view') || $user->is_super_admin);
     }
 
-    public function update(Admin $user, Participant $participant): bool
+    public function update(Admin|Participant $user, Participant $participant): bool
     {
-        return $user->hasPermission('participants.update') || $user->is_super_admin;
+        return $user instanceof Admin && ($user->hasPermission('participants.update') || $user->is_super_admin);
     }
 
-    public function manageOwnResource(Participant $user, Participant $participant): bool
+    public function manageOwnResource(Admin|Participant $user, Participant $participant): bool
     {
-        return $user->id === $participant->id;
+        return $user instanceof Participant && $user->id === $participant->id;
     }
 }

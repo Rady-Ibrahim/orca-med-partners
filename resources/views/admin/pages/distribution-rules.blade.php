@@ -108,24 +108,24 @@
                         <input id="rule_to" name="effective_to" type="date">
                     </div>
                     <div class="om-field">
-                        <label for="rule_mgmt">رسوم الإدارة (٠–١)</label>
-                        <input id="rule_mgmt" name="management_fee_rate" type="number" required min="0" max="1" step="0.0001">
+                        <label for="rule_mgmt">رسوم الإدارة %</label>
+                        <input id="rule_mgmt" name="management_fee_rate" type="number" required min="0" max="100" step="0.01">
                     </div>
                     <div class="om-field">
-                        <label for="rule_dep">إهلاك (٠–١)</label>
-                        <input id="rule_dep" name="depreciation_fund_rate" type="number" required min="0" max="1" step="0.0001">
+                        <label for="rule_dep">إهلاك %</label>
+                        <input id="rule_dep" name="depreciation_fund_rate" type="number" required min="0" max="100" step="0.01">
                     </div>
                     <div class="om-field">
-                        <label for="rule_growth">النمو (٠–١)</label>
-                        <input id="rule_growth" name="growth_fund_rate" type="number" required min="0" max="1" step="0.0001">
+                        <label for="rule_growth">النمو %</label>
+                        <input id="rule_growth" name="growth_fund_rate" type="number" required min="0" max="100" step="0.01">
                     </div>
                     <div class="om-field">
-                        <label for="rule_incentive">الحوافز (٠–١)</label>
-                        <input id="rule_incentive" name="incentive_fund_rate" type="number" required min="0" max="1" step="0.0001">
+                        <label for="rule_incentive">الحوافز %</label>
+                        <input id="rule_incentive" name="incentive_fund_rate" type="number" required min="0" max="100" step="0.01">
                     </div>
                     <div class="om-field">
-                        <label for="rule_distributed">الموزع للمشاركين (٠–١)</label>
-                        <input id="rule_distributed" name="distributed_share_rate" type="number" required min="0" max="1" step="0.0001">
+                        <label for="rule_distributed">الموزع للمشاركين %</label>
+                        <input id="rule_distributed" name="distributed_share_rate" type="number" required min="0" max="100" step="0.01">
                     </div>
                     <div class="om-field">
                         <label for="rule_status">الحالة</label>
@@ -146,7 +146,7 @@
                         <textarea id="rule_notes" name="notes" rows="2"></textarea>
                     </div>
                 </div>
-                <p class="hint" style="margin-top:10px;color:var(--text-faint)">يجب أن يكون مجموع النِسَب يساوي 1 تمامًا.</p>
+                <p class="hint" style="margin-top:10px;color:var(--text-faint)">أدخل النسب بالمئة (من 0 إلى 100) — يجب أن يكون مجموعها 100 تمامًا.</p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="secondary-button" data-modal-close>إلغاء</button>
@@ -177,24 +177,24 @@
                         <input id="rule_edit_to" name="effective_to" type="date">
                     </div>
                     <div class="om-field">
-                        <label for="rule_edit_mgmt">رسوم الإدارة (٠–١)</label>
-                        <input id="rule_edit_mgmt" name="management_fee_rate" type="number" required min="0" max="1" step="0.0001">
+                        <label for="rule_edit_mgmt">رسوم الإدارة %</label>
+                        <input id="rule_edit_mgmt" name="management_fee_rate" type="number" required min="0" max="100" step="0.01">
                     </div>
                     <div class="om-field">
-                        <label for="rule_edit_dep">إهلاك (٠–١)</label>
-                        <input id="rule_edit_dep" name="depreciation_fund_rate" type="number" required min="0" max="1" step="0.0001">
+                        <label for="rule_edit_dep">إهلاك %</label>
+                        <input id="rule_edit_dep" name="depreciation_fund_rate" type="number" required min="0" max="100" step="0.01">
                     </div>
                     <div class="om-field">
-                        <label for="rule_edit_growth">النمو (٠–١)</label>
-                        <input id="rule_edit_growth" name="growth_fund_rate" type="number" required min="0" max="1" step="0.0001">
+                        <label for="rule_edit_growth">النمو %</label>
+                        <input id="rule_edit_growth" name="growth_fund_rate" type="number" required min="0" max="100" step="0.01">
                     </div>
                     <div class="om-field">
-                        <label for="rule_edit_incentive">الحوافز (٠–١)</label>
-                        <input id="rule_edit_incentive" name="incentive_fund_rate" type="number" required min="0" max="1" step="0.0001">
+                        <label for="rule_edit_incentive">الحوافز %</label>
+                        <input id="rule_edit_incentive" name="incentive_fund_rate" type="number" required min="0" max="100" step="0.01">
                     </div>
                     <div class="om-field">
-                        <label for="rule_edit_distributed">الموزع للمشاركين (٠–١)</label>
-                        <input id="rule_edit_distributed" name="distributed_share_rate" type="number" required min="0" max="1" step="0.0001">
+                        <label for="rule_edit_distributed">الموزع للمشاركين %</label>
+                        <input id="rule_edit_distributed" name="distributed_share_rate" type="number" required min="0" max="100" step="0.01">
                     </div>
                     <div class="om-field">
                         <label for="rule_edit_status">الحالة</label>

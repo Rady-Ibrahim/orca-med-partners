@@ -5,43 +5,120 @@
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl", "value": "https://api.orca-med.local/api" },
-    { "key": "accessToken", "value": "" },
-    { "key": "refreshToken", "value": "" },
-    { "key": "adminToken", "value": "" },
-    { "key": "adminRefreshToken", "value": "" },
-    { "key": "participantUsername", "value": "mahmoud_elmalawani" },
-    { "key": "participantPassword", "value": "secret123" },
-    { "key": "adminUsername", "value": "admin" },
-    { "key": "adminPassword", "value": "admin123" },
-    { "key": "participantId", "value": "1" },
-    { "key": "investmentId", "value": "1" },
-    { "key": "capitalId", "value": "1" },
-    { "key": "monthlyProfitId", "value": "1" },
-    { "key": "fundId", "value": "1" },
-    { "key": "transactionId", "value": "1" },
-    { "key": "depreciationId", "value": "1" },
-    { "key": "distributionRuleId", "value": "1" },
-    { "key": "settlementId", "value": "1" },
-    { "key": "notificationId", "value": "1" },
-    { "key": "paymentId", "value": "1" },
-    { "key": "resourceId", "value": "1" }
+    {
+      "key": "baseUrl",
+      "value": "https://api.orca-med.local/api"
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "refreshToken",
+      "value": ""
+    },
+    {
+      "key": "adminToken",
+      "value": ""
+    },
+    {
+      "key": "adminRefreshToken",
+      "value": ""
+    },
+    {
+      "key": "participantUsername",
+      "value": "mahmoud_elmalawani"
+    },
+    {
+      "key": "participantPassword",
+      "value": "secret123"
+    },
+    {
+      "key": "adminUsername",
+      "value": "admin"
+    },
+    {
+      "key": "adminPassword",
+      "value": "admin123"
+    },
+    {
+      "key": "participantId",
+      "value": "1"
+    },
+    {
+      "key": "investmentId",
+      "value": "1"
+    },
+    {
+      "key": "capitalId",
+      "value": "1"
+    },
+    {
+      "key": "monthlyProfitId",
+      "value": "1"
+    },
+    {
+      "key": "fundId",
+      "value": "1"
+    },
+    {
+      "key": "transactionId",
+      "value": "1"
+    },
+    {
+      "key": "depreciationId",
+      "value": "1"
+    },
+    {
+      "key": "distributionRuleId",
+      "value": "1"
+    },
+    {
+      "key": "settlementId",
+      "value": "1"
+    },
+    {
+      "key": "notificationId",
+      "value": "1"
+    },
+    {
+      "key": "paymentId",
+      "value": "1"
+    },
+    {
+      "key": "resourceId",
+      "value": "1"
+    }
   ],
   "auth": {
     "type": "bearer",
-    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
   },
   "item": [
     {
       "name": "1. Admin Auth & Session",
       "auth": {
         "type": "bearer",
-        "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{adminToken}}",
+            "type": "string"
+          }
+        ]
       },
       "item": [
         {
           "name": "Admin Login",
-          "auth": { "type": "noauth" },
+          "auth": {
+            "type": "noauth"
+          },
           "event": [
             {
               "listen": "test",
@@ -62,19 +139,41 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n    \"username\": \"{{adminUsername}}\",\n    \"password\": \"{{adminPassword}}\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseUrl}}/auth/admin/login", "host": ["{{baseUrl}}"], "path": ["auth", "admin", "login"] },
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/admin/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "admin",
+                "login"
+              ]
+            },
             "description": "Validates admin credentials, issues Sanctum access token + rotating refresh token. 401 invalid credentials; 403 inactive account."
           }
         },
         {
           "name": "Admin Refresh Token",
-          "auth": { "type": "noauth" },
+          "auth": {
+            "type": "noauth"
+          },
           "event": [
             {
               "listen": "test",
@@ -93,13 +192,33 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n    \"refresh_token\": \"{{adminRefreshToken}}\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseUrl}}/auth/admin/refresh", "host": ["{{baseUrl}}"], "path": ["auth", "admin", "refresh"] },
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/admin/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "admin",
+                "refresh"
+              ]
+            },
             "description": "Single-use rotation; 401 invalid/expired, 403 inactive account (family revoked)."
           }
         },
@@ -107,43 +226,111 @@
           "name": "Admin Change Password",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n    \"current_password\": \"admin123\",\n    \"password\": \"newadmin123\",\n    \"password_confirmation\": \"newadmin123\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseUrl}}/auth/admin/password/change", "host": ["{{baseUrl}}"], "path": ["auth", "admin", "password", "change"] },
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/admin/password/change",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "admin",
+                "password",
+                "change"
+              ]
+            },
             "description": "422 if current password is wrong. On success all admin tokens + refresh family are revoked."
           }
         },
         {
           "name": "Admin Request Password Reset",
-          "auth": { "type": "noauth" },
+          "auth": {
+            "type": "noauth"
+          },
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n    \"email\": \"admin@orca.med\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseUrl}}/auth/admin/password/reset/request", "host": ["{{baseUrl}}"], "path": ["auth", "admin", "password", "reset", "request"] },
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/admin/password/reset/request",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "admin",
+                "password",
+                "reset",
+                "request"
+              ]
+            },
             "description": "Always 200 (anti-enumeration)."
           }
         },
         {
           "name": "Admin Reset Password",
-          "auth": { "type": "noauth" },
+          "auth": {
+            "type": "noauth"
+          },
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n    \"token\": \"<reset-token-from-email>\",\n    \"password\": \"newadmin123\",\n    \"password_confirmation\": \"newadmin123\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseUrl}}/auth/admin/password/reset", "host": ["{{baseUrl}}"], "path": ["auth", "admin", "password", "reset"] },
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/admin/password/reset",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "admin",
+                "password",
+                "reset"
+              ]
+            },
             "description": "400 invalid/expired token. Revokes all sessions on success."
           }
         },
@@ -151,8 +338,24 @@
           "name": "Admin Logout",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/auth/admin/logout", "host": ["{{baseUrl}}"], "path": ["auth", "admin", "logout"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/admin/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "admin",
+                "logout"
+              ]
+            },
             "description": "Revokes all admin tokens + refresh family."
           }
         }
@@ -162,15 +365,54 @@
       "name": "2. Admin — Participants",
       "auth": {
         "type": "bearer",
-        "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{adminToken}}",
+            "type": "string"
+          }
+        ]
       },
       "item": [
         {
           "name": "List Participants",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/admin/participants?search=&status=&page=1&per_page=15", "host": ["{{baseUrl}}"], "path": ["admin", "participants"], "query": [{ "key": "search", "value": "" }, { "key": "status", "value": "" }, { "key": "page", "value": "1" }, { "key": "per_page", "value": "15" }] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/participants?search=&status=&page=1&per_page=15",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "participants"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": ""
+                },
+                {
+                  "key": "status",
+                  "value": ""
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "per_page",
+                  "value": "15"
+                }
+              ]
+            },
             "description": "Paginated participant list. Filters: search (name/username/email), status (active|inactive). Includes total_investment (withSum)."
           }
         },
@@ -178,13 +420,32 @@
           "name": "Create Participant",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n    \"first_name\": \"محمود\",\n    \"last_name\": \"الملاواني\",\n    \"username\": \"mahmoud_elmalawani\",\n    \"email\": \"mahmoud@orca.med\",\n    \"password\": \"secret123\",\n    \"password_confirmation\": \"secret123\",\n    \"status\": \"active\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseUrl}}/admin/participants", "host": ["{{baseUrl}}"], "path": ["admin", "participants"] },
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/participants",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "participants"
+              ]
+            },
             "description": "201 on success. Requires participants.create. Audited as participant_created."
           }
         },
@@ -192,8 +453,24 @@
           "name": "Show Participant",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/admin/participants/{{participantId}}", "host": ["{{baseUrl}}"], "path": ["admin", "participants", "{{participantId}}"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/participants/{{participantId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "participants",
+                "{{participantId}}"
+              ]
+            },
             "description": "Participant detail with investments, settlements relation."
           }
         },
@@ -201,13 +478,33 @@
           "name": "Update Participant",
           "request": {
             "method": "PUT",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n    \"first_name\": \"محمود\",\n    \"last_name\": \"الملاواني\",\n    \"username\": \"mahmoud_elmalawani\",\n    \"email\": \"mahmoud@orca.med\",\n    \"status\": \"active\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseUrl}}/admin/participants/{{participantId}}", "host": ["{{baseUrl}}"], "path": ["admin", "participants", "{{participantId}}"] },
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/participants/{{participantId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "participants",
+                "{{participantId}}"
+              ]
+            },
             "description": "Requires participants.update. Audited as participant_updated (old/new values)."
           }
         },
@@ -215,8 +512,24 @@
           "name": "Delete Participant",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/admin/participants/{{participantId}}", "host": ["{{baseUrl}}"], "path": ["admin", "participants", "{{participantId}}"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/participants/{{participantId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "participants",
+                "{{participantId}}"
+              ]
+            },
             "description": "422 if the participant has any financial or account history (soft delete otherwise)."
           }
         }
@@ -226,15 +539,54 @@
       "name": "3. Admin — Investments",
       "auth": {
         "type": "bearer",
-        "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{adminToken}}",
+            "type": "string"
+          }
+        ]
       },
       "item": [
         {
           "name": "List Investments",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/admin/investments?search=&status=&page=1&per_page=15", "host": ["{{baseUrl}}"], "path": ["admin", "investments"], "query": [{ "key": "search", "value": "" }, { "key": "status", "value": "" }, { "key": "page", "value": "1" }, { "key": "per_page", "value": "15" }] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/investments?search=&status=&page=1&per_page=15",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "investments"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": ""
+                },
+                {
+                  "key": "status",
+                  "value": ""
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "per_page",
+                  "value": "15"
+                }
+              ]
+            },
             "description": "Paginated investments. Filters: search (participant name/username), status (pending|approved)."
           }
         },
@@ -242,13 +594,32 @@
           "name": "Create Investment",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n    \"participant_id\": 1,\n    \"amount\": \"10000.00\",\n    \"invested_at\": \"2026-01-15\",\n    \"notes\": \"إيداع أولى\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseUrl}}/admin/investments", "host": ["{{baseUrl}}"], "path": ["admin", "investments"] },
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/investments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "investments"
+              ]
+            },
             "description": "201 on success. Amount regex \\d+(\\.\\d{1,2})?. Created as status=pending."
           }
         },
@@ -256,8 +627,25 @@
           "name": "Approve Investment",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/admin/investments/{{investmentId}}/approve", "host": ["{{baseUrl}}"], "path": ["admin", "investments", "{{investmentId}}", "approve"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/investments/{{investmentId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "investments",
+                "{{investmentId}}",
+                "approve"
+              ]
+            },
             "description": "Only pending investments can be approved (422 otherwise). Audited as investment_approved. Locked via lockForUpdate."
           }
         }
@@ -267,15 +655,58 @@
       "name": "4. Admin — Capital Snapshots",
       "auth": {
         "type": "bearer",
-        "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{adminToken}}",
+            "type": "string"
+          }
+        ]
       },
       "item": [
         {
           "name": "List Capital Snapshots",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/admin/capital?year=&month=&status=&page=1&per_page=15", "host": ["{{baseUrl}}"], "path": ["admin", "capital"], "query": [{ "key": "year", "value": "" }, { "key": "month", "value": "" }, { "key": "status", "value": "" }, { "key": "page", "value": "1" }, { "key": "per_page", "value": "15" }] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/capital?year=&month=&status=&page=1&per_page=15",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "capital"
+              ],
+              "query": [
+                {
+                  "key": "year",
+                  "value": ""
+                },
+                {
+                  "key": "month",
+                  "value": ""
+                },
+                {
+                  "key": "status",
+                  "value": ""
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "per_page",
+                  "value": "15"
+                }
+              ]
+            },
             "description": "Paginated snapshots with items.participant. Filters: year, month, status."
           }
         },
@@ -283,13 +714,32 @@
           "name": "Create Capital Snapshot",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n    \"snapshot_date\": \"2026-01-31\",\n    \"year\": 2026,\n    \"month\": 1,\n    \"items\": [\n        { \"participant_id\": 1, \"capital\": \"50000.00\" },\n        { \"participant_id\": 2, \"capital\": \"50000.00\" }\n    ]\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseUrl}}/admin/capital", "host": ["{{baseUrl}}"], "path": ["admin", "capital"] },
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/capital",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "capital"
+              ]
+            },
             "description": "201 on success. total_capital is computed via BCMath from items unless provided. Ratios computed to 4 dp."
           }
         },
@@ -297,13 +747,33 @@
           "name": "Update Capital Snapshot",
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n    \"snapshot_date\": \"2026-01-31\",\n    \"items\": [\n        { \"participant_id\": 1, \"capital\": \"60000.00\" },\n        { \"participant_id\": 2, \"capital\": \"50000.00\" }\n    ]\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseUrl}}/admin/capital/{{capitalId}}", "host": ["{{baseUrl}}"], "path": ["admin", "capital", "{{capitalId}}"] },
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/capital/{{capitalId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "capital",
+                "{{capitalId}}"
+              ]
+            },
             "description": "Current snapshot rows are replaced when items is sent. 422 via ImmutableFinancialRecordException if the snapshot is already referenced by an approved profit period."
           }
         }
@@ -313,15 +783,54 @@
       "name": "5. Admin — Distribution Rules",
       "auth": {
         "type": "bearer",
-        "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{adminToken}}",
+            "type": "string"
+          }
+        ]
       },
       "item": [
         {
           "name": "List Distribution Rules",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/admin/distribution-rules?status=&is_default=false&page=1&per_page=15", "host": ["{{baseUrl}}"], "path": ["admin", "distribution-rules"], "query": [{ "key": "status", "value": "" }, { "key": "is_default", "value": "false" }, { "key": "page", "value": "1" }, { "key": "per_page", "value": "15" }] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/distribution-rules?status=&is_default=false&page=1&per_page=15",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "distribution-rules"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": ""
+                },
+                {
+                  "key": "is_default",
+                  "value": "false"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "per_page",
+                  "value": "15"
+                }
+              ]
+            },
             "description": "Paginated rules. Filters: status (draft|active|locked), is_default=true."
           }
         },
@@ -329,8 +838,24 @@
           "name": "Show Distribution Rule",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/admin/distribution-rules/{{distributionRuleId}}", "host": ["{{baseUrl}}"], "path": ["admin", "distribution-rules", "{{distributionRuleId}}"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/distribution-rules/{{distributionRuleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "distribution-rules",
+                "{{distributionRuleId}}"
+              ]
+            },
             "description": "Single rule with creator/approver."
           }
         },
@@ -338,13 +863,32 @@
           "name": "Create Distribution Rule",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n    \"effective_from\": \"2026-01-01\",\n    \"effective_to\": null,\n    \"management_fee_rate\": \"0.2500\",\n    \"depreciation_fund_rate\": \"0.0500\",\n    \"growth_fund_rate\": \"0.0250\",\n    \"incentive_fund_rate\": \"0.0250\",\n    \"distributed_share_rate\": \"0.6500\",\n    \"status\": \"active\",\n    \"is_default\": true,\n    \"notes\": \"القاعدة الافتراضية للعام 2026\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseUrl}}/admin/distribution-rules", "host": ["{{baseUrl}}"], "path": ["admin", "distribution-rules"] },
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/distribution-rules",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "distribution-rules"
+              ]
+            },
             "description": "201 on success. Requires distribution_rules.manage. 422 if the five rates do not sum to 1."
           }
         },
@@ -352,13 +896,33 @@
           "name": "Update Distribution Rule",
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n    \"management_fee_rate\": \"0.2500\",\n    \"growth_fund_rate\": \"0.0300\",\n    \"status\": \"active\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseUrl}}/admin/distribution-rules/{{distributionRuleId}}", "host": ["{{baseUrl}}"], "path": ["admin", "distribution-rules", "{{distributionRuleId}}"] },
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/distribution-rules/{{distributionRuleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "distribution-rules",
+                "{{distributionRuleId}}"
+              ]
+            },
             "description": "Requires distribution_rules.manage via the update policy. 422 if the resulting sum of rates != 1."
           }
         }
@@ -368,15 +932,36 @@
       "name": "6. Admin — Settings",
       "auth": {
         "type": "bearer",
-        "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{adminToken}}",
+            "type": "string"
+          }
+        ]
       },
       "item": [
         {
           "name": "Get Settings",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/admin/settings", "host": ["{{baseUrl}}"], "path": ["admin", "settings"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/settings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "settings"
+              ]
+            },
             "description": "Returns app settings as a key-value map."
           }
         },
@@ -384,13 +969,32 @@
           "name": "Update Settings",
           "request": {
             "method": "PUT",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n    \"settings\": {\n        \"company_name\": \"Orca Med\",\n        \"support_email\": \"support@orca.med\",\n        \"terms_version\": \"2026-09-13\"\n    }\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseUrl}}/admin/settings", "host": ["{{baseUrl}}"], "path": ["admin", "settings"] },
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/settings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "settings"
+              ]
+            },
             "description": "Upserts each key via app_settings.updateOrCreate. Requires settings.manage."
           }
         }
@@ -400,15 +1004,54 @@
       "name": "7. Admin — Funds & Transactions",
       "auth": {
         "type": "bearer",
-        "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{adminToken}}",
+            "type": "string"
+          }
+        ]
       },
       "item": [
         {
           "name": "List Funds",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/admin/funds?search=&status=&page=1&per_page=15", "host": ["{{baseUrl}}"], "path": ["admin", "funds"], "query": [{ "key": "search", "value": "" }, { "key": "status", "value": "" }, { "key": "page", "value": "1" }, { "key": "per_page", "value": "15" }] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/funds?search=&status=&page=1&per_page=15",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "funds"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": ""
+                },
+                {
+                  "key": "status",
+                  "value": ""
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "per_page",
+                  "value": "15"
+                }
+              ]
+            },
             "description": "Paginated funds. Filters: search (code/name), status."
           }
         },
@@ -416,13 +1059,32 @@
           "name": "Create Fund",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n    \"code\": \"growth_fund\",\n    \"name\": \"صندوق النمو\",\n    \"status\": \"active\",\n    \"description\": \"حصة صندوق النمو\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseUrl}}/admin/funds", "host": ["{{baseUrl}}"], "path": ["admin", "funds"] },
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/funds",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "funds"
+              ]
+            },
             "description": "201 on success. Requires funds.manage. current_balance starts at 0.00."
           }
         },
@@ -430,8 +1092,24 @@
           "name": "Show Fund",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/admin/funds/{{fundId}}", "host": ["{{baseUrl}}"], "path": ["admin", "funds", "{{fundId}}"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/funds/{{fundId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "funds",
+                "{{fundId}}"
+              ]
+            },
             "description": "Fund detail with transactions count."
           }
         },
@@ -439,13 +1117,33 @@
           "name": "Update Fund",
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n    \"name\": \"صندوق النمو المُحدّث\",\n    \"status\": \"active\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseUrl}}/admin/funds/{{fundId}}", "host": ["{{baseUrl}}"], "path": ["admin", "funds", "{{fundId}}"] },
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/funds/{{fundId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "funds",
+                "{{fundId}}"
+              ]
+            },
             "description": "Requires funds.manage. Audited with old/new values."
           }
         },
@@ -453,8 +1151,39 @@
           "name": "List Fund Transactions",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/admin/funds/{{fundId}}/transactions?type=&page=1&per_page=15", "host": ["{{baseUrl}}"], "path": ["admin", "funds", "{{fundId}}", "transactions"], "query": [{ "key": "type", "value": "" }, { "key": "page", "value": "1" }, { "key": "per_page", "value": "15" }] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/funds/{{fundId}}/transactions?type=&page=1&per_page=15",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "funds",
+                "{{fundId}}",
+                "transactions"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": ""
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "per_page",
+                  "value": "15"
+                }
+              ]
+            },
             "description": "Paginated ledger for a fund. Filter: type (deposit|withdrawal|adjustment)."
           }
         },
@@ -462,13 +1191,34 @@
           "name": "Create Fund Transaction",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n    \"transaction_type\": \"deposit\",\n    \"amount\": \"500.00\",\n    \"transaction_date\": \"2026-09-01\",\n    \"reference\": \"FUND-IN-001\",\n    \"description\": \"إيداع نقدي من الإدارة\",\n    \"notes\": null,\n    \"monthly_profit_id\": null\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseUrl}}/admin/funds/{{fundId}}/transactions", "host": ["{{baseUrl}}"], "path": ["admin", "funds", "{{fundId}}", "transactions"] },
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/funds/{{fundId}}/transactions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "funds",
+                "{{fundId}}",
+                "transactions"
+              ]
+            },
             "description": "201 on success. Applies via FundBalanceService with BCMath balance update + resulting_balance + audit logs (fund_transaction_created / fund_deposit / fund_balance_changed)."
           }
         },
@@ -476,8 +1226,26 @@
           "name": "Show Fund Transaction",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/admin/funds/{{fundId}}/transactions/{{transactionId}}", "host": ["{{baseUrl}}"], "path": ["admin", "funds", "{{fundId}}", "transactions", "{{transactionId}}"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/funds/{{fundId}}/transactions/{{transactionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "funds",
+                "{{fundId}}",
+                "transactions",
+                "{{transactionId}}"
+              ]
+            },
             "description": "404 if the transaction does not belong to the fund."
           }
         },
@@ -485,8 +1253,25 @@
           "name": "Reconcile Fund",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/admin/funds/{{fundId}}/reconciliation", "host": ["{{baseUrl}}"], "path": ["admin", "funds", "{{fundId}}", "reconciliation"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/funds/{{fundId}}/reconciliation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "funds",
+                "{{fundId}}",
+                "reconciliation"
+              ]
+            },
             "description": "Returns { expected_balance, stored_balance, is_consistent }."
           }
         }
@@ -496,15 +1281,58 @@
       "name": "8. Admin — Depreciation",
       "auth": {
         "type": "bearer",
-        "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{adminToken}}",
+            "type": "string"
+          }
+        ]
       },
       "item": [
         {
           "name": "List Depreciation Notes",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/admin/depreciation?year=&month=&fund_id=&page=1&per_page=15", "host": ["{{baseUrl}}"], "path": ["admin", "depreciation"], "query": [{ "key": "year", "value": "" }, { "key": "month", "value": "" }, { "key": "fund_id", "value": "" }, { "key": "page", "value": "1" }, { "key": "per_page", "value": "15" }] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/depreciation?year=&month=&fund_id=&page=1&per_page=15",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "depreciation"
+              ],
+              "query": [
+                {
+                  "key": "year",
+                  "value": ""
+                },
+                {
+                  "key": "month",
+                  "value": ""
+                },
+                {
+                  "key": "fund_id",
+                  "value": ""
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "per_page",
+                  "value": "15"
+                }
+              ]
+            },
             "description": "Paginated depreciation notes with participant + fund. Filters: year, month, fund_id."
           }
         },
@@ -512,13 +1340,32 @@
           "name": "Create Depreciation Note",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n    \"amount\": \"5000.00\",\n    \"rate\": \"0.0500\",\n    \"transaction_date\": \"2026-09-30\",\n    \"year\": 2026,\n    \"month\": 9,\n    \"description\": \"مخصص إهلاك شهري\",\n    \"admin_note\": \"مخصص يدوي\",\n    \"participant_id\": null,\n    \"monthly_profit_id\": null\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseUrl}}/admin/depreciation", "host": ["{{baseUrl}}"], "path": ["admin", "depreciation"] },
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/depreciation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "depreciation"
+              ]
+            },
             "description": "201 on success. fund_id defaults to depreciation_fund when omitted. 422 if monthly_profit_id points to an approved profit."
           }
         },
@@ -526,13 +1373,33 @@
           "name": "Update Depreciation Note",
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n    \"amount\": \"5500.00\",\n    \"admin_note\": \"تعديل المخصص\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseUrl}}/admin/depreciation/{{depreciationId}}", "host": ["{{baseUrl}}"], "path": ["admin", "depreciation", "{{depreciationId}}"] },
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/depreciation/{{depreciationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "depreciation",
+                "{{depreciationId}}"
+              ]
+            },
             "description": "422 via ImmutableFinancialRecordException if the note is linked to an approved profit period."
           }
         },
@@ -540,8 +1407,24 @@
           "name": "Delete Depreciation Note",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/admin/depreciation/{{depreciationId}}", "host": ["{{baseUrl}}"], "path": ["admin", "depreciation", "{{depreciationId}}"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/depreciation/{{depreciationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "depreciation",
+                "{{depreciationId}}"
+              ]
+            },
             "description": "422 if the note is linked to an approved profit period."
           }
         }
@@ -551,15 +1434,58 @@
       "name": "9. Admin — Monthly Profits",
       "auth": {
         "type": "bearer",
-        "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{adminToken}}",
+            "type": "string"
+          }
+        ]
       },
       "item": [
         {
           "name": "List Monthly Profits",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/admin/monthly-profits?year=&month=&status=&page=1&per_page=15", "host": ["{{baseUrl}}"], "path": ["admin", "monthly-profits"], "query": [{ "key": "year", "value": "" }, { "key": "month", "value": "" }, { "key": "status", "value": "" }, { "key": "page", "value": "1" }, { "key": "per_page", "value": "15" }] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/monthly-profits?year=&month=&status=&page=1&per_page=15",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "monthly-profits"
+              ],
+              "query": [
+                {
+                  "key": "year",
+                  "value": ""
+                },
+                {
+                  "key": "month",
+                  "value": ""
+                },
+                {
+                  "key": "status",
+                  "value": ""
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "per_page",
+                  "value": "15"
+                }
+              ]
+            },
             "description": "Paginated profits with allocations count. Filters: year, month, status."
           }
         },
@@ -567,13 +1493,32 @@
           "name": "Create Monthly Profit (Draft)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n    \"capital_snapshot_id\": 1,\n    \"distribution_rule_id\": 1,\n    \"gross_profit\": \"100000.00\",\n    \"year\": 2026,\n    \"month\": 9\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseUrl}}/admin/monthly-profits", "host": ["{{baseUrl}}"], "path": ["admin", "monthly-profits"] },
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/monthly-profits",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "monthly-profits"
+              ]
+            },
             "description": "201 on success. Creates a draft profit, participant profit allocations, participant_fund_allocations (growth/incentive/depreciation) and a fund-level DepreciationNote — all inside one DB::transaction with lockForUpdate."
           }
         },
@@ -581,8 +1526,25 @@
           "name": "Approve Monthly Profit",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/admin/monthly-profits/{{monthlyProfitId}}/approve", "host": ["{{baseUrl}}"], "path": ["admin", "monthly-profits", "{{monthlyProfitId}}", "approve"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/monthly-profits/{{monthlyProfitId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "monthly-profits",
+                "{{monthlyProfitId}}",
+                "approve"
+              ]
+            },
             "description": "Runs the financial cascade: deposits growth/incentive/depreciation shares into funds via FundBalanceService (BCMath balance updates + PROFIT-{id} reference), sends profit_update notifications, audits monthly_profit_approved. Only draft records can be approved."
           }
         },
@@ -590,13 +1552,34 @@
           "name": "Revise Monthly Profit",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n    \"gross_profit\": \"115000.00\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseUrl}}/admin/monthly-profits/{{monthlyProfitId}}/revision", "host": ["{{baseUrl}}"], "path": ["admin", "monthly-profits", "{{monthlyProfitId}}", "revision"] },
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/monthly-profits/{{monthlyProfitId}}/revision",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "monthly-profits",
+                "{{monthlyProfitId}}",
+                "revision"
+              ]
+            },
             "description": "201 on success. Creates version N+1 draft; only the first version deposits fund shares on approval."
           }
         }
@@ -606,15 +1589,54 @@
       "name": "10. Admin — Settlements",
       "auth": {
         "type": "bearer",
-        "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{adminToken}}",
+            "type": "string"
+          }
+        ]
       },
       "item": [
         {
           "name": "List Settlements",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/admin/settlements?year=&status=&page=1&per_page=15", "host": ["{{baseUrl}}"], "path": ["admin", "settlements"], "query": [{ "key": "year", "value": "" }, { "key": "status", "value": "" }, { "key": "page", "value": "1" }, { "key": "per_page", "value": "15" }] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/settlements?year=&status=&page=1&per_page=15",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "settlements"
+              ],
+              "query": [
+                {
+                  "key": "year",
+                  "value": ""
+                },
+                {
+                  "key": "status",
+                  "value": ""
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "per_page",
+                  "value": "15"
+                }
+              ]
+            },
             "description": "Paginated annual settlements. Filters: year, status."
           }
         },
@@ -622,13 +1644,32 @@
           "name": "Create Annual Settlement",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n    \"year\": 2026\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseUrl}}/admin/settlements", "host": ["{{baseUrl}}"], "path": ["admin", "settlements"] },
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/settlements",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "settlements"
+              ]
+            },
             "description": "201 on success. Builds items from approved profit + fund allocations. amount_due = profit + fund_share - previous_payments. Blocked if an active settlement exists for the year."
           }
         },
@@ -636,8 +1677,24 @@
           "name": "Show Settlement",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/admin/settlements/{{settlementId}}", "host": ["{{baseUrl}}"], "path": ["admin", "settlements", "{{settlementId}}"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/settlements/{{settlementId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "settlements",
+                "{{settlementId}}"
+              ]
+            },
             "description": "Settlement with items."
           }
         },
@@ -645,8 +1702,25 @@
           "name": "Approve Settlement",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/admin/settlements/{{settlementId}}/approve", "host": ["{{baseUrl}}"], "path": ["admin", "settlements", "{{settlementId}}", "approve"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/settlements/{{settlementId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "settlements",
+                "{{settlementId}}",
+                "approve"
+              ]
+            },
             "description": "Requires settlements.approve. Only draft settlements. Marks items approved."
           }
         },
@@ -654,8 +1728,25 @@
           "name": "Mark Settlement Paid",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/admin/settlements/{{settlementId}}/paid", "host": ["{{baseUrl}}"], "path": ["admin", "settlements", "{{settlementId}}", "paid"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/settlements/{{settlementId}}/paid",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "settlements",
+                "{{settlementId}}",
+                "paid"
+              ]
+            },
             "description": "Marks the approved settlement as fully paid without a fund-level payment record."
           }
         },
@@ -663,13 +1754,34 @@
           "name": "Record Settlement Payment",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n    \"amount\": \"40000.00\",\n    \"paid_at\": \"2026-12-15\",\n    \"payment_method\": \"bank-transfer\",\n    \"payment_source\": \"bank\",\n    \"reference\": \"TRX-2026-001\",\n    \"description\": \"دفعة أولى للتسوية السنوية 2026\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseUrl}}/admin/settlements/{{settlementId}}/payments", "host": ["{{baseUrl}}"], "path": ["admin", "settlements", "{{settlementId}}", "payments"] },
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/settlements/{{settlementId}}/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "settlements",
+                "{{settlementId}}",
+                "payments"
+              ]
+            },
             "description": "Validates against the settlement amount_due (already net of previous payments on revisions). Sets partially_paid or paid. Audited."
           }
         },
@@ -677,13 +1789,34 @@
           "name": "Add Settlement Adjustment",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n    \"type\": \"adjustment\",\n    \"direction\": \"increase\",\n    \"amount\": \"500.00\",\n    \"reason\": \"تعديل تسوية بعد المراجعة\",\n    \"reference\": \"ADJ-2026-001\",\n    \"settlement_payment_id\": null\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseUrl}}/admin/settlements/{{settlementId}}/adjustments", "host": ["{{baseUrl}}"], "path": ["admin", "settlements", "{{settlementId}}", "adjustments"] },
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/settlements/{{settlementId}}/adjustments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "settlements",
+                "{{settlementId}}",
+                "adjustments"
+              ]
+            },
             "description": "201 on success. type adjustment|reversal, direction increase|decrease. Audited."
           }
         },
@@ -691,8 +1824,25 @@
           "name": "Cancel Settlement",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/admin/settlements/{{settlementId}}/cancel", "host": ["{{baseUrl}}"], "path": ["admin", "settlements", "{{settlementId}}", "cancel"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/settlements/{{settlementId}}/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "settlements",
+                "{{settlementId}}",
+                "cancel"
+              ]
+            },
             "description": "Only draft settlements can be cancelled."
           }
         },
@@ -700,8 +1850,25 @@
           "name": "Revise Settlement",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/admin/settlements/{{settlementId}}/revision", "host": ["{{baseUrl}}"], "path": ["admin", "settlements", "{{settlementId}}", "revision"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/settlements/{{settlementId}}/revision",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "settlements",
+                "{{settlementId}}",
+                "revision"
+              ]
+            },
             "description": "201 on success. Creates version N+1. amount_due = profit + fund_share - previous_payments of the parent. Only approved or paid settlements can be revised."
           }
         }
@@ -711,15 +1878,62 @@
       "name": "11. Admin — Audit Logs",
       "auth": {
         "type": "bearer",
-        "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{adminToken}}",
+            "type": "string"
+          }
+        ]
       },
       "item": [
         {
           "name": "List Audit Logs",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/admin/audit-logs?actor=&action=&entity=&entity_id=&date_from=&date_to=", "host": ["{{baseUrl}}"], "path": ["admin", "audit-logs"], "query": [{ "key": "actor", "value": "" }, { "key": "action", "value": "" }, { "key": "entity", "value": "" }, { "key": "entity_id", "value": "" }, { "key": "date_from", "value": "" }, { "key": "date_to", "value": "" }] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/audit-logs?actor=&action=&entity=&entity_id=&date_from=&date_to=",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "audit-logs"
+              ],
+              "query": [
+                {
+                  "key": "actor",
+                  "value": ""
+                },
+                {
+                  "key": "action",
+                  "value": ""
+                },
+                {
+                  "key": "entity",
+                  "value": ""
+                },
+                {
+                  "key": "entity_id",
+                  "value": ""
+                },
+                {
+                  "key": "date_from",
+                  "value": ""
+                },
+                {
+                  "key": "date_to",
+                  "value": ""
+                }
+              ]
+            },
             "description": "Paginated audit trail. Filters: actor, action, entity, entity_id, date_from, date_to."
           }
         }
@@ -729,12 +1943,20 @@
       "name": "12. Participant Auth & Session",
       "auth": {
         "type": "bearer",
-        "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{accessToken}}",
+            "type": "string"
+          }
+        ]
       },
       "item": [
         {
           "name": "Login",
-          "auth": { "type": "noauth" },
+          "auth": {
+            "type": "noauth"
+          },
           "event": [
             {
               "listen": "test",
@@ -757,19 +1979,41 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n    \"username\": \"{{participantUsername}}\",\n    \"password\": \"{{participantPassword}}\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseUrl}}/auth/participant/login", "host": ["{{baseUrl}}"], "path": ["auth", "participant", "login"] },
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/participant/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "participant",
+                "login"
+              ]
+            },
             "description": "Validates credentials, issues Sanctum access token + rotating refresh token. Rate-limited to 10/min. 401 invalid credentials; 403 inactive account."
           }
         },
         {
           "name": "Refresh Token",
-          "auth": { "type": "noauth" },
+          "auth": {
+            "type": "noauth"
+          },
           "event": [
             {
               "listen": "test",
@@ -788,13 +2032,33 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n    \"refresh_token\": \"{{refreshToken}}\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseUrl}}/auth/participant/refresh", "host": ["{{baseUrl}}"], "path": ["auth", "participant", "refresh"] },
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/participant/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "participant",
+                "refresh"
+              ]
+            },
             "description": "Single-use rotation; old refresh token immediately invalidated. 401 invalid/expired; 403 inactive account."
           }
         },
@@ -802,13 +2066,34 @@
           "name": "Change Password",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n    \"current_password\": \"secret123\",\n    \"password\": \"newsecret123\",\n    \"password_confirmation\": \"newsecret123\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseUrl}}/auth/participant/password/change", "host": ["{{baseUrl}}"], "path": ["auth", "participant", "password", "change"] },
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/participant/password/change",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "participant",
+                "password",
+                "change"
+              ]
+            },
             "description": "422 if current password is wrong. On success ALL tokens + refresh family are revoked — client must re-login."
           }
         },
@@ -816,8 +2101,24 @@
           "name": "Logout",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/auth/participant/logout", "host": ["{{baseUrl}}"], "path": ["auth", "participant", "logout"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/participant/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "participant",
+                "logout"
+              ]
+            },
             "description": "Tokens revoked, refresh family revoked."
           }
         },
@@ -825,43 +2126,110 @@
           "name": "Change Password (v1) (POST /v1/auth/participant/change-password)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n    \"current_password\": \"secret123\",\n    \"password\": \"newsecret123\",\n    \"password_confirmation\": \"newsecret123\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseUrl}}/v1/auth/participant/change-password", "host": ["{{baseUrl}}"], "path": ["v1", "auth", "participant", "change-password"] },
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/participant/change-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "participant",
+                "change-password"
+              ]
+            },
             "description": "Versioned alias of the password change flow (revokes all sessions on success)."
           }
         },
         {
           "name": "Request Password Reset",
-          "auth": { "type": "noauth" },
+          "auth": {
+            "type": "noauth"
+          },
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n    \"email\": \"m@orca.med\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseUrl}}/auth/participant/password/reset/request", "host": ["{{baseUrl}}"], "path": ["auth", "participant", "password", "reset", "request"] },
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/participant/password/reset/request",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "participant",
+                "password",
+                "reset",
+                "request"
+              ]
+            },
             "description": "Always 200 (anti-enumeration)."
           }
         },
         {
           "name": "Reset Password",
-          "auth": { "type": "noauth" },
+          "auth": {
+            "type": "noauth"
+          },
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n    \"token\": \"<reset-token-from-email>\",\n    \"password\": \"newsecret123\",\n    \"password_confirmation\": \"newsecret123\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseUrl}}/auth/participant/password/reset", "host": ["{{baseUrl}}"], "path": ["auth", "participant", "password", "reset"] },
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/participant/password/reset",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "participant",
+                "password",
+                "reset"
+              ]
+            },
             "description": "400 invalid/expired token. Revokes all sessions on success."
           }
         }
@@ -890,8 +2258,22 @@
           ],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/me", "host": ["{{baseUrl}}"], "path": ["me"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "me"
+              ]
+            },
             "description": "Home/header profile: identity, status, participation start date. Never exposes sensitive fields."
           }
         },
@@ -899,8 +2281,33 @@
           "name": "Investment Metrics (GET /me/investment)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/me/investment?status=approved&page=1", "host": ["{{baseUrl}}"], "path": ["me", "investment"], "query": [{ "key": "status", "value": "approved" }, { "key": "page", "value": "1" }] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/me/investment?status=approved&page=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "me",
+                "investment"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "approved"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            },
             "description": "Paginated investment rows. Filter: status. amount is a decimal string."
           }
         },
@@ -908,8 +2315,33 @@
           "name": "Capital Positions (GET /me/capital)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/me/capital?year=&page=1", "host": ["{{baseUrl}}"], "path": ["me", "capital"], "query": [{ "key": "year", "value": "" }, { "key": "page", "value": "1" }] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/me/capital?year=&page=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "me",
+                "capital"
+              ],
+              "query": [
+                {
+                  "key": "year",
+                  "value": ""
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            },
             "description": "Licensed share/capital positions per snapshot. Filter: year."
           }
         },
@@ -917,8 +2349,34 @@
           "name": "Capital Growth (GET /me/capital/growth)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/me/capital/growth?year=&page=1", "host": ["{{baseUrl}}"], "path": ["me", "capital", "growth"], "query": [{ "key": "year", "value": "" }, { "key": "page", "value": "1" }] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/me/capital/growth?year=&page=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "me",
+                "capital",
+                "growth"
+              ],
+              "query": [
+                {
+                  "key": "year",
+                  "value": ""
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            },
             "description": "Company capital growth series with snapshot-to-snapshot movement (bcsub at read time). Filter: year."
           }
         },
@@ -926,8 +2384,37 @@
           "name": "Profits (GET /me/profits)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/me/profits?year=&month=&page=1", "host": ["{{baseUrl}}"], "path": ["me", "profits"], "query": [{ "key": "year", "value": "" }, { "key": "month", "value": "" }, { "key": "page", "value": "1" }] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/me/profits?year=&month=&page=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "me",
+                "profits"
+              ],
+              "query": [
+                {
+                  "key": "year",
+                  "value": ""
+                },
+                {
+                  "key": "month",
+                  "value": ""
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            },
             "description": "Approved profit allocation rows. Filters: year, month."
           }
         },
@@ -935,8 +2422,33 @@
           "name": "Fund Allocations (GET /me/funds)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/me/funds?year=&page=1", "host": ["{{baseUrl}}"], "path": ["me", "funds"], "query": [{ "key": "year", "value": "" }, { "key": "page", "value": "1" }] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/me/funds?year=&page=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "me",
+                "funds"
+              ],
+              "query": [
+                {
+                  "key": "year",
+                  "value": ""
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            },
             "description": "Growth / incentive / depreciation fund allocations. Filter: year."
           }
         },
@@ -944,8 +2456,37 @@
           "name": "Depreciation (GET /me/depreciation)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/me/depreciation?year=&month=&page=1", "host": ["{{baseUrl}}"], "path": ["me", "depreciation"], "query": [{ "key": "year", "value": "" }, { "key": "month", "value": "" }, { "key": "page", "value": "1" }] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/me/depreciation?year=&month=&page=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "me",
+                "depreciation"
+              ],
+              "query": [
+                {
+                  "key": "year",
+                  "value": ""
+                },
+                {
+                  "key": "month",
+                  "value": ""
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            },
             "description": "Depreciation movements/notes. Filters: year, month."
           }
         },
@@ -953,8 +2494,37 @@
           "name": "Settlements (GET /me/settlements)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/me/settlements?year=&status=&page=1", "host": ["{{baseUrl}}"], "path": ["me", "settlements"], "query": [{ "key": "year", "value": "" }, { "key": "status", "value": "" }, { "key": "page", "value": "1" }] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/me/settlements?year=&status=&page=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "me",
+                "settlements"
+              ],
+              "query": [
+                {
+                  "key": "year",
+                  "value": ""
+                },
+                {
+                  "key": "status",
+                  "value": ""
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            },
             "description": "Yearly settlement breakdown with embedded payments. Filters: year, status."
           }
         },
@@ -962,8 +2532,24 @@
           "name": "Settlement Detail (GET /me/settlements/{id})",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/me/settlements/{{settlementId}}", "host": ["{{baseUrl}}"], "path": ["me", "settlements", "{{settlementId}}"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/me/settlements/{{settlementId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "me",
+                "settlements",
+                "{{settlementId}}"
+              ]
+            },
             "description": "Full ledger: profit_share + fund_share + amount_due + paid_amount + remaining + payments + adjustments."
           }
         },
@@ -971,8 +2557,25 @@
           "name": "Settlement Payments (GET /me/settlements/{id}/payments)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/me/settlements/{{settlementId}}/payments", "host": ["{{baseUrl}}"], "path": ["me", "settlements", "{{settlementId}}", "payments"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/me/settlements/{{settlementId}}/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "me",
+                "settlements",
+                "{{settlementId}}",
+                "payments"
+              ]
+            },
             "description": "Transfer/payout history (verification trail). 404 if the participant has no item in this settlement."
           }
         }
@@ -985,8 +2588,33 @@
           "name": "List (GET /me/notifications)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/me/notifications?read=&page=1", "host": ["{{baseUrl}}"], "path": ["me", "notifications"], "query": [{ "key": "read", "value": "" }, { "key": "page", "value": "1" }] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/me/notifications?read=&page=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "me",
+                "notifications"
+              ],
+              "query": [
+                {
+                  "key": "read",
+                  "value": ""
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            },
             "description": "Notification feed. Filter: read=true/false."
           }
         },
@@ -994,8 +2622,24 @@
           "name": "Unread Count (GET /v1/me/notifications/unread-count)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/v1/me/notifications/unread-count", "host": ["{{baseUrl}}"], "path": ["v1", "me", "notifications", "unread-count"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/me/notifications/unread-count",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "me",
+                "notifications",
+                "unread-count"
+              ]
+            },
             "description": "Returns { unread_count }."
           }
         },
@@ -1003,8 +2647,25 @@
           "name": "Mark Read (PATCH /v1/me/notifications/{id}/read)",
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/v1/me/notifications/{{notificationId}}/read", "host": ["{{baseUrl}}"], "path": ["v1", "me", "notifications", "{{notificationId}}", "read"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/me/notifications/{{notificationId}}/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "me",
+                "notifications",
+                "{{notificationId}}",
+                "read"
+              ]
+            },
             "description": "403 if the notification is not owned by the caller (logged as security event)."
           }
         },
@@ -1012,8 +2673,24 @@
           "name": "Mark All Read (PATCH /v1/me/notifications/read-all)",
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/v1/me/notifications/read-all", "host": ["{{baseUrl}}"], "path": ["v1", "me", "notifications", "read-all"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/me/notifications/read-all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "me",
+                "notifications",
+                "read-all"
+              ]
+            },
             "description": "Returns { updated } count."
           }
         },
@@ -1021,8 +2698,24 @@
           "name": "Detail (GET /participant/notifications/{id})",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/participant/notifications/{{notificationId}}", "host": ["{{baseUrl}}"], "path": ["participant", "notifications", "{{notificationId}}"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/participant/notifications/{{notificationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "participant",
+                "notifications",
+                "{{notificationId}}"
+              ]
+            },
             "description": "Ownership-scoped single notification."
           }
         }
@@ -1035,8 +2728,23 @@
           "name": "Reports Index (GET /v1/me/reports)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/v1/me/reports", "host": ["{{baseUrl}}"], "path": ["v1", "me", "reports"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/me/reports",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "me",
+                "reports"
+              ]
+            },
             "description": "Lists report types with available_years."
           }
         },
@@ -1044,8 +2752,35 @@
           "name": "Download Report (GET /v1/me/reports/{type}/download)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/v1/me/reports/settlement_statement/download?format=pdf&year=2026", "host": ["{{baseUrl}}"], "path": ["v1", "me", "reports", "settlement_statement", "download"], "query": [{ "key": "format", "value": "pdf" }, { "key": "year", "value": "2026" }] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/me/reports/settlement_statement/download?format=pdf&year=2026",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "me",
+                "reports",
+                "settlement_statement",
+                "download"
+              ],
+              "query": [
+                {
+                  "key": "format",
+                  "value": "pdf"
+                },
+                {
+                  "key": "year",
+                  "value": "2026"
+                }
+              ]
+            },
             "description": "Streams PDF or XLSX. format in pdf|xlsx, year optional. Types: settlement_statement, annual_investment_summary (etc. from GetParticipantReportsAction::TYPES)."
           }
         },
@@ -1053,8 +2788,27 @@
           "name": "Settlement Receipt (GET /v1/me/settlements/{id}/payments/{id}/receipt)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/v1/me/settlements/{{settlementId}}/payments/{{paymentId}}/receipt", "host": ["{{baseUrl}}"], "path": ["v1", "me", "settlements", "{{settlementId}}", "payments", "{{paymentId}}", "receipt"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/me/settlements/{{settlementId}}/payments/{{paymentId}}/receipt",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "me",
+                "settlements",
+                "{{settlementId}}",
+                "payments",
+                "{{paymentId}}",
+                "receipt"
+              ]
+            },
             "description": "Ownership-scoped payment receipt."
           }
         }
@@ -1067,13 +2821,33 @@
           "name": "ROI Simulation (POST /v1/me/tools/roi-simulation)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n    \"base_capital\": \"50000.00\",\n    \"months\": 12,\n    \"expected_monthly_rate\": \"0.015\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseUrl}}/v1/me/tools/roi-simulation", "host": ["{{baseUrl}}"], "path": ["v1", "me", "tools", "roi-simulation"] },
+            "url": {
+              "raw": "{{baseUrl}}/v1/me/tools/roi-simulation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "me",
+                "tools",
+                "roi-simulation"
+              ]
+            },
             "description": "Server-authoritative compound-interest projection. Returns projected_capital, projected_profit, average_monthly_profit + per-month schedule + disclaimer. Informational only, no guarantee of return."
           }
         },
@@ -1081,8 +2855,24 @@
           "name": "2FA Status (GET /v1/me/settings/2fa)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/v1/me/settings/2fa", "host": ["{{baseUrl}}"], "path": ["v1", "me", "settings", "2fa"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/me/settings/2fa",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "me",
+                "settings",
+                "2fa"
+              ]
+            },
             "description": "Returns { 2fa_enabled, enabled_at }."
           }
         },
@@ -1090,13 +2880,34 @@
           "name": "Toggle 2FA (POST /v1/me/settings/2fa/toggle)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n    \"password\": \"secret123\",\n    \"enable\": true\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseUrl}}/v1/me/settings/2fa/toggle", "host": ["{{baseUrl}}"], "path": ["v1", "me", "settings", "2fa", "toggle"] },
+            "url": {
+              "raw": "{{baseUrl}}/v1/me/settings/2fa/toggle",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "me",
+                "settings",
+                "2fa",
+                "toggle"
+              ]
+            },
             "description": "422 if password is wrong. enable omitted toggles current state. Audited as two_factor_toggled."
           }
         },
@@ -1104,23 +2915,59 @@
           "name": "Submit Support Ticket (POST /v1/support/ticket)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n    \"subject\": \"استفسار حول التسوية السنوية\",\n    \"message\": \"أرغب بالاستفسار عن تفاصيل بنود التسوية السنوية لعام 2026.\",\n    \"category\": \"settlements\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseUrl}}/v1/support/ticket", "host": ["{{baseUrl}}"], "path": ["v1", "support", "ticket"] },
+            "url": {
+              "raw": "{{baseUrl}}/v1/support/ticket",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "support",
+                "ticket"
+              ]
+            },
             "description": "201 on success. Returns { id, status, created_at }."
           }
         },
         {
           "name": "Legal Terms (GET /v1/legal/terms)",
-          "auth": { "type": "noauth" },
+          "auth": {
+            "type": "noauth"
+          },
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/v1/legal/terms", "host": ["{{baseUrl}}"], "path": ["v1", "legal", "terms"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/legal/terms",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "legal",
+                "terms"
+              ]
+            },
             "description": "Public. Terms & commitments document. Rate-limited to 60/min."
           }
         }
@@ -1133,8 +2980,24 @@
           "name": "Investment Detail",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/participant/investments/{{resourceId}}", "host": ["{{baseUrl}}"], "path": ["participant", "investments", "{{resourceId}}"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/participant/investments/{{resourceId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "participant",
+                "investments",
+                "{{resourceId}}"
+              ]
+            },
             "description": "Ownership-scoped: 403 for any resource not owned by the token holder (logged as security event)."
           }
         },
@@ -1142,48 +3005,143 @@
           "name": "Capital Detail",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/participant/capital/{{resourceId}}", "host": ["{{baseUrl}}"], "path": ["participant", "capital", "{{resourceId}}"] }
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/participant/capital/{{resourceId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "participant",
+                "capital",
+                "{{resourceId}}"
+              ]
+            }
           }
         },
         {
           "name": "Profit Allocation Detail",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/participant/profits/{{resourceId}}", "host": ["{{baseUrl}}"], "path": ["participant", "profits", "{{resourceId}}"] }
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/participant/profits/{{resourceId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "participant",
+                "profits",
+                "{{resourceId}}"
+              ]
+            }
           }
         },
         {
           "name": "Fund Allocation Detail",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/participant/funds/{{resourceId}}", "host": ["{{baseUrl}}"], "path": ["participant", "funds", "{{resourceId}}"] }
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/participant/funds/{{resourceId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "participant",
+                "funds",
+                "{{resourceId}}"
+              ]
+            }
           }
         },
         {
           "name": "Depreciation Detail",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/participant/depreciation/{{resourceId}}", "host": ["{{baseUrl}}"], "path": ["participant", "depreciation", "{{resourceId}}"] }
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/participant/depreciation/{{resourceId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "participant",
+                "depreciation",
+                "{{resourceId}}"
+              ]
+            }
           }
         },
         {
           "name": "Monthly Profit Detail",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/participant/monthly-profits/{{resourceId}}", "host": ["{{baseUrl}}"], "path": ["participant", "monthly-profits", "{{resourceId}}"] }
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/participant/monthly-profits/{{resourceId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "participant",
+                "monthly-profits",
+                "{{resourceId}}"
+              ]
+            }
           }
         },
         {
           "name": "Settlement List (alt) (GET /participant/settlements)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/participant/settlements", "host": ["{{baseUrl}}"], "path": ["participant", "settlements"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/participant/settlements",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "participant",
+                "settlements"
+              ]
+            },
             "description": "Alias list for the settlement ledger screen."
           }
         },
@@ -1191,8 +3149,24 @@
           "name": "Settlement Detail (alt) (GET /participant/settlements/{id})",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/participant/settlements/{{settlementId}}", "host": ["{{baseUrl}}"], "path": ["participant", "settlements", "{{settlementId}}"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/participant/settlements/{{settlementId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "participant",
+                "settlements",
+                "{{settlementId}}"
+              ]
+            },
             "description": "Owner-scoped settlement with own items + payments. 403 if the participant has no item."
           }
         }

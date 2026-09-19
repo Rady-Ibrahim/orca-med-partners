@@ -6,26 +6,27 @@ namespace App\Policies;
 
 use App\Models\Admin;
 use App\Models\DistributionRule;
+use App\Models\Participant;
 
 class DistributionRulePolicy
 {
-    public function create(Admin $user): bool
+    public function create(Admin|Participant $user): bool
     {
-        return $user->hasPermission('distribution_rules.manage') || $user->is_super_admin;
+        return $user instanceof Admin && ($user->hasPermission('distribution_rules.manage') || $user->is_super_admin);
     }
 
-    public function viewAny(Admin $user): bool
+    public function viewAny(Admin|Participant $user): bool
     {
-        return $user->hasPermission('distribution_rules.view') || $user->is_super_admin;
+        return $user instanceof Admin && ($user->hasPermission('distribution_rules.view') || $user->is_super_admin);
     }
 
-    public function view(Admin $user, DistributionRule $rule): bool
+    public function view(Admin|Participant $user, DistributionRule $rule): bool
     {
-        return $user->hasPermission('distribution_rules.view') || $user->is_super_admin;
+        return $user instanceof Admin && ($user->hasPermission('distribution_rules.view') || $user->is_super_admin);
     }
 
-    public function update(Admin $user): bool
+    public function update(Admin|Participant $user): bool
     {
-        return $user->hasPermission('distribution_rules.manage') || $user->is_super_admin;
+        return $user instanceof Admin && ($user->hasPermission('distribution_rules.manage') || $user->is_super_admin);
     }
 }

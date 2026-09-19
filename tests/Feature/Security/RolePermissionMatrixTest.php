@@ -27,9 +27,9 @@ class RolePermissionMatrixTest extends TestCase
 
         $token = $admin->createToken('admin-api', ['*'])->plainTextToken;
 
-        $this->withToken($token)->getJson('/api/admin/investments')->assertOk();
-        $this->withToken($token)->getJson('/api/admin/participants')->assertOk();
-        $this->withToken($token)->getJson('/api/admin/audit-logs')->assertOk();
+        $this->withToken($token)->getJson('/api/v1/admin/investments')->assertOk();
+        $this->withToken($token)->getJson('/api/v1/admin/participants')->assertOk();
+        $this->withToken($token)->getJson('/api/v1/admin/audit-logs')->assertOk();
     }
 
     public function test_financial_manager_has_financial_access_but_is_denied_admin_management_routes(): void
@@ -45,8 +45,8 @@ class RolePermissionMatrixTest extends TestCase
 
         $token = $manager->createToken('admin-api', ['*'])->plainTextToken;
 
-        $this->withToken($token)->getJson('/api/admin/investments')->assertOk();
-        $this->withToken($token)->getJson('/api/admin/audit-logs')->assertStatus(403);
+        $this->withToken($token)->getJson('/api/v1/admin/investments')->assertOk();
+        $this->withToken($token)->getJson('/api/v1/admin/audit-logs')->assertStatus(403);
     }
 
     public function test_employee_is_blocked_from_unassigned_routes(): void
@@ -62,8 +62,8 @@ class RolePermissionMatrixTest extends TestCase
 
         $token = $employee->createToken('admin-api', ['*'])->plainTextToken;
 
-        $this->withToken($token)->getJson('/api/admin/investments')->assertStatus(403);
-        $this->withToken($token)->getJson('/api/admin/audit-logs')->assertStatus(403);
+        $this->withToken($token)->getJson('/api/v1/admin/investments')->assertStatus(403);
+        $this->withToken($token)->getJson('/api/v1/admin/audit-logs')->assertStatus(403);
     }
 
     public function test_employee_can_access_route_when_explicit_permission_is_granted(): void
@@ -79,6 +79,6 @@ class RolePermissionMatrixTest extends TestCase
 
         $token = $employee->createToken('admin-api', ['*'])->plainTextToken;
 
-        $this->withToken($token)->getJson('/api/admin/investments')->assertOk();
+        $this->withToken($token)->getJson('/api/v1/admin/investments')->assertOk();
     }
 }

@@ -40,7 +40,7 @@ class IdorProtectionTest extends TestCase
 
         $token = $attacker->createToken('participant-api', ['*'])->plainTextToken;
 
-        $response = $this->withToken($token)->getJson('/api/participant/investments/' . $investment->id);
+        $response = $this->withToken($token)->getJson('/api/v1/participant/investments/' . $investment->id);
 
         $response->assertStatus(403);
     }
@@ -68,7 +68,7 @@ class IdorProtectionTest extends TestCase
 
         $token = $attacker->createToken('participant-api', ['*'])->plainTextToken;
 
-        $response = $this->withToken($token)->getJson('/api/participant/capital/' . $capital->id);
+        $response = $this->withToken($token)->getJson('/api/v1/participant/capital/' . $capital->id);
 
         $response->assertStatus(403);
     }
@@ -126,7 +126,7 @@ class IdorProtectionTest extends TestCase
 
         $token = $attacker->createToken('participant-api', ['*'])->plainTextToken;
 
-        $response = $this->withToken($token)->getJson('/api/participant/profits/' . $profit->id);
+        $response = $this->withToken($token)->getJson('/api/v1/participant/profits/' . $profit->id);
 
         $response->assertStatus(403);
     }
@@ -192,7 +192,7 @@ class IdorProtectionTest extends TestCase
 
         $token = $attacker->createToken('participant-api', ['*'])->plainTextToken;
 
-        $response = $this->withToken($token)->getJson('/api/participant/funds/' . $allocation->id);
+        $response = $this->withToken($token)->getJson('/api/v1/participant/funds/' . $allocation->id);
 
         $response->assertStatus(403);
     }
@@ -225,7 +225,7 @@ class IdorProtectionTest extends TestCase
 
         $token = $attacker->createToken('participant-api', ['*'])->plainTextToken;
 
-        $response = $this->withToken($token)->getJson('/api/participant/depreciation/' . $depreciation->id);
+        $response = $this->withToken($token)->getJson('/api/v1/participant/depreciation/' . $depreciation->id);
 
         $response->assertStatus(403);
     }
@@ -259,7 +259,7 @@ class IdorProtectionTest extends TestCase
 
         $token = $attacker->createToken('participant-api', ['*'])->plainTextToken;
 
-        $response = $this->withToken($token)->getJson('/api/participant/settlements/' . $item->id);
+        $response = $this->withToken($token)->getJson('/api/v1/participant/settlements/' . $item->id);
 
         $response->assertStatus(403);
     }
@@ -280,7 +280,7 @@ class IdorProtectionTest extends TestCase
 
         $token = $attacker->createToken('participant-api', ['*'])->plainTextToken;
 
-        $response = $this->withToken($token)->getJson('/api/participant/notifications/' . $notification->id);
+        $response = $this->withToken($token)->getJson('/api/v1/participant/notifications/' . $notification->id);
 
         $response->assertStatus(403);
     }

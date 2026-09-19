@@ -146,7 +146,7 @@ class MonthlyProfitEngineTest extends TestCase
         ]);
         $token = $employee->createToken('admin-api', ['*'])->plainTextToken;
 
-        $this->withToken($token)->postJson('/api/admin/monthly-profits', [
+        $this->withToken($token)->postJson('/api/v1/admin/monthly-profits', [
             'capital_snapshot_id' => 1,
             'distribution_rule_id' => 1,
             'gross_profit' => '100.00',

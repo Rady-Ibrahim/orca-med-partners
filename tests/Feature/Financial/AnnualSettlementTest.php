@@ -162,16 +162,16 @@ class AnnualSettlementTest extends TestCase
         $firstToken = $first->createToken('participant-api', ['*'])->plainTextToken;
         $secondToken = $second->createToken('participant-api', ['*'])->plainTextToken;
 
-        $firstList = $this->withToken($firstToken)->getJson('/api/me/settlements')->assertOk()->json('data.data.0');
+        $firstList = $this->withToken($firstToken)->getJson('/api/v1/me/settlements')->assertOk()->json('data.data.0');
         self::assertSame('45.00', $firstList['amount_due']);
         self::assertSame('0.00', $firstList['paid_amount']);
         self::assertSame('45.00', $firstList['remaining']);
 
-        $secondList = $this->withToken($secondToken)->getJson('/api/me/settlements')->assertOk()->json('data.data.0');
+        $secondList = $this->withToken($secondToken)->getJson('/api/v1/me/settlements')->assertOk()->json('data.data.0');
         self::assertSame('25.00', $secondList['amount_due']);
         self::assertSame('25.00', $secondList['remaining']);
 
-        $detail = $this->withToken($firstToken)->getJson('/api/me/settlements/' . $settlement->id)->assertOk()->json('data');
+        $detail = $this->withToken($firstToken)->getJson('/api/v1/me/settlements/' . $settlement->id)->assertOk()->json('data');
         self::assertSame('45.00', $detail['amount_due']);
         self::assertSame('45.00', $detail['remaining']);
         self::assertSame('70.00', $detail['settlement_total_due']);
@@ -184,10 +184,10 @@ class AnnualSettlementTest extends TestCase
         $ownerToken = $owner->createToken('participant-api', ['*'])->plainTextToken;
         $otherToken = $other->createToken('participant-api', ['*'])->plainTextToken;
 
-        $this->withToken($ownerToken)->getJson('/api/participant/settlements')->assertOk();
-        $this->withToken($ownerToken)->getJson('/api/participant/settlements/' . $settlement->id)->assertOk();
-        $this->withToken($otherToken)->getJson('/api/participant/settlements/' . $settlement->id)->assertForbidden();
-        $this->withToken($ownerToken)->postJson('/api/admin/settlements', ['year' => 2029])->assertForbidden();
+        $this->withToken($ownerToken)->getJson('/api/v1/participant/settlements')->assertOk();
+        $this->withToken($ownerToken)->getJson('/api/v1/participant/settlements/' . $settlement->id)->assertOk();
+        $this->withToken($otherToken)->getJson('/api/v1/participant/settlements/' . $settlement->id)->assertForbidden();
+        $this->withToken($ownerToken)->postJson('/api/v1/admin/settlements', ['year' => 2029])->assertForbidden();
     }
 
     public function test_admin_settlement_api_supports_create_approve_and_paid(): void
@@ -195,10 +195,10 @@ class AnnualSettlementTest extends TestCase
         [$admin] = $this->createApprovedAnnualData(2030);
         $token = $admin->createToken('admin-api', ['*'])->plainTextToken;
 
-        $created = $this->withToken($token)->postJson('/api/admin/settlements', ['year' => 2030])->assertCreated()->json('data');
-        $this->withToken($token)->getJson('/api/admin/settlements/' . $created['id'])->assertOk();
-        $this->withToken($token)->postJson('/api/admin/settlements/' . $created['id'] . '/approve')->assertOk();
-        $this->withToken($token)->postJson('/api/admin/settlements/' . $created['id'] . '/paid')->assertOk();
+        $created = $this->withToken($token)->postJson('/api/v1/admin/settlements', ['year' => 2030])->assertCreated()->json('data');
+        $this->withToken($token)->getJson('/api/v1/admin/settlements/' . $created['id'])->assertOk();
+        $this->withToken($token)->postJson('/api/v1/admin/settlements/' . $created['id'] . '/approve')->assertOk();
+        $this->withToken($token)->postJson('/api/v1/admin/settlements/' . $created['id'] . '/paid')->assertOk();
     }
 
     public function test_amount_due_does_not_invent_prior_deductions_or_include_principal(): void

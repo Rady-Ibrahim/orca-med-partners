@@ -26,7 +26,7 @@ Query filter keys (shared): `year` (2000–2200), `month` (1–12), `status`, `r
 
 ## 2. Auth & Profile — ✅ Verified
 
-### POST /auth/participant/login
+### POST /v1/auth/participant/login
 Purpose: Authenticate partner/investor credentials.
 Body:
 ```json
@@ -44,18 +44,18 @@ Response `200`:
 ```
 Statuses: `401` invalid credentials · `403` inactive account.
 
-### POST /auth/participant/refresh
+### POST /v1/auth/participant/refresh
 Body: `{ "refresh_token": "..." }` → rotates token, same response shape. `401` invalid/expired.
 
-### POST /auth/participant/logout · POST /auth/participant/password/change
+### POST /v1/auth/participant/logout · POST /v1/auth/participant/password/change
 - `logout` (auth) → revokes all tokens + rotates refresh family to dead. `200`.
 - `password/change` (auth) Body: `{ "current_password", "password", "password_confirmation" }`. `422` wrong current password. On success: **revokes all sessions** (forces re-login).
 
-### POST /auth/participant/password/reset/request · /password/reset
+### POST /v1/auth/participant/password/reset/request · /password/reset
 - `request` Body: `{ "email" }` → always `200` (anti-enumeration), writes 60-min token.
 - `reset` Body: `{ "token", "password", "password_confirmation" }`. `400` invalid token.
 
-### GET /me — ✅ Verified (`MeController@show`)
+### GET /v1/me — ✅ Verified (`MeController@show`)
 Profile for the header/avatar/settings entry.
 ```json
 {
@@ -71,22 +71,22 @@ Profile for the header/avatar/settings entry.
 
 ## 3. Dashboard (الرئيسية)
 
-### GET /me/investment — ✅ Verified
+### GET /v1/me/investment — ✅ Verified
 Aggregate investment metrics. Filters: `status`.
 Response rows:
 ```json
 { "id": 1, "amount": "1500000.00", "invested_at": "2023-01-15", "status": "approved", "approved_at": "2023-01-20T..." }
 ```
-> **Gap note:** Mobile dashboard header needs **company capital status & KPI badge** (current market value, fixed vs. liquid). Underlying snapshot data exists (`CapitalSnapshot.total_capital`, ratio items), but no aggregated KPI payload — see ❌ GAP §8 `GET /me/kpis`.
+> **Gap note:** Mobile dashboard header needs **company capital status & KPI badge** (current market value, fixed vs. liquid). Underlying snapshot data exists (`CapitalSnapshot.total_capital`, ratio items), but no aggregated KPI payload — see ❌ GAP §8 `GET /v1/me/kpis`.
 
-### GET /me/capital — ✅ VERIFIED
+### GET /v1/me/capital — ✅ VERIFIED
 Portfolio capital positions. Filters: `year`.
 ```json
 { "id": 9, "snapshot_date": "2024-01-31", "year": 2024, "month": 1,
   "participant_capital": "525000.00", "participant_ratio": "0.35000000" }
 ```
 
-### GET /me/capital/growth — ✅ VERIFIED
+### GET /v1/me/capital/growth — ✅ VERIFIED
 Company-wide capital growth history (snapshot-to-snapshot movement).
 ```json
 { "id": 4, "snapshot_date": "2024-02-29", "year": 2024, "month": 2,
@@ -97,27 +97,27 @@ Company-wide capital growth history (snapshot-to-snapshot movement).
 
 ## 4. Investment Portfolio (محفظة الاستثمار / المستثمرات)
 
-### GET /me/profits — ✅ VERIFIED
+### GET /v1/me/profits — ✅ VERIFIED
 Approved profit allocations. Filters: `year`, `month`.
 ```json
 { "id": 12, "year": 2024, "month": 3, "gross_profit": "240000.00", "amount": "84000.00",
   "status": "approved", "approved_at": "2024-04-05T..." }
 ```
 
-### GET /participant/investments/{investment} — ✅ VERIFIED
+### GET /v1/participant/investments/{investment} — ✅ VERIFIED
 Single investment detail; ownership-scoped (`participant_id` forced). `403` if not owner.
 
-### GET /participant/profits/{profit} — ✅ VERIFIED
+### GET /v1/participant/profits/{profit} — ✅ VERIFIED
 Single profit-allocation detail; ownership-scoped.
 
-### GET /participant/capital/{capital} — ✅ VERIFIED
+### GET /v1/participant/capital/{capital} — ✅ VERIFIED
 Single capital-snapshot-item detail; ownership-scoped.
 
 ---
 
 ## 5. Funds & Allocations (الصناديق الاستثمارية والمخصصات)
 
-### GET /me/funds — ✅ VERIFIED
+### GET /v1/me/funds — ✅ VERIFIED
 Fund-level allocations (Growth / Performance Incentive / Depreciation). Filters: `year`.
 ```json
 {
@@ -127,21 +127,21 @@ Fund-level allocations (Growth / Performance Incentive / Depreciation). Filters:
   "year": 2024, "month": 1
 }
 ```
-Detail: `GET /participant/funds/{allocation}` — ✅ VERIFIED, ownership-scoped.
+Detail: `GET /v1/participant/funds/{allocation}` — ✅ VERIFIED, ownership-scoped.
 
-### GET /me/depreciation — ✅ VERIFIED
+### GET /v1/me/depreciation — ✅ VERIFIED
 Depreciation notes & movements. Filters: `year`, `month`.
 ```json
 { "id": 7, "amount": "5000.00", "rate": "0.0500", "transaction_date": "2024-01-31",
   "year": 2024, "month": 1, "description": "Medical equipment", "note": "CT scanner" }
 ```
-Detail: `GET /participant/depreciation/{depreciation}` — ✅ VERIFIED.
+Detail: `GET /v1/participant/depreciation/{depreciation}` — ✅ VERIFIED.
 
 ---
 
 ## 6. Distribution & Settlement Ledger (تفاصيل التسوية المالية)
 
-### GET /me/settlements — ✅ VERIFIED
+### GET /v1/me/settlements — ✅ VERIFIED
 Yearly settlement breakdown. Filters: `year`, `status`.
 ```json
 {
@@ -154,7 +154,7 @@ Yearly settlement breakdown. Filters: `year`, `status`.
 }
 ```
 
-### GET /me/settlements/{settlement} — ✅ VERIFIED
+### GET /v1/me/settlements/{settlement} — ✅ VERIFIED
 Full ledger: shares + payments + adjustments.
 ```json
 {
@@ -166,10 +166,10 @@ Full ledger: shares + payments + adjustments.
 }
 ```
 
-### GET /me/settlements/{settlement}/payments — ✅ VERIFIED
+### GET /v1/me/settlements/{settlement}/payments — ✅ VERIFIED
 Payment/transfer history (verification trail). `404` if this participant has no item in the settlement.
 
-### GET /participant/settlements · GET /participant/settlements/{settlement} — ✅ VERIFIED
+### GET /v1/participant/settlements · GET /v1/participant/settlements/{settlement} — ✅ VERIFIED
 Alias collection/detail routes for the ledger screen.
 
 > **Receipt gap:** `settlement_payments` has no receipt/attachment column. The "bank transfer receipt/PDF verification" feature of this screen is **🚫 not implementable** until ❌ GAP §9 (uploads) exists.
@@ -178,7 +178,7 @@ Alias collection/detail routes for the ledger screen.
 
 ## 7. Notifications (الإشعارات) — 🟡 PARTIAL
 
-### GET /me/notifications — ✅ VERIFIED
+### GET /v1/me/notifications — ✅ VERIFIED
 Filters: `read` (true/false). Types (from service): `investment_update`, `investment_value_update`, `depreciation_update`, `monthly_profit_created`, `monthly_profit_approved`, `settlement_created`, `settlement_approved`, `settlement_paid`, `settlement_cancelled`.
 ```json
 { "id": 5, "type": "settlement_paid", "title": "Settlement #4 paid",
@@ -186,14 +186,14 @@ Filters: `read` (true/false). Types (from service): `investment_update`, `invest
   "read": false, "created_at": "2024-02-01T09:00:00+00:00" }
 ```
 
-Detail: `GET /participant/notifications/{notification}` — ✅ VERIFIED, ownership-scoped.
+Detail: `GET /v1/participant/notifications/{notification}` — ✅ VERIFIED, ownership-scoped.
 
 ### ❌ GAP — contract additions required to power the mobile Notification screen
 | Endpoint | Purpose |
 |---|---|
-| `GET /me/notifications/unread-count` | Badge count: `{ "unread_count": 3 }` (`WHERE participant_id=? AND is_read=false`) |
-| `PATCH /me/notifications/{notification}/read` | Mark single read → `200 {id, read:true}` |
-| `PATCH /me/notifications/read-all` | Mark all read → `200 { "updated": 5 }` |
+| `GET /v1/me/notifications/unread-count` | Badge count: `{ "unread_count": 3 }` (`WHERE participant_id=? AND is_read=false`) |
+| `PATCH /v1/me/notifications/{notification}/read` | Mark single read → `200 {id, read:true}` |
+| `PATCH /v1/me/notifications/read-all` | Mark all read → `200 { "updated": 5 }` |
 
 Schema hardening (migration) to match the "categorized (Financial / Investment / Administrative) with direct actions" requirement:
 - Add `category` column: enum `financial|investment|administrative` (map legacy `type` bucket to category on write).
@@ -210,19 +210,19 @@ PDF/Excel libraries exist (`barryvdh/laravel-dompdf`, `maatwebsite/excel`) but a
 
 | Endpoint | Purpose / contract |
 |---|---|
-| `GET /me/reports` | List available statement types + latest generated file (if any): `{ "reports": [ { "type":"settlement_statement", "label":"settlement 2023", "period_year":2023, "download_url": "...", "generated_at": "..." } ] }` |
-| `GET /me/reports/{type}` | One report header + period list; `type ∈ { investment, capital, profit, settlement_statement, funds, depreciation }` |
-| `GET /me/reports/{type}/download?format=pdf\|xlsx&year=2023` | Stream binary. `Content-Type: application/pdf` / `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`. Participant-scoped data sources ONLY |
+| `GET /v1/me/reports` | List available statement types + latest generated file (if any): `{ "reports": [ { "type":"settlement_statement", "label":"settlement 2023", "period_year":2023, "download_url": "...", "generated_at": "..." } ] }` |
+| `GET /v1/me/reports/{type}` | One report header + period list; `type ∈ { investment, capital, profit, settlement_statement, funds, depreciation }` |
+| `GET /v1/me/reports/{type}/download?format=pdf\|xlsx&year=2023` | Stream binary. `Content-Type: application/pdf` / `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`. Participant-scoped data sources ONLY |
 
 For the "official **signed** statement" requirement: the settlement-statement PDF should render settlement record + payments + adjustments and a signing block (`signed_at`, `signed_by`), regenerated per `version` (`settlement.version`, `parent_id` already model revisioned).
 
 ### ❌ GAP — Investor Notifications preferences & push
-`PUT /me/settings/notifications` Body `{ "email": bool, "push": bool, "categories": ["financial","settlement","investment"] }` — requires new `notification_preferences` table.
+`PUT /v1/me/settings/notifications` Body `{ "email": bool, "push": bool, "categories": ["financial","settlement","investment"] }` — requires new `notification_preferences` table.
 
 ### ❌ GAP — ROI Calculator (Interactive Investment Calculator)
 > **Updated:** endpoint implemented as a server-authoritative pure function (compound monthly, BCMath + half-even rounding).
 ```
-POST /me/tools/roi-simulation
+POST /v1/me/tools/roi-simulation
 { "base_capital": "525000.00", "months": 12, "expected_monthly_rate": "0.015" }
 → { "base_capital": "525000.00", "months": 12, "expected_monthly_rate": "0.0150",
     "projected_capital": "619244.00", "projected_profit": "94244.00",
@@ -235,21 +235,21 @@ Rule: **server-authoritative only** — never trust client-provided formulas; va
 No TOTP package installed. Admin page labels 2FA "غير مُفعّل". Endpoints to plan:
 | Endpoint | Purpose |
 |---|---|
-| `PATCH /me/settings/profile` | Update `email`, mobile/phone (NOT username/capital) |
-| `GET /me/settings/security` | 2FA status, enabled date, backup codes left |
-| `POST /me/settings/security/2fa/enable` | Initiate TOTP → returns `{ qr_secret }` |
-| `POST /me/settings/security/2fa/verify` | `{ code }` → activates |
-| `POST /me/settings/security/2fa/disable` | Deactivate (re-auth required) |
-| `GET /me/settings/active-sessions` | List tokens for device management (Sanctum `personal_access_tokens` browser/device) |
-| `POST /me/settings/sessions/{token}/revoke` | Kill a device session |
+| `PATCH /v1/me/settings/profile` | Update `email`, mobile/phone (NOT username/capital) |
+| `GET /v1/me/settings/security` | 2FA status, enabled date, backup codes left |
+| `POST /v1/me/settings/security/2fa/enable` | Initiate TOTP → returns `{ qr_secret }` |
+| `POST /v1/me/settings/security/2fa/verify` | `{ code }` → activates |
+| `POST /v1/me/settings/security/2fa/disable` | Deactivate (re-auth required) |
+| `GET /v1/me/settings/active-sessions` | List tokens for device management (Sanctum `personal_access_tokens` browser/device) |
+| `POST /v1/me/settings/sessions/{token}/revoke` | Kill a device session |
 
 ### ❌ GAP — Legal & Support
 | Endpoint | Purpose |
 |---|---|
-| `GET /legal/terms` | `app_settings`-backed terms doc (render markdown/HTML) |
-| `GET /legal/privacy` | Privacy policy |
-| `GET /legal/fees` | Fees/charges disclosure |
-| `POST /support/contact` | `{ subject, message, category }` → creates support ticket / audit trail |
+| `GET /v1/legal/terms` | `app_settings`-backed terms doc (render markdown/HTML) |
+| `GET /v1/legal/privacy` | Privacy policy |
+| `GET /v1/legal/fees` | Fees/charges disclosure |
+| `POST /v1/support/contact` | `{ subject, message, category }` → creates support ticket / audit trail |
 
 ---
 
@@ -260,9 +260,9 @@ No TOTP package installed. Admin page labels 2FA "غير مُفعّل". Endpoint
 
 | Endpoint | Purpose / contract |
 |---|---|
-| `POST /me/settlements/{settlement}/payments/{payment}/receipt` | Multipart `file=` (PDF/PNG/JPG, ≤10MB). VALIDATE mime + size; store on private disk; persist `receipt_path` on payment |
-| `GET /me/settlements/{settlement}/payments/{payment}/receipt` | Download; MUST be authenticated + ownership-scoped (payment belongs to participant's settlement item) |
-| `GET /me/reports/{type}/download` | See §8 — prefer **signed temporary URL** (`Storage::temporaryUrl($path, 300)`) for large PDF/Excel instead of binary stream |
+| `POST /v1/me/settlements/{settlement}/payments/{payment}/receipt` | Multipart `file=` (PDF/PNG/JPG, ≤10MB). VALIDATE mime + size; store on private disk; persist `receipt_path` on payment |
+| `GET /v1/me/settlements/{settlement}/payments/{payment}/receipt` | Download; MUST be authenticated + ownership-scoped (payment belongs to participant's settlement item) |
+| `GET /v1/me/reports/{type}/download` | See §8 — prefer **signed temporary URL** (`Storage::temporaryUrl($path, 300)`) for large PDF/Excel instead of binary stream |
 
 Rules:
 - Store on private disk (`storage/app/private`), never `public`.
@@ -305,8 +305,8 @@ Every monetary value is immutable in storage; derived values are recomputed at r
 
 | Data | Strategy |
 |---|---|
-| `GET /me` profile | Cache 5 min per participant (`participant:{id}:profile`) |
-| KPI aggregates (`GET /me/kpis`, proposed) | Read-model / materialized summary from `capital_snapshots`; cache 24h, invalidate on new snapshot |
+| `GET /v1/me` profile | Cache 5 min per participant (`participant:{id}:profile`) |
+| KPI aggregates (`GET /v1/me/kpis`, proposed) | Read-model / materialized summary from `capital_snapshots`; cache 24h, invalidate on new snapshot |
 | `capital/growth` company series | Cache 1h; immutable snapshots → long TTL + tag invalidation |
 | `funds`, `depreciation` (already-paginated) | `with('fund','monthlyProfit')` eager loading already used — keep; add `SELECT` column restriction |
 | Notifications unread badge | Redis counter per participant, decrement on mark-read |
@@ -320,34 +320,34 @@ Every monetary value is immutable in storage; derived values are recomputed at r
 | # | Mobile Screen (UI) | Endpoint(s) | Status |
 |---|---|---|---|
 | 1 | Splash / Auth | `/auth/participant/*` | ✅ |
-| 2 | Profile header / avatar | `GET /me` | ✅ |
-| 3 | Dashboard — investment metrics | `GET /me/investment` | ✅ |
-| 4 | Dashboard — company capital status & KPIs (fixed vs liquid, market value) | `GET /me/kpis` | ❌ **GAP** |
-| 5 | Dashboard — capital growth history | `GET /me/capital/growth` | ✅ |
-| 6 | Dashboard — recent activity feed | `GET /me/notifications` (top N) | 🟡 add `?limit` |
-| 7 | Portfolio — share/capital positions | `GET /me/capital`, `GET /participant/capital/{id}` | ✅ |
-| 8 | Portfolio — company overall capital (fixed/liquid assets) | `GET /me/kpis` (asset-breakdown) | ❌ **GAP** |
-| 9 | Portfolio — investment entries | `GET /me/investment`, `GET /participant/investments/{id}` | ✅ |
-| 10 | Funds — allocations by fund | `GET /me/funds`, `GET /participant/funds/{id}` | ✅ |
-| 11 | Funds — depreciation movements | `GET /me/depreciation`, `GET /participant/depreciation/{id}` | ✅ |
-| 12 | Funds — transaction ledger | `GET /me/funds` (+ filter `allocation_type`) | 🟡 add type filter |
-| 13 | Settlement — yearly breakdown | `GET /me/settlements`, `GET /participant/settlements` | ✅ |
-| 14 | Settlement — liquidity & payout | `GET /me/settlements/{id}`, `/payments` | ✅ |
+| 2 | Profile header / avatar | `GET /v1/me` | ✅ |
+| 3 | Dashboard — investment metrics | `GET /v1/me/investment` | ✅ |
+| 4 | Dashboard — company capital status & KPIs (fixed vs liquid, market value) | `GET /v1/me/kpis` | ❌ **GAP** |
+| 5 | Dashboard — capital growth history | `GET /v1/me/capital/growth` | ✅ |
+| 6 | Dashboard — recent activity feed | `GET /v1/me/notifications` (top N) | 🟡 add `?limit` |
+| 7 | Portfolio — share/capital positions | `GET /v1/me/capital`, `GET /v1/participant/capital/{id}` | ✅ |
+| 8 | Portfolio — company overall capital (fixed/liquid assets) | `GET /v1/me/kpis` (asset-breakdown) | ❌ **GAP** |
+| 9 | Portfolio — investment entries | `GET /v1/me/investment`, `GET /v1/participant/investments/{id}` | ✅ |
+| 10 | Funds — allocations by fund | `GET /v1/me/funds`, `GET /v1/participant/funds/{id}` | ✅ |
+| 11 | Funds — depreciation movements | `GET /v1/me/depreciation`, `GET /v1/participant/depreciation/{id}` | ✅ |
+| 12 | Funds — transaction ledger | `GET /v1/me/funds` (+ filter `allocation_type`) | 🟡 add type filter |
+| 13 | Settlement — yearly breakdown | `GET /v1/me/settlements`, `GET /v1/participant/settlements` | ✅ |
+| 14 | Settlement — liquidity & payout | `GET /v1/me/settlements/{id}`, `/payments` | ✅ |
 | 15 | Settlement — transfer verification (receipts/PDF) | `POST|GET .../payments/{id}/receipt` | ❌ **GAP** |
-| 16 | Reports — signed official statements | `GET /me/reports`, `/download?format=pdf` | ❌ **GAP** |
-| 17 | Reports — monthly/yearly Excel | `GET /me/reports/.../download?format=xlsx` | ❌ **GAP** |
-| 18 | Reports — audit trail | `GET /me/notifications` (event history) / admin audit-log view | 🟡 |
-| 19 | Notifications — list + categorized filter | `GET /me/notifications` (+ `category`) | 🟡 GAP schema `category` |
-| 20 | Notifications — unread badge | `GET /me/notifications/unread-count` | ❌ **GAP** |
-| 21 | Notifications — mark read / mark all | `PATCH /me/notifications/{id}/read`, `PATCH /me/notifications/read-all` | ❌ **GAP** |
+| 16 | Reports — signed official statements | `GET /v1/me/reports`, `/download?format=pdf` | ❌ **GAP** |
+| 17 | Reports — monthly/yearly Excel | `GET /v1/me/reports/.../download?format=xlsx` | ❌ **GAP** |
+| 18 | Reports — audit trail | `GET /v1/me/notifications` (event history) / admin audit-log view | 🟡 |
+| 19 | Notifications — list + categorized filter | `GET /v1/me/notifications` (+ `category`) | 🟡 GAP schema `category` |
+| 20 | Notifications — unread badge | `GET /v1/me/notifications/unread-count` | ❌ **GAP** |
+| 21 | Notifications — mark read / mark all | `PATCH /v1/me/notifications/{id}/read`, `PATCH /v1/me/notifications/read-all` | ❌ **GAP** |
 | 22 | Notifications — direct action navigation | add `action_target` column | ❌ **GAP** |
-| 23 | Tools — ROI calculator | `POST /me/tools/roi-simulation` | ❌ **GAP** (blocked on formula) |
-| 24 | Settings — profile edit | `PATCH /me/settings/profile` | ❌ **GAP** |
-| 25 | Settings — security / 2FA | `GET|POST /me/settings/security/2fa/*` | ❌ **GAP** |
-| 26 | Settings — notification prefs | `PUT /me/settings/notifications` | ❌ **GAP** |
-| 27 | Settings — legal terms / privacy / fees | `GET /legal/*` | ❌ **GAP** |
-| 28 | Settings — support/contact | `POST /support/contact` | ❌ **GAP** |
-| 29 | Auth — password reset path | `POST /auth/participant/password/reset/*` | ✅ |
+| 23 | Tools — ROI calculator | `POST /v1/me/tools/roi-simulation` | ❌ **GAP** (blocked on formula) |
+| 24 | Settings — profile edit | `PATCH /v1/me/settings/profile` | ❌ **GAP** |
+| 25 | Settings — security / 2FA | `GET|POST /v1/me/settings/security/2fa/*` | ❌ **GAP** |
+| 26 | Settings — notification prefs | `PUT /v1/me/settings/notifications` | ❌ **GAP** |
+| 27 | Settings — legal terms / privacy / fees | `GET /v1/legal/*` | ❌ **GAP** |
+| 28 | Settings — support/contact | `POST /v1/support/contact` | ❌ **GAP** |
+| 29 | Auth — password reset path | `POST /v1/auth/participant/password/reset/*` | ✅ |
 
 **Coverage:** 15/29 screens fully covered today; 14 dependency-gaps block a 100% mobile release (all marked ❌). Priority order: §9 files/receipts + §8 reports → §7 notification actions → §8 settings/2FA/legal → §8 calculator.
 

@@ -5,13 +5,19 @@ declare(strict_types=1);
 namespace App\Http\Middleware;
 
 use App\Models\Admin;
+use App\Models\Participant;
 use Closure;
 use Illuminate\Http\Request;
 use Laravel\Sanctum\PersonalAccessToken;
 use Symfony\Component\HttpFoundation\Response;
 
-class EnsureAdminContext
+final class EnsureApiContext
 {
+    private const SUPPORTED_TOKENABLES = [
+        Admin::class,
+        Participant::class,
+    ];
+
     private function isExpired(PersonalAccessToken $token): bool
     {
         return $token->expires_at !== null && $token->expires_at->isPast();
@@ -27,8 +33,8 @@ class EnsureAdminContext
 
         $token = PersonalAccessToken::findToken($bearerToken);
 
-        if (! $token || ! $token->tokenable instanceof Admin) {
-            abort(403, 'Admin access required.');
+        if (! $token || ! in_array(get_class($token->tokenable), self::SUPPORTED_TOKENABLES, true)) {
+            abort(401, 'Unauthenticated.');
         }
 
         if ($this->isExpired($token) || ! $token->tokenable->isActive()) {
@@ -37,7 +43,7 @@ class EnsureAdminContext
             abort(401, 'Access token expired or account is inactive.');
         }
 
-        $request->setUserResolver(fn() => $token->tokenable);
+        $request->setUserResolver(fn () => $token->tokenable);
 
         return $next($request);
     }

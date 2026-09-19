@@ -29,7 +29,7 @@ final class ParticipantChangePasswordApiTest extends TestCase
         self::assertTrue(Hash::check('new-secret-123', $participant->fresh()->password));
         self::assertCount(0, $participant->tokens()->get());
 
-        $this->withToken($token)->getJson('/api/me')->assertForbidden();
+        $this->withToken($token)->getJson('/api/v1/me')->assertUnauthorized();
     }
 
     public function test_change_password_rejects_incorrect_current_password(): void

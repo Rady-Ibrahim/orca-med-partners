@@ -26,7 +26,7 @@ class RateLimitingTest extends TestCase
 
         for ($i = 0; $i < 10; $i++) {
             $this->withServerVariables($server)
-                ->postJson('/api/auth/admin/login', [
+                ->postJson('/api/v1/auth/admin/login', [
                     'username' => 'rate-admin',
                     'password' => 'wrong-password',
                 ])
@@ -34,7 +34,7 @@ class RateLimitingTest extends TestCase
         }
 
         $this->withServerVariables($server)
-            ->postJson('/api/auth/admin/login', [
+            ->postJson('/api/v1/auth/admin/login', [
                 'username' => 'rate-admin',
                 'password' => 'wrong-password',
             ])
@@ -53,7 +53,7 @@ class RateLimitingTest extends TestCase
 
         for ($i = 0; $i < 10; $i++) {
             $this->withServerVariables($server)
-                ->postJson('/api/auth/participant/login', [
+                ->postJson('/api/v1/auth/participant/login', [
                     'username' => 'rate-participant',
                     'password' => 'wrong-password',
                 ])
@@ -61,7 +61,7 @@ class RateLimitingTest extends TestCase
         }
 
         $this->withServerVariables($server)
-            ->postJson('/api/auth/participant/login', [
+            ->postJson('/api/v1/auth/participant/login', [
                 'username' => 'rate-participant',
                 'password' => 'wrong-password',
             ])
@@ -81,14 +81,14 @@ class RateLimitingTest extends TestCase
 
         for ($i = 0; $i < 10; $i++) {
             $this->withServerVariables($server)
-                ->postJson('/api/auth/admin/password/reset/request', [
+                ->postJson('/api/v1/auth/admin/password/reset/request', [
                     'email' => $admin->email,
                 ])
                 ->assertOk();
         }
 
         $this->withServerVariables($server)
-            ->postJson('/api/auth/admin/password/reset/request', [
+            ->postJson('/api/v1/auth/admin/password/reset/request', [
                 'email' => $admin->email,
             ])
             ->assertStatus(429);
@@ -106,14 +106,14 @@ class RateLimitingTest extends TestCase
 
         for ($i = 0; $i < 10; $i++) {
             $this->withServerVariables($server)
-                ->postJson('/api/auth/admin/refresh', [
+                ->postJson('/api/v1/auth/admin/refresh', [
                     'refresh_token' => 'invalid-token-' . $i,
                 ])
                 ->assertStatus(401);
         }
 
         $this->withServerVariables($server)
-            ->postJson('/api/auth/admin/refresh', [
+            ->postJson('/api/v1/auth/admin/refresh', [
                 'refresh_token' => 'invalid-token-fail',
             ])
             ->assertStatus(429);

@@ -23,7 +23,7 @@ final class AccessTokenExpiryTest extends TestCase
         $token->accessToken->forceFill(['expires_at' => now()->subMinute()])->save();
 
         $this->withToken($token->plainTextToken)
-            ->getJson('/api/me')
+            ->getJson('/api/v1/me')
             ->assertStatus(401)
             ->assertJsonPath('message', 'Access token expired or account is inactive.');
 
@@ -37,7 +37,7 @@ final class AccessTokenExpiryTest extends TestCase
         $token->accessToken->forceFill(['expires_at' => now()->subMinute()])->save();
 
         $this->withToken($token->plainTextToken)
-            ->getJson('/api/admin/participants')
+            ->getJson('/api/v1/admin/participants')
             ->assertStatus(401);
     }
 
@@ -47,7 +47,7 @@ final class AccessTokenExpiryTest extends TestCase
         $token = $participant->createToken('participant-api', ['*']);
 
         $this->withToken($token->plainTextToken)
-            ->getJson('/api/me')
+            ->getJson('/api/v1/me')
             ->assertStatus(401);
 
         $this->assertDatabaseMissing('personal_access_tokens', ['id' => $token->accessToken->id]);
@@ -64,7 +64,7 @@ final class AccessTokenExpiryTest extends TestCase
         $token = $admin->createToken('admin-api', ['*']);
 
         $this->withToken($token->plainTextToken)
-            ->getJson('/api/admin/participants')
+            ->getJson('/api/v1/admin/participants')
             ->assertStatus(401);
     }
 
@@ -76,8 +76,8 @@ final class AccessTokenExpiryTest extends TestCase
         $token = $participant->createToken('participant-api', ['*']);
         $adminToken = $admin->createToken('admin-api', ['*']);
 
-        $this->withToken($token->plainTextToken)->getJson('/api/me')->assertOk();
-        $this->withToken($adminToken->plainTextToken)->getJson('/api/admin/participants')->assertOk();
+        $this->withToken($token->plainTextToken)->getJson('/api/v1/me')->assertOk();
+        $this->withToken($adminToken->plainTextToken)->getJson('/api/v1/admin/participants')->assertOk();
     }
 
     public function test_refresh_for_inactive_participant_returns_403_and_revokes_family(): void
@@ -86,7 +86,7 @@ final class AccessTokenExpiryTest extends TestCase
 
         $raw = app(RefreshTokenService::class)->issue($participant, 'participant-api');
 
-        $this->postJson('/api/auth/participant/refresh', ['refresh_token' => $raw])
+        $this->postJson('/api/v1/auth/participant/refresh', ['refresh_token' => $raw])
             ->assertStatus(403)
             ->assertJsonPath('message', 'Account is inactive.');
 
@@ -106,7 +106,7 @@ final class AccessTokenExpiryTest extends TestCase
             'status' => 'active',
         ]);
 
-        $this->postJson('/api/auth/participant/login', [
+        $this->postJson('/api/v1/auth/participant/login', [
             'username' => 'expiry.user',
             'password' => 'secret123',
         ])->assertOk()->assertJsonPath('data.expires_in', (int) config('sanctum.expiration', 60) * 60);
@@ -123,7 +123,7 @@ final class AccessTokenExpiryTest extends TestCase
             'created_at' => now()->subHours(2),
         ]);
 
-        $this->postJson('/api/auth/participant/password/reset', [
+        $this->postJson('/api/v1/auth/participant/password/reset', [
             'token' => $token,
             'password' => 'NewPass123',
             'password_confirmation' => 'NewPass123',

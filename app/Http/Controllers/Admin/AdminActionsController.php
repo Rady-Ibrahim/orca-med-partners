@@ -34,9 +34,11 @@ use App\Models\FundTransaction;
 use App\Models\Investment;
 use App\Models\MonthlyProfit;
 use App\Models\Settlement;
+use App\Services\SecurityAuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use InvalidArgumentException;
 use Throwable;
@@ -151,7 +153,7 @@ final class AdminActionsController
 
         try {
             if (in_array($fund->code, ['depreciation_fund', 'growth_fund', 'incentive_fund'], true)) {
-                throw new \App\Domain\Financial\Exceptions\ImmutableFinancialRecordException('لا يمكن حذف الصناديق البرمجية الأساسية.');
+                throw new ImmutableFinancialRecordException('لا يمكن حذف الصناديق البرمجية الأساسية.');
             }
 
             $fund->delete();
@@ -215,7 +217,7 @@ final class AdminActionsController
             return $this->fail($request, $e, 'تعذر تحديث الحركة المالية.');
         }
 
-        app(\App\Services\SecurityAuditService::class)->log('fund_transaction_updated', $request->user(), 'fund_transaction', $fundTransaction->id, [
+        app(SecurityAuditService::class)->log('fund_transaction_updated', $request->user(), 'fund_transaction', $fundTransaction->id, [
             'fund_id' => $fund->id,
             'old' => $old,
             'new' => $fundTransaction->only(['reference', 'description', 'notes', 'transaction_date']),
@@ -371,7 +373,7 @@ final class AdminActionsController
             'items.*.capital' => ['required', 'numeric', 'min:0'],
         ]);
 
-        $snapshot = \Illuminate\Support\Facades\DB::transaction(function () use ($data, $request): CapitalSnapshot {
+        $snapshot = DB::transaction(function () use ($data, $request): CapitalSnapshot {
             $totalCapital = '0.00';
             foreach ($data['items'] as $item) {
                 $totalCapital = bcadd($totalCapital, number_format((float) $item['capital'], 2, '.', ''), 2);
@@ -392,7 +394,7 @@ final class AdminActionsController
                     ? '0.0000'
                     : bcdiv($capital, $totalCapital, 4);
 
-                \App\Models\CapitalSnapshotItem::query()->create([
+                CapitalSnapshotItem::query()->create([
                     'capital_snapshot_id' => $snapshot->id,
                     'participant_id' => (int) $item['participant_id'],
                     'participant_capital_snapshot' => $capital,
@@ -426,7 +428,7 @@ final class AdminActionsController
         ]);
 
         try {
-            \Illuminate\Support\Facades\DB::transaction(function () use ($data, $capitalSnapshot): void {
+            DB::transaction(function () use ($data, $capitalSnapshot): void {
                 $capitalSnapshot->fill($data)->save();
 
                 if (array_key_exists('items', $data) && $data['items'] !== null) {
@@ -487,18 +489,23 @@ final class AdminActionsController
     {
         Gate::forUser($request->user())->authorize('create', DistributionRule::class);
 
-        $data = $request->validate([
-            'effective_from' => ['required', 'date'],
-            'effective_to' => ['nullable', 'date', 'after_or_equal:effective_from'],
-            'management_fee_rate' => ['required', 'numeric', 'min:0', 'max:1'],
-            'depreciation_fund_rate' => ['required', 'numeric', 'min:0', 'max:1'],
-            'growth_fund_rate' => ['required', 'numeric', 'min:0', 'max:1'],
-            'incentive_fund_rate' => ['required', 'numeric', 'min:0', 'max:1'],
-            'distributed_share_rate' => ['required', 'numeric', 'min:0', 'max:1'],
-            'status' => ['required', 'in:draft,active,locked'],
-            'is_default' => ['sometimes', 'boolean'],
-            'notes' => ['nullable', 'string', 'max:1000'],
-        ]);
+        $data = $request->validate(
+            [
+                'effective_from' => ['required', 'date'],
+                'effective_to' => ['nullable', 'date', 'after_or_equal:effective_from'],
+                'management_fee_rate' => ['required', 'numeric', 'min:0', 'max:100'],
+                'depreciation_fund_rate' => ['required', 'numeric', 'min:0', 'max:100'],
+                'growth_fund_rate' => ['required', 'numeric', 'min:0', 'max:100'],
+                'incentive_fund_rate' => ['required', 'numeric', 'min:0', 'max:100'],
+                'distributed_share_rate' => ['required', 'numeric', 'min:0', 'max:100'],
+                'status' => ['required', 'in:draft,active,locked'],
+                'is_default' => ['sometimes', 'boolean'],
+                'notes' => ['nullable', 'string', 'max:1000'],
+            ],
+            $this->distributionRuleMessages(),
+        );
+
+        $data = $this->percentRatesToRatio($data);
 
         try {
             $this->validateDistributionRates($data);
@@ -522,18 +529,23 @@ final class AdminActionsController
     {
         Gate::forUser($request->user())->authorize('update', $distributionRule);
 
-        $data = $request->validate([
-            'effective_from' => ['sometimes', 'date'],
-            'effective_to' => ['nullable', 'date', 'after_or_equal:effective_from'],
-            'management_fee_rate' => ['sometimes', 'numeric', 'min:0', 'max:1'],
-            'depreciation_fund_rate' => ['sometimes', 'numeric', 'min:0', 'max:1'],
-            'growth_fund_rate' => ['sometimes', 'numeric', 'min:0', 'max:1'],
-            'incentive_fund_rate' => ['sometimes', 'numeric', 'min:0', 'max:1'],
-            'distributed_share_rate' => ['sometimes', 'numeric', 'min:0', 'max:1'],
-            'status' => ['sometimes', 'in:draft,active,locked'],
-            'is_default' => ['sometimes', 'boolean'],
-            'notes' => ['nullable', 'string', 'max:1000'],
-        ]);
+        $data = $request->validate(
+            [
+                'effective_from' => ['sometimes', 'date'],
+                'effective_to' => ['nullable', 'date', 'after_or_equal:effective_from'],
+                'management_fee_rate' => ['sometimes', 'numeric', 'min:0', 'max:100'],
+                'depreciation_fund_rate' => ['sometimes', 'numeric', 'min:0', 'max:100'],
+                'growth_fund_rate' => ['sometimes', 'numeric', 'min:0', 'max:100'],
+                'incentive_fund_rate' => ['sometimes', 'numeric', 'min:0', 'max:100'],
+                'distributed_share_rate' => ['sometimes', 'numeric', 'min:0', 'max:100'],
+                'status' => ['sometimes', 'in:draft,active,locked'],
+                'is_default' => ['sometimes', 'boolean'],
+                'notes' => ['nullable', 'string', 'max:1000'],
+            ],
+            $this->distributionRuleMessages(),
+        );
+
+        $data = $this->percentRatesToRatio($data);
 
         try {
             $this->validateDistributionRates(array_replace(
@@ -641,7 +653,7 @@ final class AdminActionsController
             'fund_id' => array_key_exists('fund_id', $data)
                 ? (($data['fund_id'] === '' || $data['fund_id'] === null) ? null : (int) $data['fund_id'])
                 : $depreciationNote->fund_id,
-        ], fn($value) => $value !== null);
+        ], fn ($value) => $value !== null);
 
         try {
             $depreciationNote->fill($fillable)->save();
@@ -693,7 +705,7 @@ final class AdminActionsController
                     ? ($data['invested_at'] ?: now()->toDateString())
                     : $investment->invested_at,
                 'notes' => array_key_exists('notes', $data) ? $data['notes'] : $investment->notes,
-            ], fn($value) => $value !== null))->save();
+            ], fn ($value) => $value !== null))->save();
         } catch (Throwable $e) {
             return $this->fail($request, $e, 'تعذر تحديث الاستثمار.');
         }
@@ -732,6 +744,50 @@ final class AdminActionsController
             'incentive_fund_rate' => (string) ($data['incentive_fund_rate'] ?? '0'),
             'distributed_share_rate' => (string) ($data['distributed_share_rate'] ?? '0'),
         ]);
+    }
+
+    /**
+     * Convert percent inputs (0-100) to ratios (0-1) for the rate fields.
+     */
+    private function percentRatesToRatio(array $data): array
+    {
+        foreach (['management_fee_rate', 'depreciation_fund_rate', 'growth_fund_rate', 'incentive_fund_rate', 'distributed_share_rate'] as $field) {
+            if (array_key_exists($field, $data)) {
+                $data[$field] = bcdiv((string) $data[$field], '100', 4);
+            }
+        }
+
+        return $data;
+    }
+
+    private function distributionRuleMessages(): array
+    {
+        $labels = [
+            'management_fee_rate' => 'رسوم الإدارة',
+            'depreciation_fund_rate' => 'الإهلاك',
+            'growth_fund_rate' => 'النمو',
+            'incentive_fund_rate' => 'الحوافز',
+            'distributed_share_rate' => 'الموزّع للمشاركين',
+        ];
+
+        $messages = [];
+        foreach ($labels as $field => $label) {
+            $messages["{$field}.required"] = "نسبة {$label} مطلوبة.";
+            $messages["{$field}.numeric"] = "نسبة {$label} يجب أن تكون رقمًا.";
+            $messages["{$field}.min"] = "نسبة {$label} يجب ألا تقل عن 0.";
+            $messages["{$field}.max"] = "نسبة {$label} يجب ألا تزيد عن 100.";
+        }
+
+        $messages['effective_from.required'] = 'تاريخ بدء السريان مطلوب.';
+        $messages['effective_from.date'] = 'تاريخ بدء السريان غير صالح.';
+        $messages['effective_to.date'] = 'تاريخ نهاية السريان غير صالح.';
+        $messages['effective_to.after_or_equal'] = 'تاريخ نهاية السريان يجب أن يكون بعد تاريخ البداية أو مساويًا له.';
+        $messages['status.required'] = 'حالة القاعدة مطلوبة.';
+        $messages['status.in'] = 'قيمة الحالة غير صالحة.';
+        $messages['is_default.boolean'] = 'قيمة القاعدة الافتراضية غير صالحة.';
+        $messages['notes.max'] = 'الوصف يجب ألا يتجاوز 1000 حرف.';
+
+        return $messages;
     }
 
     private function fail(Request $request, Throwable $e, string $fallbackMessage): JsonResponse|RedirectResponse

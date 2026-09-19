@@ -24,7 +24,7 @@ class SecurityAuditTest extends TestCase
             'status' => 'active',
         ]);
 
-        $adminLogin = $this->postJson('/api/auth/admin/login', [
+        $adminLogin = $this->postJson('/api/v1/auth/admin/login', [
             'username' => 'audit-admin',
             'password' => 'secret123',
         ]);
@@ -33,7 +33,7 @@ class SecurityAuditTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['action' => 'admin_login_success']);
 
         $adminToken = $adminLogin->json('data.access_token');
-        $this->withToken($adminToken)->postJson('/api/auth/admin/logout')->assertOk();
+        $this->withToken($adminToken)->postJson('/api/v1/auth/admin/logout')->assertOk();
         $this->assertDatabaseHas('audit_logs', ['action' => 'admin_logout']);
 
         $participant = Participant::factory()->create([
@@ -42,7 +42,7 @@ class SecurityAuditTest extends TestCase
             'status' => 'active',
         ]);
 
-        $participantLogin = $this->postJson('/api/auth/participant/login', [
+        $participantLogin = $this->postJson('/api/v1/auth/participant/login', [
             'username' => 'audit-participant',
             'password' => 'secret123',
         ]);
@@ -51,13 +51,13 @@ class SecurityAuditTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['action' => 'participant_login_success']);
 
         $participantToken = $participantLogin->json('data.access_token');
-        $this->withToken($participantToken)->postJson('/api/auth/participant/logout')->assertOk();
+        $this->withToken($participantToken)->postJson('/api/v1/auth/participant/logout')->assertOk();
         $this->assertDatabaseHas('audit_logs', ['action' => 'participant_logout']);
     }
 
     public function test_login_failure_audit_is_persisted(): void
     {
-        $this->postJson('/api/auth/admin/login', [
+        $this->postJson('/api/v1/auth/admin/login', [
             'username' => 'missing-user',
             'password' => 'wrong-password',
         ])->assertStatus(401);
@@ -73,7 +73,7 @@ class SecurityAuditTest extends TestCase
             'status' => 'active',
         ]);
 
-        $login = $this->postJson('/api/auth/admin/login', [
+        $login = $this->postJson('/api/v1/auth/admin/login', [
             'username' => 'refresh-audit-admin',
             'password' => 'secret123',
         ]);
@@ -81,10 +81,10 @@ class SecurityAuditTest extends TestCase
         $login->assertOk();
         $refreshToken = $login->json('data.refresh_token');
 
-        $this->postJson('/api/auth/admin/refresh', ['refresh_token' => $refreshToken])->assertOk();
+        $this->postJson('/api/v1/auth/admin/refresh', ['refresh_token' => $refreshToken])->assertOk();
         $this->assertDatabaseHas('audit_logs', ['action' => 'admin_refresh_success']);
 
-        $this->postJson('/api/auth/admin/refresh', ['refresh_token' => $refreshToken])->assertStatus(401);
+        $this->postJson('/api/v1/auth/admin/refresh', ['refresh_token' => $refreshToken])->assertStatus(401);
         $this->assertDatabaseHas('audit_logs', ['action' => 'admin_refresh_failure']);
     }
 
@@ -99,7 +99,7 @@ class SecurityAuditTest extends TestCase
 
         $token = $admin->createToken('admin-api', ['*'])->plainTextToken;
 
-        $this->withToken($token)->postJson('/api/auth/admin/password/change', [
+        $this->withToken($token)->postJson('/api/v1/auth/admin/password/change', [
             'current_password' => 'secret123',
             'password' => 'newSecret123',
             'password_confirmation' => 'newSecret123',
@@ -107,7 +107,7 @@ class SecurityAuditTest extends TestCase
 
         $this->assertDatabaseHas('audit_logs', ['action' => 'admin_password_change']);
 
-        $this->postJson('/api/auth/admin/password/reset/request', ['email' => 'audit-password-admin@example.com'])->assertOk();
+        $this->postJson('/api/v1/auth/admin/password/reset/request', ['email' => 'audit-password-admin@example.com'])->assertOk();
         $this->assertDatabaseHas('audit_logs', ['action' => 'admin_password_reset_request']);
     }
 
@@ -119,7 +119,7 @@ class SecurityAuditTest extends TestCase
             'status' => 'inactive',
         ]);
 
-        $this->postJson('/api/auth/admin/login', [
+        $this->postJson('/api/v1/auth/admin/login', [
             'username' => 'inactive-audit-admin',
             'password' => 'secret123',
         ])->assertStatus(403);
@@ -162,7 +162,7 @@ class SecurityAuditTest extends TestCase
         ]);
 
         $token = $attacker->createToken('participant-api', ['*'])->plainTextToken;
-        $response = $this->withToken($token)->getJson('/api/participant/investments/' . $investment->id);
+        $response = $this->withToken($token)->getJson('/api/v1/participant/investments/' . $investment->id);
         $response->assertStatus(403);
 
         $this->assertDatabaseHas('audit_logs', ['action' => 'authorization_denied']);

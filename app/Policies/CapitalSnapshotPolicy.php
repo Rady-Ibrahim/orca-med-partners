@@ -10,9 +10,9 @@ use App\Models\Participant;
 
 class CapitalSnapshotPolicy
 {
-    public function create(Admin $user): bool
+    public function create(Admin|Participant $user): bool
     {
-        return $user->hasPermission('capital.manage') || $user->is_super_admin;
+        return $user instanceof Admin && ($user->hasPermission('capital.manage') || $user->is_super_admin);
     }
 
     public function viewAny(Admin|Participant $user): bool

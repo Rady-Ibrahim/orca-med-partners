@@ -25,7 +25,7 @@ class Phase2SecurityHardeningTest extends TestCase
             'status' => 'active',
         ]);
 
-        $response = $this->postJson('/api/auth/admin/login', [
+        $response = $this->postJson('/api/v1/auth/admin/login', [
             'username' => 'superadmin',
             'password' => 'secret123',
         ]);
@@ -34,7 +34,7 @@ class Phase2SecurityHardeningTest extends TestCase
         $refreshToken = $response->json('data.refresh_token');
         $this->assertNotEmpty($refreshToken);
 
-        $refreshed = $this->postJson('/api/auth/admin/refresh', [
+        $refreshed = $this->postJson('/api/v1/auth/admin/refresh', [
             'refresh_token' => $refreshToken,
         ]);
 
@@ -44,7 +44,7 @@ class Phase2SecurityHardeningTest extends TestCase
         $this->assertNotEmpty($newRefreshToken);
         $this->assertNotSame($refreshToken, $newRefreshToken);
 
-        $reused = $this->postJson('/api/auth/admin/refresh', [
+        $reused = $this->postJson('/api/v1/auth/admin/refresh', [
             'refresh_token' => $refreshToken,
         ]);
 
@@ -65,13 +65,13 @@ class Phase2SecurityHardeningTest extends TestCase
             'status' => 'inactive',
         ]);
 
-        $adminLogin = $this->postJson('/api/auth/admin/login', [
+        $adminLogin = $this->postJson('/api/v1/auth/admin/login', [
             'username' => 'disabled-admin',
             'password' => 'secret123',
         ]);
         $adminLogin->assertStatus(403);
 
-        $participantLogin = $this->postJson('/api/auth/participant/login', [
+        $participantLogin = $this->postJson('/api/v1/auth/participant/login', [
             'username' => 'disabled-participant',
             'password' => 'secret123',
         ]);
@@ -88,14 +88,14 @@ class Phase2SecurityHardeningTest extends TestCase
 
         $token = $admin->createToken('admin-api', ['*'])->plainTextToken;
 
-        $bad = $this->withToken($token)->postJson('/api/auth/admin/password/change', [
+        $bad = $this->withToken($token)->postJson('/api/v1/auth/admin/password/change', [
             'current_password' => 'wrong-password',
             'password' => 'newSecret123',
             'password_confirmation' => 'newSecret123',
         ]);
         $bad->assertStatus(422);
 
-        $good = $this->withToken($token)->postJson('/api/auth/admin/password/change', [
+        $good = $this->withToken($token)->postJson('/api/v1/auth/admin/password/change', [
             'current_password' => 'secret123',
             'password' => 'newSecret123',
             'password_confirmation' => 'newSecret123',
@@ -115,7 +115,7 @@ class Phase2SecurityHardeningTest extends TestCase
             'status' => 'active',
         ]);
 
-        $request = $this->postJson('/api/auth/admin/password/reset/request', [
+        $request = $this->postJson('/api/v1/auth/admin/password/reset/request', [
             'email' => 'resetadmin@example.com',
         ]);
         $request->assertOk();
@@ -123,7 +123,7 @@ class Phase2SecurityHardeningTest extends TestCase
         $token = $this->app['db']->table('password_reset_tokens')->where('email', 'resetadmin@example.com')->value('token');
         $this->assertNotEmpty($token);
 
-        $reset = $this->postJson('/api/auth/admin/password/reset', [
+        $reset = $this->postJson('/api/v1/auth/admin/password/reset', [
             'token' => $token,
             'password' => 'newResetSecret123',
             'password_confirmation' => 'newResetSecret123',
@@ -132,7 +132,7 @@ class Phase2SecurityHardeningTest extends TestCase
         $reset->assertOk();
         $this->assertTrue(Hash::check('newResetSecret123', $admin->fresh()->password));
 
-        $reused = $this->postJson('/api/auth/admin/password/reset', [
+        $reused = $this->postJson('/api/v1/auth/admin/password/reset', [
             'token' => $token,
             'password' => 'anotherSecret123',
             'password_confirmation' => 'anotherSecret123',

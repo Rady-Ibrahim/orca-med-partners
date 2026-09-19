@@ -40,15 +40,15 @@ final class ParticipantDashboardApiTest extends TestCase
         $token = $participant->createToken('participant-api', ['*'])->plainTextToken;
         $headers = ['Authorization' => 'Bearer ' . $token];
 
-        $profile = $this->withHeaders($headers)->getJson('/api/me');
+        $profile = $this->withHeaders($headers)->getJson('/api/v1/me');
         $profile->assertOk()->assertJsonPath('data.id', $participant->id)->assertJsonMissing(['password', 'access_token', 'refresh_token']);
 
         foreach (['investment', 'capital', 'profits', 'funds', 'depreciation', 'settlements', 'notifications'] as $resource) {
-            $this->withHeaders($headers)->getJson('/api/me/' . $resource)->assertOk()->assertJsonPath('success', true);
+            $this->withHeaders($headers)->getJson('/api/v1/me/' . $resource)->assertOk()->assertJsonPath('success', true);
         }
 
-        $this->withHeaders($headers)->getJson('/api/me/profits?year=2026')->assertOk();
-        $this->withHeaders($headers)->getJson('/api/me/notifications?participant_id=999999&read=false')->assertOk()->assertJsonPath('data.data.0.id', Notification::query()->first()->id);
+        $this->withHeaders($headers)->getJson('/api/v1/me/profits?year=2026')->assertOk();
+        $this->withHeaders($headers)->getJson('/api/v1/me/notifications?participant_id=999999&read=false')->assertOk()->assertJsonPath('data.data.0.id', Notification::query()->first()->id);
     }
 
     public function test_participant_collection_scope_never_returns_another_participants_data(): void
@@ -59,10 +59,10 @@ final class ParticipantDashboardApiTest extends TestCase
         Notification::query()->create(['participant_id' => $other->id, 'type' => 'important', 'title' => 'Private', 'body' => 'Private data']);
 
         $token = $owner->createToken('participant-api', ['*'])->plainTextToken;
-        $response = $this->withToken($token)->getJson('/api/me/investment');
+        $response = $this->withToken($token)->getJson('/api/v1/me/investment');
         $response->assertOk()->assertJsonMissing(['9000.00', 'Private']);
 
-        $notifications = $this->withToken($token)->getJson('/api/me/notifications');
+        $notifications = $this->withToken($token)->getJson('/api/v1/me/notifications');
         $notifications->assertOk()->assertJsonMissing(['Private']);
     }
 
@@ -71,11 +71,11 @@ final class ParticipantDashboardApiTest extends TestCase
         $participant = Participant::factory()->create(['password' => Hash::make('secret123'), 'status' => 'active']);
         $token = $participant->createToken('participant-api', ['*'])->plainTextToken;
 
-        $this->withToken($token)->postJson('/api/me/investment')->assertStatus(405);
-        $this->withToken($token)->postJson('/api/me/profits')->assertStatus(405);
-        $this->withToken($token)->postJson('/api/me/settlements')->assertStatus(405);
-        $this->withToken($token)->postJson('/api/me/funds')->assertStatus(405);
-        $this->withToken($token)->postJson('/api/me/depreciation')->assertStatus(405);
+        $this->withToken($token)->postJson('/api/v1/me/investment')->assertStatus(405);
+        $this->withToken($token)->postJson('/api/v1/me/profits')->assertStatus(405);
+        $this->withToken($token)->postJson('/api/v1/me/settlements')->assertStatus(405);
+        $this->withToken($token)->postJson('/api/v1/me/funds')->assertStatus(405);
+        $this->withToken($token)->postJson('/api/v1/me/depreciation')->assertStatus(405);
     }
 
     public function test_capital_growth_movement_is_continuous_across_pages(): void
@@ -93,12 +93,12 @@ final class ParticipantDashboardApiTest extends TestCase
             ]);
         }
 
-        $page1 = $this->withToken($token)->getJson('/api/me/capital/growth?page=1')->assertOk();
+        $page1 = $this->withToken($token)->getJson('/api/v1/me/capital/growth?page=1')->assertOk();
         self::assertCount(20, $page1->json('data.data'));
         self::assertSame('2000.00', $page1->json('data.data.19.snapshot_capital'));
         self::assertSame('100.00', $page1->json('data.data.19.movement'));
 
-        $page2 = $this->withToken($token)->getJson('/api/me/capital/growth?page=2')->assertOk();
+        $page2 = $this->withToken($token)->getJson('/api/v1/me/capital/growth?page=2')->assertOk();
         self::assertCount(5, $page2->json('data.data'));
         self::assertSame('2100.00', $page2->json('data.data.0.snapshot_capital'));
         self::assertSame('100.00', $page2->json('data.data.0.movement'));
@@ -106,7 +106,7 @@ final class ParticipantDashboardApiTest extends TestCase
 
     public function test_unauthenticated_participant_dashboard_request_is_rejected(): void
     {
-        $this->getJson('/api/me')->assertUnauthorized();
-        $this->getJson('/api/me/profits')->assertUnauthorized();
+        $this->getJson('/api/v1/me')->assertUnauthorized();
+        $this->getJson('/api/v1/me/profits')->assertUnauthorized();
     }
 }

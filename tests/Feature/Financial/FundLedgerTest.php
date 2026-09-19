@@ -25,14 +25,14 @@ class FundLedgerTest extends TestCase
         $admin = $this->adminWithFundPermission();
         $token = $admin->createToken('admin-api', ['*'])->plainTextToken;
 
-        $created = $this->withToken($token)->postJson('/api/admin/funds', [
+        $created = $this->withToken($token)->postJson('/api/v1/admin/funds', [
             'code' => 'DEP-001',
             'name' => 'Depreciation Fund',
             'description' => 'Operational fund',
         ])->assertCreated()->json('data');
 
-        $this->withToken($token)->getJson('/api/admin/funds/' . $created['id'])->assertOk();
-        $this->withToken($token)->patchJson('/api/admin/funds/' . $created['id'], [
+        $this->withToken($token)->getJson('/api/v1/admin/funds/' . $created['id'])->assertOk();
+        $this->withToken($token)->patchJson('/api/v1/admin/funds/' . $created['id'], [
             'name' => 'Updated Depreciation Fund',
         ])->assertOk();
 
@@ -121,12 +121,12 @@ class FundLedgerTest extends TestCase
         $fund = Fund::query()->create(['code' => 'READ-ONLY-001', 'name' => 'Read Only Fund']);
         $token = $participant->createToken('participant-api', ['*'])->plainTextToken;
 
-        $this->withToken($token)->postJson('/api/admin/funds/' . $fund->id . '/transactions', [
+        $this->withToken($token)->postJson('/api/v1/admin/funds/' . $fund->id . '/transactions', [
             'transaction_type' => 'deposit',
             'amount' => '10.00',
         ])->assertForbidden();
 
-        $this->withToken($token)->patchJson('/api/admin/funds/' . $fund->id, [
+        $this->withToken($token)->patchJson('/api/v1/admin/funds/' . $fund->id, [
             'name' => 'Tampered',
         ])->assertForbidden();
     }
@@ -142,8 +142,8 @@ class FundLedgerTest extends TestCase
         $fund = Fund::query()->create(['code' => 'EMPLOYEE-001', 'name' => 'Employee Visible Fund']);
         $token = $employee->createToken('admin-api', ['*'])->plainTextToken;
 
-        $this->withToken($token)->getJson('/api/admin/funds')->assertOk();
-        $this->withToken($token)->postJson('/api/admin/funds/' . $fund->id . '/transactions', [
+        $this->withToken($token)->getJson('/api/v1/admin/funds')->assertOk();
+        $this->withToken($token)->postJson('/api/v1/admin/funds/' . $fund->id . '/transactions', [
             'transaction_type' => 'deposit',
             'amount' => '1.00',
         ])->assertForbidden();
@@ -155,7 +155,7 @@ class FundLedgerTest extends TestCase
         $fund = Fund::query()->create(['code' => 'API-001', 'name' => 'API Fund']);
         $token = $admin->createToken('admin-api', ['*'])->plainTextToken;
 
-        $this->withToken($token)->postJson('/api/admin/funds/' . $fund->id . '/transactions', [
+        $this->withToken($token)->postJson('/api/v1/admin/funds/' . $fund->id . '/transactions', [
             'transaction_type' => 'deposit',
             'amount' => '0.10',
             'transaction_date' => '2026-09-06',
@@ -163,7 +163,7 @@ class FundLedgerTest extends TestCase
             'description' => 'Initial deposit',
         ])->assertCreated();
 
-        $this->withToken($token)->getJson('/api/admin/funds/' . $fund->id . '/transactions')
+        $this->withToken($token)->getJson('/api/v1/admin/funds/' . $fund->id . '/transactions')
             ->assertOk()
             ->assertJsonPath('data.data.0.amount', '0.10');
     }

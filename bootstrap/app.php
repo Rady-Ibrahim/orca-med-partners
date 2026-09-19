@@ -1,33 +1,43 @@
 <?php
 
+use App\Domain\Financial\Exceptions\FundBalanceDriftException;
+use App\Domain\Financial\Exceptions\ImmutableFinancialRecordException;
+use App\Domain\Financial\Exceptions\InvalidAnnualSettlementException;
+use App\Domain\Financial\Exceptions\InvalidCapitalSnapshotException;
+use App\Domain\Financial\Exceptions\InvalidGrossProfitException;
+use App\Http\Middleware\EnsureApiContext;
+use App\Http\Middleware\EnsureWebAdminContext;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
-        web: __DIR__ . '/../routes/web.php',
-        api: __DIR__ . '/../routes/api.php',
-        commands: __DIR__ . '/../routes/console.php',
+        web: __DIR__.'/../routes/web.php',
+        api: __DIR__.'/../routes/api.php',
+        commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'ensure.admin.context' => \App\Http\Middleware\EnsureAdminContext::class,
-            'ensure.participant.context' => \App\Http\Middleware\EnsureParticipantContext::class,
-            'ensure.web.admin' => \App\Http\Middleware\EnsureWebAdminContext::class,
+            'ensure.api.context' => EnsureApiContext::class,
+            'ensure.web.admin' => EnsureWebAdminContext::class,
         ]);
 
         $middleware->trustProxies(
             at: explode(',', (string) env('TRUSTED_PROXIES', '*')),
-            headers: \Illuminate\Http\Request::HEADER_X_FORWARDED_FOR
-                | \Illuminate\Http\Request::HEADER_X_FORWARDED_HOST
-                | \Illuminate\Http\Request::HEADER_X_FORWARDED_PORT
-                | \Illuminate\Http\Request::HEADER_X_FORWARDED_PROTO,
+            headers: Request::HEADER_X_FORWARDED_FOR
+                | Request::HEADER_X_FORWARDED_HOST
+                | Request::HEADER_X_FORWARDED_PORT
+                | Request::HEADER_X_FORWARDED_PROTO,
         );
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        $fail = fn (\Illuminate\Http\Request $request, string $message, int $status, array $errors = [], array $headers = []) => (
+        $fail = fn (Request $request, string $message, int $status, array $errors = [], array $headers = []) => (
             $request->is('api/*')
                 ? response()->json(array_merge([
                     'success' => false,
@@ -36,15 +46,15 @@ return Application::configure(basePath: dirname(__DIR__))
                 : null
         );
 
-        $exceptions->render(function (\Illuminate\Validation\ValidationException $e, \Illuminate\Http\Request $request) use ($fail) {
+        $exceptions->render(function (ValidationException $e, Request $request) use ($fail) {
             return $fail($request, $e->getMessage(), $e->status, $e->errors());
         });
 
-        $exceptions->render(function (\Illuminate\Auth\AuthenticationException $e, \Illuminate\Http\Request $request) use ($fail) {
+        $exceptions->render(function (AuthenticationException $e, Request $request) use ($fail) {
             return $fail($request, 'Unauthenticated.', 401);
         });
 
-        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\HttpException $e, \Illuminate\Http\Request $request) use ($fail) {
+        $exceptions->render(function (HttpException $e, Request $request) use ($fail) {
             $labels = [
                 400 => 'Bad request.',
                 401 => 'Unauthenticated.',
@@ -60,15 +70,15 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         $domainExceptions = [
-            \App\Domain\Financial\Exceptions\ImmutableFinancialRecordException::class,
-            \App\Domain\Financial\Exceptions\InvalidAnnualSettlementException::class,
-            \App\Domain\Financial\Exceptions\InvalidCapitalSnapshotException::class,
-            \App\Domain\Financial\Exceptions\InvalidGrossProfitException::class,
-            \App\Domain\Financial\Exceptions\FundBalanceDriftException::class,
+            ImmutableFinancialRecordException::class,
+            InvalidAnnualSettlementException::class,
+            InvalidCapitalSnapshotException::class,
+            InvalidGrossProfitException::class,
+            FundBalanceDriftException::class,
         ];
 
         foreach ($domainExceptions as $domainExceptionClass) {
-            $exceptions->render(function (\RuntimeException $e, \Illuminate\Http\Request $request) use ($fail, $domainExceptionClass) {
+            $exceptions->render(function (RuntimeException $e, Request $request) use ($fail, $domainExceptionClass) {
                 if (! $e instanceof $domainExceptionClass) {
                     return null;
                 }

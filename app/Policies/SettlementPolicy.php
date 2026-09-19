@@ -28,28 +28,28 @@ class SettlementPolicy
         return $user instanceof Participant && $settlement->participantItems($user->id)->exists();
     }
 
-    public function create(Admin $user): bool
+    public function create(Admin|Participant $user): bool
     {
-        return $user->hasPermission('settlements.create') || $user->is_super_admin;
+        return $user instanceof Admin && ($user->hasPermission('settlements.create') || $user->is_super_admin);
     }
 
-    public function approve(Admin $user): bool
+    public function approve(Admin|Participant $user): bool
     {
-        return $user->hasPermission('settlements.approve') || $user->is_super_admin;
+        return $user instanceof Admin && ($user->hasPermission('settlements.approve') || $user->is_super_admin);
     }
 
-    public function pay(Admin $user): bool
+    public function pay(Admin|Participant $user): bool
     {
-        return $user->hasPermission('settlements.pay') || $user->is_super_admin;
+        return $user instanceof Admin && ($user->hasPermission('settlements.pay') || $user->is_super_admin);
     }
 
-    public function revise(Admin $user): bool
+    public function revise(Admin|Participant $user): bool
     {
-        return $user->hasPermission('settlements.update') || $user->is_super_admin;
+        return $user instanceof Admin && ($user->hasPermission('settlements.update') || $user->is_super_admin);
     }
 
-    public function cancel(Admin $user): bool
+    public function cancel(Admin|Participant $user): bool
     {
-        return $user->hasPermission('settlements.update') || $user->is_super_admin;
+        return $user instanceof Admin && ($user->hasPermission('settlements.update') || $user->is_super_admin);
     }
 }

@@ -30,7 +30,7 @@ class Phase2AuthorizationAcceptanceTest extends TestCase
 
         $token = $admin->createToken('admin-api', ['*'])->plainTextToken;
 
-        $response = $this->withToken($token)->getJson('/api/admin/investments');
+        $response = $this->withToken($token)->getJson('/api/v1/admin/investments');
 
         $response->assertOk();
         $this->assertTrue($admin->hasPermission('investments.view'));
@@ -50,10 +50,10 @@ class Phase2AuthorizationAcceptanceTest extends TestCase
 
         $token = $admin->createToken('admin-api', ['*'])->plainTextToken;
 
-        $financialResponse = $this->withToken($token)->getJson('/api/admin/investments');
+        $financialResponse = $this->withToken($token)->getJson('/api/v1/admin/investments');
         $financialResponse->assertOk();
 
-        $rolesResponse = $this->withToken($token)->getJson('/api/admin/audit-logs');
+        $rolesResponse = $this->withToken($token)->getJson('/api/v1/admin/audit-logs');
         $rolesResponse->assertStatus(403);
     }
 
@@ -78,7 +78,7 @@ class Phase2AuthorizationAcceptanceTest extends TestCase
 
         $token = $employee->createToken('admin-api', ['*'])->plainTextToken;
 
-        $response = $this->withToken($token)->postJson('/api/admin/investments/' . $investment->id . '/approve');
+        $response = $this->withToken($token)->postJson('/api/v1/admin/investments/' . $investment->id . '/approve');
 
         $response->assertStatus(403);
     }
@@ -97,7 +97,7 @@ class Phase2AuthorizationAcceptanceTest extends TestCase
 
         $token = $attacker->createToken('participant-api', ['*'])->plainTextToken;
 
-        $response = $this->withToken($token)->getJson('/api/participant/investments/' . $investment->id);
+        $response = $this->withToken($token)->getJson('/api/v1/participant/investments/' . $investment->id);
 
         $response->assertStatus(403);
     }
@@ -115,7 +115,7 @@ class Phase2AuthorizationAcceptanceTest extends TestCase
 
         $token = $admin->createToken('admin-api', ['*'])->plainTextToken;
 
-        $this->withToken($token)->postJson('/api/auth/admin/login', [
+        $this->withToken($token)->postJson('/api/v1/auth/admin/login', [
             'username' => 'audit-admin',
             'password' => 'secret123',
         ]);
@@ -136,13 +136,13 @@ class Phase2AuthorizationAcceptanceTest extends TestCase
         ]);
 
         for ($i = 0; $i < 12; $i++) {
-            $response = $this->postJson('/api/auth/admin/login', [
+            $response = $this->postJson('/api/v1/auth/admin/login', [
                 'username' => 'rate-limit-admin',
                 'password' => 'wrong-password',
             ]);
         }
 
-        $response = $this->postJson('/api/auth/admin/login', [
+        $response = $this->postJson('/api/v1/auth/admin/login', [
             'username' => 'rate-limit-admin',
             'password' => 'wrong-password',
         ]);

@@ -13,6 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Redirector;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 
 final class AdminParticipantController
@@ -92,6 +93,29 @@ final class AdminParticipantController
         ];
 
         $participant->update($data);
+
+        $stored = $participant->refresh()->only(['first_name', 'last_name', 'username', 'email', 'status']);
+        $storedSent = array_intersect_key($stored, $data);
+        $expected = array_intersect_key($data, $stored);
+
+        if ($storedSent != $expected) {
+            Log::error('[ParticipantUpdate] Persistence check failed — record not saved as sent.', [
+                'participant_id' => $participant->getKey(),
+                'expected'       => $expected,
+                'stored'         => $stored,
+            ]);
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'تعذّر حفظ التعديلات. لم يتم تحديث البيانات فعلياً، راجع السجلات.',
+                ], 500);
+            }
+
+            return redirect()
+                ->route('admin.participants')
+                ->with('error', 'تعذّر حفظ التعديلات. لم يتم تحديث البيانات فعلياً، راجع السجلات.');
+        }
 
         $this->audit->log(
             'participant_updated',

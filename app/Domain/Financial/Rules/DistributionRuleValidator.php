@@ -9,7 +9,7 @@ use InvalidArgumentException;
 final class DistributionRuleValidator
 {
     /**
-     * @param array<string, mixed> $rates
+     * @param  array<string, mixed>  $rates
      */
     public static function validate(array $rates): void
     {
@@ -23,17 +23,17 @@ final class DistributionRuleValidator
 
         foreach ($required as $key) {
             if (! array_key_exists($key, $rates)) {
-                throw new InvalidArgumentException("Missing rate [$key].");
+                throw new InvalidArgumentException("نسبة [$key] مفقودة.");
             }
 
             $value = (string) $rates[$key];
 
             if (! preg_match('/^\d+(\.\d+)?$/', $value)) {
-                throw new InvalidArgumentException("Rate [$key] must be numeric.");
+                throw new InvalidArgumentException("نسبة [$key] يجب أن تكون رقمية.");
             }
 
             if (bccomp($value, '0', 4) < 0 || bccomp($value, '1', 4) > 0) {
-                throw new InvalidArgumentException("Rate [$key] must be between 0 and 1.");
+                throw new InvalidArgumentException("نسبة [$key] يجب أن تكون بين 0 و 1.");
             }
         }
 
@@ -43,7 +43,7 @@ final class DistributionRuleValidator
         }
 
         if (bccomp($total, '1.0000', 4) !== 0) {
-            throw new InvalidArgumentException('Distribution rule totals must equal 1.0000.');
+            throw new InvalidArgumentException('مجموع نسب قاعدة التوزيع يجب أن يساوي 1 تمامًا (100%).');
         }
     }
 }

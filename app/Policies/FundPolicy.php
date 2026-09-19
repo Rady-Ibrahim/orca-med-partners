@@ -10,9 +10,9 @@ use App\Models\Participant;
 
 class FundPolicy
 {
-    public function manage(Admin $user): bool
+    public function manage(Admin|Participant $user): bool
     {
-        return $user->hasPermission('funds.manage') || $user->is_super_admin;
+        return $user instanceof Admin && ($user->hasPermission('funds.manage') || $user->is_super_admin);
     }
 
     public function viewAny(Admin|Participant $user): bool

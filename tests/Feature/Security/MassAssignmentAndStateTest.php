@@ -27,7 +27,7 @@ class MassAssignmentAndStateTest extends TestCase
 
         $token = $participant->createToken('participant-api', ['*'])->plainTextToken;
 
-        $this->withToken($token)->patchJson('/api/participant/investments/1', [
+        $this->withToken($token)->patchJson('/api/v1/participant/investments/1', [
             'role' => 'super_admin',
             'participant_id' => 999,
         ])->assertMethodNotAllowed();
@@ -50,7 +50,7 @@ class MassAssignmentAndStateTest extends TestCase
 
         $token = $admin->createToken('admin-api', ['*'])->plainTextToken;
 
-        $this->withToken($token)->patchJson('/api/auth/admin/password/change', [
+        $this->withToken($token)->patchJson('/api/v1/auth/admin/password/change', [
             'current_password' => 'secret123',
             'password' => 'newSecret123',
             'password_confirmation' => 'newSecret123',
@@ -84,7 +84,7 @@ class MassAssignmentAndStateTest extends TestCase
 
         $token = $owner->createToken('participant-api', ['*'])->plainTextToken;
 
-        $this->withToken($token)->patchJson('/api/participant/investments/' . $investment->id, [
+        $this->withToken($token)->patchJson('/api/v1/participant/investments/' . $investment->id, [
             'participant_id' => $other->id,
             'amount' => 9999,
         ])->assertMethodNotAllowed();
@@ -120,7 +120,7 @@ class MassAssignmentAndStateTest extends TestCase
 
         $token = $admin->createToken('admin-api', ['*'])->plainTextToken;
 
-        $this->withToken($token)->postJson('/api/admin/investments/' . $investment->id . '/approve', [
+        $this->withToken($token)->postJson('/api/v1/admin/investments/' . $investment->id . '/approve', [
             'status' => 'approved',
             'approved_at' => now()->toDateTimeString(),
         ])->assertOk();

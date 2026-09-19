@@ -29,7 +29,7 @@ final class AdminParticipantCrudApiTest extends TestCase
     {
         $token = $this->admin()->createToken('admin-api', ['*'])->plainTextToken;
 
-        $response = $this->withToken($token)->postJson('/api/admin/participants', [
+        $response = $this->withToken($token)->postJson('/api/v1/admin/participants', [
             'first_name' => 'New',
             'last_name' => 'Participant',
             'username' => 'new.participant',
@@ -54,7 +54,7 @@ final class AdminParticipantCrudApiTest extends TestCase
         Participant::factory()->create(['username' => 'taken.name']);
 
         $this->withToken($token)
-            ->postJson('/api/admin/participants', [
+            ->postJson('/api/v1/admin/participants', [
                 'first_name' => 'A', 'last_name' => 'B', 'username' => 'taken.name',
                 'password' => 'secret123', 'password_confirmation' => 'secret123', 'status' => 'active',
             ])
@@ -62,7 +62,7 @@ final class AdminParticipantCrudApiTest extends TestCase
             ->assertJsonPath('success', false);
 
         $this->withToken($token)
-            ->postJson('/api/admin/participants', [
+            ->postJson('/api/v1/admin/participants', [
                 'first_name' => 'A', 'last_name' => 'B', 'username' => 'fresh.name',
                 'password' => 'short', 'password_confirmation' => 'short', 'status' => 'active',
             ])
@@ -76,7 +76,7 @@ final class AdminParticipantCrudApiTest extends TestCase
         $participant = Participant::factory()->create(['username' => 'update.me', 'status' => 'active']);
 
         $this->withToken($token)
-            ->putJson("/api/admin/participants/{$participant->id}", [
+            ->putJson("/api/v1/admin/participants/{$participant->id}", [
                 'first_name' => 'Renamed',
                 'last_name' => 'Surname',
                 'username' => 'update.me',
@@ -95,7 +95,7 @@ final class AdminParticipantCrudApiTest extends TestCase
         $participant = Participant::factory()->create(['username' => 'clean.user']);
 
         $this->withToken($token)
-            ->deleteJson("/api/admin/participants/{$participant->id}")
+            ->deleteJson("/api/v1/admin/participants/{$participant->id}")
             ->assertOk()
             ->assertJsonPath('success', true);
 
@@ -118,7 +118,7 @@ final class AdminParticipantCrudApiTest extends TestCase
         ]);
 
         $this->withToken($token)
-            ->deleteJson("/api/admin/participants/{$participant->id}")
+            ->deleteJson("/api/v1/admin/participants/{$participant->id}")
             ->assertStatus(422)
             ->assertJsonPath('success', false);
 
@@ -138,7 +138,7 @@ final class AdminParticipantCrudApiTest extends TestCase
         $token = $employee->createToken('admin-api', ['*'])->plainTextToken;
 
         $this->withToken($token)
-            ->postJson('/api/admin/participants', [
+            ->postJson('/api/v1/admin/participants', [
                 'first_name' => 'A', 'last_name' => 'B', 'username' => 'no.create',
                 'password' => 'secret123', 'password_confirmation' => 'secret123', 'status' => 'active',
             ])
@@ -150,7 +150,7 @@ final class AdminParticipantCrudApiTest extends TestCase
         $token = $this->admin()->createToken('admin-api', ['*'])->plainTextToken;
         $participant = Participant::factory()->create();
 
-        $response = $this->withToken($token)->postJson('/api/admin/investments', [
+        $response = $this->withToken($token)->postJson('/api/v1/admin/investments', [
             'participant_id' => $participant->id,
             'amount' => '25000.00',
             'invested_at' => '2026-05-15',
@@ -174,7 +174,7 @@ final class AdminParticipantCrudApiTest extends TestCase
         $participant = Participant::factory()->create();
 
         $this->withToken($token)
-            ->postJson('/api/admin/investments', ['participant_id' => $participant->id, 'amount' => '0.001'])
+            ->postJson('/api/v1/admin/investments', ['participant_id' => $participant->id, 'amount' => '0.001'])
             ->assertStatus(422)
             ->assertJsonPath('success', false);
     }
@@ -193,7 +193,7 @@ final class AdminParticipantCrudApiTest extends TestCase
         ]);
 
         $this->withToken($token)
-            ->postJson("/api/admin/investments/{$investment->id}/approve")
+            ->postJson("/api/v1/admin/investments/{$investment->id}/approve")
             ->assertOk()
             ->assertJsonPath('data.status', 'approved');
 
@@ -201,7 +201,7 @@ final class AdminParticipantCrudApiTest extends TestCase
         self::assertSame(1, Investment::query()->where('id', $investment->id)->where('status', 'approved')->count());
 
         $this->withToken($token)
-            ->postJson("/api/admin/investments/{$investment->id}/approve")
+            ->postJson("/api/v1/admin/investments/{$investment->id}/approve")
             ->assertStatus(422)
             ->assertJsonPath('success', false);
 

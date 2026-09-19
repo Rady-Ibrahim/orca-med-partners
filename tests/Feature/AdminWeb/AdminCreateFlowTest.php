@@ -10,7 +10,7 @@ use App\Models\Admin;
 use App\Models\CapitalSnapshot;
 use App\Models\DistributionRule;
 use App\Models\Fund;
-use App\Models\MonthlyProfit;
+use App\Models\Investment;
 use App\Models\Participant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -108,11 +108,11 @@ final class AdminCreateFlowTest extends TestCase
         $this->withSession(['web_admin_id' => $admin->id])
             ->postJson('/admin/distribution-rules', [
                 'effective_from' => '2026-03-01',
-                'management_fee_rate' => '0.25',
-                'depreciation_fund_rate' => '0.05',
-                'growth_fund_rate' => '0.025',
-                'incentive_fund_rate' => '0.025',
-                'distributed_share_rate' => '0.65',
+                'management_fee_rate' => '25',
+                'depreciation_fund_rate' => '5',
+                'growth_fund_rate' => '2.5',
+                'incentive_fund_rate' => '2.5',
+                'distributed_share_rate' => '65',
                 'status' => 'active',
             ])
             ->assertStatus(201)
@@ -128,11 +128,11 @@ final class AdminCreateFlowTest extends TestCase
         $this->withSession(['web_admin_id' => $admin->id])
             ->postJson('/admin/distribution-rules', [
                 'effective_from' => '2026-03-01',
-                'management_fee_rate' => '0.25',
-                'depreciation_fund_rate' => '0.05',
-                'growth_fund_rate' => '0.025',
-                'incentive_fund_rate' => '0.025',
-                'distributed_share_rate' => '0.65',
+                'management_fee_rate' => '25',
+                'depreciation_fund_rate' => '5',
+                'growth_fund_rate' => '2.5',
+                'incentive_fund_rate' => '2.5',
+                'distributed_share_rate' => '65',
                 'status' => 'active',
             ])
             ->assertStatus(422)
@@ -232,7 +232,7 @@ final class AdminCreateFlowTest extends TestCase
     public function test_investment_approve_via_web_ajax_marks_investment_approved(): void
     {
         [$admin, , , $participant] = $this->financialContext(2026, 1);
-        $investment = \App\Models\Investment::query()->create([
+        $investment = Investment::query()->create([
             'participant_id' => $participant->id,
             'amount' => '5000.00',
             'invested_at' => '2026-01-20',
