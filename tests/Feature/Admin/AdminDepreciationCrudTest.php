@@ -96,7 +96,7 @@ final class AdminDepreciationCrudTest extends TestCase
         $this->withSession(['web_admin_id' => $admin->id])
             ->postJson('/admin/depreciation', [
                 'amount' => '500.00',
-                'rate' => '0.1000',
+                'rate' => '10',
                 'transaction_date' => '2026-01-31',
                 'year' => 2026,
                 'month' => 1,
@@ -127,7 +127,7 @@ final class AdminDepreciationCrudTest extends TestCase
         $this->withSession(['web_admin_id' => $admin->id])
             ->postJson('/admin/depreciation', [
                 'amount' => '250.00',
-                'rate' => '0.0500',
+                'rate' => '5',
                 'transaction_date' => '2026-02-15',
                 'year' => 2026,
                 'month' => 2,
@@ -161,7 +161,7 @@ final class AdminDepreciationCrudTest extends TestCase
         $this->withSession(['web_admin_id' => $admin->id])
             ->patchJson("/admin/depreciation/{$note->id}", [
                 'amount' => '750.25',
-                'rate' => '0.1200',
+                'rate' => '12',
             ])
             ->assertOk()
             ->assertJsonPath('success', true);
@@ -170,6 +170,28 @@ final class AdminDepreciationCrudTest extends TestCase
         $this->assertSame('750.25', (string) $note->amount);
         $this->assertSame('0.1200', (string) $note->rate);
         $this->assertSame('إهلاك شهر يناير', $note->description);
+    }
+
+    public function test_depreciation_rate_is_validated_as_percent(): void
+    {
+        $admin = $this->admin();
+        $note = $this->note($admin);
+
+        $this->withSession(['web_admin_id' => $admin->id])
+            ->postJson('/admin/depreciation', [
+                'amount' => '100.00',
+                'rate' => '120',
+                'transaction_date' => '2026-03-31',
+                'year' => 2026,
+                'month' => 3,
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['rate']);
+
+        $this->withSession(['web_admin_id' => $admin->id])
+            ->patchJson("/admin/depreciation/{$note->id}", ['rate' => '-5'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['rate']);
     }
 
     public function test_admin_can_delete_depreciation_note(): void

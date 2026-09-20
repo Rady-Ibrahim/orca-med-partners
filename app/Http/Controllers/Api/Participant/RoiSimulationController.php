@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api\Participant;
 use App\Domain\Financial\Services\RoiCalculatorService;
 use App\Http\Requests\RoiSimulationRequest;
 use App\Models\Participant;
+use App\Support\AppSettingBag;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -17,11 +18,14 @@ final class RoiSimulationController
         $this->participant($request);
         $input = $request->validated();
 
+        $baseRate = (string) AppSettingBag::get('roi_base_annual_rate', RoiCalculatorService::DEFAULT_BASE_ANNUAL_RATE);
+        $bonuses = (array) AppSettingBag::get('roi_growth_bonuses', RoiCalculatorService::DEFAULT_GROWTH_BONUSES);
+
         $result = $calculator->simulate(
             (string) $input['base_capital'],
             (int) $input['years'],
-            (string) ($input['base_annual_rate'] ?? RoiCalculatorService::DEFAULT_BASE_ANNUAL_RATE),
-            array_map('strval', $input['growth_bonus'] ?? RoiCalculatorService::DEFAULT_GROWTH_BONUSES),
+            (string) ($input['base_annual_rate'] ?? $baseRate),
+            array_map('strval', $input['growth_bonus'] ?? $bonuses),
             (bool) ($input['is_compounded'] ?? true),
         );
 

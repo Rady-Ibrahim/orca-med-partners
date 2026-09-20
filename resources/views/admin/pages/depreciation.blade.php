@@ -1,4 +1,5 @@
 @extends('admin.pages.layout')
+@php $currency = (string) \App\Support\AppSettingBag::get('currency_symbol', 'ر.س'); @endphp
 @section('content')
 <div class="admin-page-header">
     <div>
@@ -62,7 +63,7 @@
                     @foreach ($items as $item)
                         <tr>
                             <td><strong>{{ $item['period'] }}</strong></td>
-                            <td class="numeric">{{ $item['amount'] }} ر.س</td>
+                            <td class="numeric">{{ $item['amount'] }} {{ $currency }}</td>
                             <td>{{ $item['rate'] }}</td>
                             <td class="muted">{{ $item['date'] }}</td>
                             <td>{{ $item['description'] ?: '—' }}</td>
@@ -74,7 +75,7 @@
                                         data-edit='@json($item["edit_payload"])'>تعديل</button>
                                     <button type="button" class="action-danger" data-post data-method="DELETE"
                                         data-url="{{ route('admin.depreciation.destroy', $item['id']) }}"
-                                        data-confirm="سيتم حذف مذكرة الإهلاك «{{ $item['period'] }}» بمبلغ {{ $item['amount'] }} ر.س. متابعة؟">حذف</button>
+                                        data-confirm="سيتم حذف مذكرة الإهلاك «{{ $item['period'] }}» بمبلغ {{ $item['amount'] }} {{ $currency }}. متابعة؟">حذف</button>
                                 </div>
                             </td>
                         </tr>
@@ -98,12 +99,12 @@
             <div class="modal-body">
                 <div class="modal-grid">
                     <div class="om-field">
-                        <label for="dep_amount">المبلغ (ر.س)</label>
+                        <label for="dep_amount">المبلغ ({{ $currency }})</label>
                         <input id="dep_amount" name="amount" type="number" required min="0" step="0.01" dir="ltr" placeholder="0.00">
                     </div>
                     <div class="om-field">
-                        <label for="dep_rate">النسبة (٠–١)</label>
-                        <input id="dep_rate" name="rate" type="number" required min="0" max="1" step="0.0001" dir="ltr" placeholder="0.1000">
+                        <label for="dep_rate">النسبة %</label>
+                        <input id="dep_rate" name="rate" type="number" required min="0" max="100" step="0.01" dir="ltr" placeholder="10">
                     </div>
                     <div class="om-field">
                         <label for="dep_date">التاريخ</label>
@@ -132,12 +133,16 @@
                     </div>
                     <div class="om-field full">
                         <label for="dep_participant">المشارك (اختياري)</label>
-                        <select id="dep_participant" name="participant_id">
-                            <option value="">— لا أحد —</option>
-                            @foreach ($participants as $participant)
-                                <option value="{{ $participant['id'] }}">{{ $participant['name'] }}</option>
-                            @endforeach
-                        </select>
+                        <div class="searchable-select" data-searchable>
+                            <input type="text" class="searchable-input" placeholder="ابحث عن اسم المشارك..." autocomplete="off">
+                            <select id="dep_participant" name="participant_id" class="js-searchable-select" hidden>
+                                <option value="">— لا أحد —</option>
+                                @foreach ($participants as $participant)
+                                    <option value="{{ $participant['id'] }}">{{ $participant['name'] }}</option>
+                                @endforeach
+                            </select>
+                            <ul class="searchable-list"></ul>
+                        </div>
                     </div>
                     <div class="om-field full">
                         <label for="dep_description">الوصف</label>
@@ -166,12 +171,12 @@
             <div class="modal-body">
                 <div class="modal-grid">
                     <div class="om-field">
-                        <label for="dep_edit_amount">المبلغ (ر.س)</label>
+                        <label for="dep_edit_amount">المبلغ ({{ $currency }})</label>
                         <input id="dep_edit_amount" name="amount" type="number" min="0" step="0.01" dir="ltr" placeholder="0.00">
                     </div>
                     <div class="om-field">
-                        <label for="dep_edit_rate">النسبة (٠–١)</label>
-                        <input id="dep_edit_rate" name="rate" type="number" min="0" max="1" step="0.0001" dir="ltr" placeholder="0.1000">
+                        <label for="dep_edit_rate">النسبة %</label>
+                        <input id="dep_edit_rate" name="rate" type="number" min="0" max="100" step="0.01" dir="ltr" placeholder="10">
                     </div>
                     <div class="om-field">
                         <label for="dep_edit_date">التاريخ</label>
@@ -200,12 +205,16 @@
                     </div>
                     <div class="om-field full">
                         <label for="dep_edit_participant">المشارك (اختياري)</label>
-                        <select id="dep_edit_participant" name="participant_id">
-                            <option value="">— لا أحد —</option>
-                            @foreach ($participants as $participant)
-                                <option value="{{ $participant['id'] }}">{{ $participant['name'] }}</option>
-                            @endforeach
-                        </select>
+                        <div class="searchable-select" data-searchable>
+                            <input type="text" class="searchable-input" placeholder="ابحث عن اسم المشارك..." autocomplete="off">
+                            <select id="dep_edit_participant" name="participant_id" class="js-searchable-select" hidden>
+                                <option value="">— لا أحد —</option>
+                                @foreach ($participants as $participant)
+                                    <option value="{{ $participant['id'] }}">{{ $participant['name'] }}</option>
+                                @endforeach
+                            </select>
+                            <ul class="searchable-list"></ul>
+                        </div>
                     </div>
                     <div class="om-field full">
                         <label for="dep_edit_description">الوصف</label>

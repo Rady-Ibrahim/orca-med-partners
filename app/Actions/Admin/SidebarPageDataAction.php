@@ -286,7 +286,7 @@ final class SidebarPageDataAction
                 'month' => $note->month,
                 'edit_payload' => [
                     'amount' => (string) $note->amount,
-                    'rate' => (string) $note->rate,
+                    'rate' => $note->rate ? rtrim(rtrim(bcmul((string) $note->rate, '100', 4), '0'), '.') : '0',
                     'transaction_date' => $note->transaction_date?->format('Y-m-d'),
                     'year' => $note->year,
                     'month' => $note->month,

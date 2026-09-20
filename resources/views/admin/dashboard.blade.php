@@ -123,12 +123,43 @@
                         <span aria-hidden="true">⌕</span>
                         <input placeholder="ابحث في المنصة" aria-label="بحث">
                     </label>
-                    <button class="icon-button notification-button" aria-label="الإشعارات">
-                        <span>♧</span>
-                        @if ($dashboard['attention']['unread_notifications'] > 0)
-                            <i>{{ $dashboard['attention']['unread_notifications'] }}</i>
-                        @endif
-                    </button>
+                    <div class="notification-dropdown" id="notification-dropdown">
+                        <button type="button" class="icon-button notification-button" id="notification-trigger"
+                            aria-label="الإشعارات" aria-expanded="false">
+                            <span>♧</span>
+                            @if ($dashboard['attention']['unread_notifications'] > 0)
+                                <i>{{ $dashboard['attention']['unread_notifications'] }}</i>
+                            @endif
+                        </button>
+                        <div class="dropdown-menu notification-menu" id="notification-menu" role="menu">
+                            <div class="dropdown-header">
+                                <div>
+                                    <strong>الإشعارات</strong>
+                                    <small>
+                                        {{ $dashboard['attention']['unread_notifications'] > 0 ? $dashboard['attention']['unread_notifications'].' غير مقروء' : 'لا توجد إشعارات جديدة' }}
+                                    </small>
+                                </div>
+                            </div>
+                            @if (empty($dashboard['recent_notifications']))
+                                <div class="notification-empty">لا توجد إشعارات بعد</div>
+                            @else
+                                @foreach ($dashboard['recent_notifications'] as $notification)
+                                    <div class="notification-row {{ $notification['is_read'] ? 'read' : 'unread' }}">
+                                        <div>
+                                            <strong>{{ $notification['title'] }}</strong>
+                                            <p>{{ $notification['body'] }}</p>
+                                            <small>{{ $notification['participant'] }} · {{ $notification['created_at'] }}</small>
+                                        </div>
+                                        <span class="notification-dot"></span>
+                                    </div>
+                                @endforeach
+                            @endif
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item" href="{{ route('admin.notifications') }}">
+                                <span class="dropdown-icon">◍</span> عرض كل الإشعارات
+                            </a>
+                        </div>
+                    </div>
                     <button class="theme-toggle" title="تبديل المظهر">☀️</button>
                     <div class="profile-dropdown" id="profile-dropdown">
                         <button class="profile-trigger" id="profile-trigger" aria-haspopup="true"

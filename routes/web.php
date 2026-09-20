@@ -1,9 +1,9 @@
 <?php
 
-use App\Http\Controllers\Admin\SidebarPageController;
-use App\Http\Controllers\Admin\ReportController;
-use App\Http\Controllers\Admin\AdminParticipantController;
 use App\Http\Controllers\Admin\AdminActionsController;
+use App\Http\Controllers\Admin\AdminParticipantController;
+use App\Http\Controllers\Admin\ReportController;
+use App\Http\Controllers\Admin\SidebarPageController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminWebAuthController;
 use Illuminate\Support\Facades\Route;
@@ -60,6 +60,7 @@ Route::middleware('ensure.web.admin')->prefix('admin')->name('admin.')->group(fu
     Route::patch('/distribution-rules/{distributionRule}', [AdminActionsController::class, 'updateDistributionRule'])->name('distribution-rules.update');
     Route::delete('/distribution-rules/{distributionRule}', [AdminActionsController::class, 'destroyDistributionRule'])->name('distribution-rules.destroy');
     Route::get('/settings', [SidebarPageController::class, 'settings'])->name('settings');
+    Route::post('/settings', [AdminActionsController::class, 'updateSettings'])->name('settings.update');
     Route::get('/audit-logs', [SidebarPageController::class, 'auditLogs'])->name('audit-logs');
     Route::get('/audit-logs/{auditLog}', [SidebarPageController::class, 'auditLogDetails'])->name('audit-logs.show');
 });

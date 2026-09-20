@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\ParticipantApi;
 
 use App\Domain\Financial\ValueObjects\FinancialRoundingService;
+use App\Models\AppSetting;
 use App\Models\Participant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -114,6 +115,28 @@ final class RoiSimulationApiTest extends TestCase
         $this->withToken($this->token($participant))
             ->postJson('/api/v1/me/tools/roi-simulation', ['base_capital' => '100.00', 'years' => 5, 'is_compounded' => true, 'growth_bonus' => ['abc']])
             ->assertStatus(422);
+    }
+
+    public function test_roi_simulation_uses_admin_settings_as_defaults(): void
+    {
+        AppSetting::query()->create(['key' => 'roi_base_annual_rate', 'value' => '0.21']);
+        AppSetting::query()->create(['key' => 'roi_growth_bonuses', 'value' => ['0.02', '0.03', '0.01', '0.01']]);
+
+        $participant = $this->createParticipant();
+
+        $data = $this->withToken($this->token($participant))
+            ->postJson('/api/v1/me/tools/roi-simulation', [
+                'base_capital' => '1000.00',
+                'years' => 2,
+                'is_compounded' => true,
+            ])
+            ->assertOk()
+            ->json('data');
+
+        self::assertSame('0.2100', $data['base_annual_rate']);
+        self::assertSame(['0.0200', '0.0300'], $data['growth_bonus']);
+        self::assertSame('1525.20', $data['projected_capital']);
+        self::assertSame('525.20', $data['projected_profit']);
     }
 
     public function test_roi_simulation_requires_authentication(): void

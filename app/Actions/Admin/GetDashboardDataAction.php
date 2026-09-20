@@ -14,7 +14,6 @@ use App\Models\MonthlyProfit;
 use App\Models\Notification;
 use App\Models\Participant;
 use App\Models\Settlement;
-use App\Support\DecimalFormatter;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -81,7 +80,7 @@ final class GetDashboardDataAction
             ->groupBy('participant_id')->get()->keyBy('participant_id');
         $recentParticipants = Participant::query()->latest('created_at')->limit(6)->get()->map(function (Participant $participant) use ($investmentTotals): array {
             return [
-                'name' => trim($participant->first_name . ' ' . $participant->last_name),
+                'name' => trim($participant->first_name.' '.$participant->last_name),
                 'username' => $participant->username,
                 'status' => $participant->status,
                 'joined' => $participant->created_at?->format('Y-m-d'),
@@ -110,14 +109,14 @@ final class GetDashboardDataAction
             ] : null,
             'funds' => $funds,
             'participants' => $recentParticipants,
-            'profits' => MonthlyProfit::query()->latest('year')->latest('month')->limit(6)->get()->map(fn(MonthlyProfit $profit): array => [
+            'profits' => MonthlyProfit::query()->latest('year')->latest('month')->limit(6)->get()->map(fn (MonthlyProfit $profit): array => [
                 'period' => sprintf('%04d / %02d', $profit->year, $profit->month),
                 'gross' => (string) $profit->gross_profit,
                 'distributed' => (string) $profit->distributed_amount,
                 'status' => $profit->status,
                 'approved_at' => $profit->approved_at?->format('Y-m-d'),
             ])->all(),
-            'settlements' => Settlement::query()->with('items')->latest('year')->limit(6)->get()->map(fn(Settlement $settlement): array => [
+            'settlements' => Settlement::query()->with('items')->latest('year')->limit(6)->get()->map(fn (Settlement $settlement): array => [
                 'year' => $settlement->year,
                 'profit' => (string) $settlement->participant_profit_share,
                 'due' => (string) $settlement->amount_due,
@@ -125,7 +124,7 @@ final class GetDashboardDataAction
                 'status' => $settlement->status,
                 'participants' => $settlement->items->count(),
             ])->all(),
-            'depreciation' => DepreciationNote::query()->latest('transaction_date')->limit(5)->get()->map(fn(DepreciationNote $note): array => [
+            'depreciation' => DepreciationNote::query()->latest('transaction_date')->limit(5)->get()->map(fn (DepreciationNote $note): array => [
                 'amount' => (string) $note->amount,
                 'rate' => (string) ($note->rate ?? '0.0000'),
                 'date' => $note->transaction_date?->format('Y-m-d'),
@@ -137,7 +136,16 @@ final class GetDashboardDataAction
                 'draft_settlements' => Settlement::query()->where('status', 'draft')->count(),
                 'unread_notifications' => Notification::query()->where('is_read', false)->count(),
             ],
-            'activities' => AuditLog::query()->latest('id')->limit(7)->get()->map(fn(AuditLog $log): array => [
+            'recent_notifications' => Notification::query()->with('participant')->latest('created_at')->limit(6)->get()
+                ->map(fn (Notification $notification): array => [
+                    'title' => $notification->title,
+                    'body' => $notification->body,
+                    'type' => $notification->type,
+                    'is_read' => $notification->is_read,
+                    'participant' => $notification->participant ? trim(($notification->participant->first_name ?? '').' '.($notification->participant->last_name ?? '')) : '—',
+                    'created_at' => Carbon::parse($notification->created_at)->diffForHumans(),
+                ])->all(),
+            'activities' => AuditLog::query()->latest('id')->limit(7)->get()->map(fn (AuditLog $log): array => [
                 'action' => $log->action,
                 'entity' => $log->auditable_type,
                 'at' => Carbon::parse($log->created_at)->diffForHumans(),

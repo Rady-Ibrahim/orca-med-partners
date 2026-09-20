@@ -8,309 +8,163 @@
         <h1>الإعدادات</h1>
     </div>
     <div class="page-actions">
-        <span class="settings-badge on">● النظام نشط</span>
+        <button type="submit" form="settings-form" class="primary-button">حفظ الإعدادات</button>
     </div>
 </div>
 
-{{-- ── Tabs ── --}}
-<div class="settings-tabs" role="tablist">
-    <button class="settings-tab active" data-tab="general"   role="tab">⚙ إعدادات عامة</button>
-    <button class="settings-tab"        data-tab="financial" role="tab">◈ القواعد المالية</button>
-    <button class="settings-tab"        data-tab="theme"     role="tab">◑ المظهر</button>
-    <button class="settings-tab"        data-tab="security"  role="tab">✦ الأمان</button>
-</div>
+@if (session('success'))
+    <div class="alert alert-success">{{ session('success') }}</div>
+@endif
+@if (session('error'))
+    <div class="alert alert-danger">{{ session('error') }}</div>
+@endif
 
-{{-- ══════════════════════════════════════════════════ --}}
-{{-- PANE 1 — GENERAL                                  --}}
-{{-- ══════════════════════════════════════════════════ --}}
-<div class="settings-pane active" id="pane-general">
+<form id="settings-form" data-ajax-form action="{{ route('admin.settings.update') }}" method="POST" novalidate>
+    @csrf
 
-    <div class="settings-section">
-        <div class="settings-section-title">⚙ إعدادات المنصة العامة</div>
-        <div class="settings-grid">
-            <div class="settings-field">
-                <label>اسم المنصة</label>
-                <input type="text" value="ORCA MED Partners" readonly>
-                <span class="hint">يظهر في الواجهة وعناوين الصفحات</span>
-            </div>
-            <div class="settings-field">
-                <label>رمز العملة</label>
-                <select disabled>
-                    <option selected>ر.س — ريال سعودي (SAR)</option>
-                    <option>ج.م — جنيه مصري (EGP)</option>
-                    <option>$ — دولار أمريكي (USD)</option>
-                </select>
-                <span class="hint">يُستخدم في عرض جميع القيم المالية</span>
-            </div>
-            <div class="settings-field">
-                <label>تنسيق التاريخ</label>
-                <select disabled>
-                    <option selected>YYYY-MM-DD</option>
-                    <option>DD/MM/YYYY</option>
-                    <option>MM/DD/YYYY</option>
-                </select>
-            </div>
-            <div class="settings-field">
-                <label>اللغة الافتراضية</label>
-                <input type="text" value="العربية (AR) — RTL" readonly>
+    {{-- ── Tabs ── --}}
+    <div class="settings-tabs" role="tablist">
+        <button type="button" class="settings-tab active" data-tab="general"   role="tab">⚙ إعدادات عامة</button>
+        <button type="button" class="settings-tab"        data-tab="financial" role="tab">◈ القواعد المالية</button>
+        <button type="button" class="settings-tab"        data-tab="security"  role="tab">✦ الأمان</button>
+    </div>
+
+    {{-- ══════════════════════════════════════════════════ --}}
+    {{-- PANE 1 — GENERAL                                  --}}
+    {{-- ══════════════════════════════════════════════════ --}}
+    <div class="settings-pane active" id="pane-general">
+        <div class="settings-section">
+            <div class="settings-section-title">⚙ إعدادات المنصة العامة</div>
+            <div class="settings-grid">
+                <div class="settings-field">
+                    <label for="set_company_name">اسم المنصة</label>
+                    <input id="set_company_name" name="company_name" type="text" value="{{ $settings['company_name'] }}" required maxlength="100">
+                    <span class="hint">يظهر في الواجهة وعناوين الصفحات</span>
+                </div>
+                <div class="settings-field">
+                    <label for="set_currency_code">كود العملة</label>
+                    <input id="set_currency_code" name="currency_code" type="text" value="{{ $settings['currency_code'] }}" required maxlength="10" dir="ltr">
+                    <span class="hint">مثال: SAR — USD — EGP</span>
+                </div>
+                <div class="settings-field">
+                    <label for="set_currency_symbol">رمز العملة</label>
+                    <input id="set_currency_symbol" name="currency_symbol" type="text" value="{{ $settings['currency_symbol'] }}" required maxlength="10">
+                    <span class="hint">يُستخدم في عرض جميع القيم المالية</span>
+                </div>
+                <div class="settings-field">
+                    <label for="set_date_format">تنسيق التاريخ</label>
+                    <input id="set_date_format" name="date_format" type="text" value="{{ $settings['date_format'] }}" required maxlength="20" dir="ltr">
+                    <span class="hint">مثال: Y-m-d أو d/m/Y</span>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="settings-section">
-        <div class="settings-section-title">◌ إحصاءات قاعدة البيانات</div>
-        <div class="settings-grid">
-            <div class="settings-field">
-                <label>إجمالي الإعدادات المخزنة</label>
-                <input type="text" value="{{ $items->total() }}" readonly>
+    {{-- ══════════════════════════════════════════════════ --}}
+    {{-- PANE 2 — FINANCIAL                                --}}
+    {{-- ══════════════════════════════════════════════════ --}}
+    <div class="settings-pane" id="pane-financial">
+        <div class="settings-section">
+            <div class="settings-section-title">◈ حاسبة العائد السنوي (ROI) التراكمي</div>
+            <div class="settings-grid">
+                <div class="settings-field">
+                    <label for="set_roi_base">معدل العائد الأساسي السنوي %</label>
+                    <input id="set_roi_base" name="roi_base_annual_rate" type="number" value="{{ $settings['roi_base_annual_rate_percent'] }}" required min="0" max="100" step="0.01" dir="ltr">
+                    <span class="hint">صافي النسبة الأساسية قبل بونص النمو</span>
+                </div>
+                <div class="settings-field">
+                    <label for="set_roi_bonus_1">بونص نمو — السنة الأولى %</label>
+                    <input id="set_roi_bonus_1" name="roi_growth_bonus_year1" type="number" value="{{ $settings['roi_growth_bonus_year1_percent'] }}" required min="0" max="100" step="0.01" dir="ltr">
+                </div>
+                <div class="settings-field">
+                    <label for="set_roi_bonus_2">بونص نمو — السنة الثانية %</label>
+                    <input id="set_roi_bonus_2" name="roi_growth_bonus_year2" type="number" value="{{ $settings['roi_growth_bonus_year2_percent'] }}" required min="0" max="100" step="0.01" dir="ltr">
+                </div>
+                <div class="settings-field">
+                    <label for="set_roi_bonus_3">بونص نمو — السنة الثالثة %</label>
+                    <input id="set_roi_bonus_3" name="roi_growth_bonus_year3" type="number" value="{{ $settings['roi_growth_bonus_year3_percent'] }}" required min="0" max="100" step="0.01" dir="ltr">
+                </div>
+                <div class="settings-field">
+                    <label for="set_roi_bonus_4">بونص نمو — السنة الرابعة فما بعد %</label>
+                    <input id="set_roi_bonus_4" name="roi_growth_bonus_year4" type="number" value="{{ $settings['roi_growth_bonus_year4_percent'] }}" required min="0" max="100" step="0.01" dir="ltr">
+                </div>
             </div>
-            <div class="settings-field">
-                <label>آخر تحديث للإعدادات</label>
-                <input type="text" value="{{ $items->first()['updated_at'] ?? 'لم يتم بعد' }}" readonly>
-            </div>
-            <div class="settings-field">
-                <label>بيئة التشغيل</label>
-                <input type="text" value="{{ ucfirst(app()->environment()) }}" readonly>
-            </div>
-            <div class="settings-field">
-                <label>إصدار Laravel</label>
-                <input type="text" value="{{ app()->version() }}" readonly>
+        </div>
+
+        <div class="settings-section">
+            <div class="settings-section-title">◌ نسب التوزيع الافتراضية (قاعدة التوزيع النشطة)</div>
+            <div class="settings-grid">
+                @if ($activeRule)
+                    <div class="settings-field">
+                        <label>رسوم الإدارة</label>
+                        <input type="text" value="{{ $activeRule->management_fee_rate * 100 }} %" readonly>
+                        <span class="hint">تُدار من صفحة «قواعد التوزيع»</span>
+                    </div>
+                    <div class="settings-field">
+                        <label>صندوق الإهلاك</label>
+                        <input type="text" value="{{ $activeRule->depreciation_fund_rate * 100 }} %" readonly>
+                    </div>
+                    <div class="settings-field">
+                        <label>صندوق النمو</label>
+                        <input type="text" value="{{ $activeRule->growth_fund_rate * 100 }} %" readonly>
+                    </div>
+                    <div class="settings-field">
+                        <label>حوافز المشاركين</label>
+                        <input type="text" value="{{ $activeRule->incentive_fund_rate * 100 }} %" readonly>
+                    </div>
+                    <div class="settings-field">
+                        <label>الحصة الموزعة للمشاركين</label>
+                        <input type="text" value="{{ $activeRule->distributed_share_rate * 100 }} %" readonly>
+                    </div>
+                @else
+                    <div class="settings-field">
+                        <label>قاعدة التوزيع</label>
+                        <input type="text" value="لا توجد قاعدة نشطة حالياً" readonly>
+                    </div>
+                @endif
             </div>
         </div>
     </div>
 
-</div>
-
-{{-- ══════════════════════════════════════════════════ --}}
-{{-- PANE 2 — FINANCIAL                                --}}
-{{-- ══════════════════════════════════════════════════ --}}
-<div class="settings-pane" id="pane-financial">
-
-    <div class="settings-section">
-        <div class="settings-section-title">◈ نسب التوزيع الافتراضية (قاعدة التوزيع النشطة)</div>
-        <div class="settings-grid">
-            <div class="settings-field">
-                <label>رسوم الإدارة</label>
-                <input type="text" value="25.00 %" readonly>
-                <span class="hint">القيمة الفعلية تُحدَّد من قواعد التوزيع</span>
-            </div>
-            <div class="settings-field">
-                <label>صندوق الاستهلاك</label>
-                <input type="text" value="5.00 %" readonly>
-            </div>
-            <div class="settings-field">
-                <label>صندوق النمو</label>
-                <input type="text" value="2.50 %" readonly>
-            </div>
-            <div class="settings-field">
-                <label>حوافز المشاركين</label>
-                <input type="text" value="2.50 %" readonly>
-            </div>
-            <div class="settings-field">
-                <label>الحصة الموزعة للمشاركين</label>
-                <input type="text" value="65.00 %" readonly>
-            </div>
-            <div class="settings-field">
-                <label>المجموع الكلي</label>
-                <input type="text" value="100.00 % ✓" readonly>
+    {{-- ══════════════════════════════════════════════════ --}}
+    {{-- PANE 3 — SECURITY                                 --}}
+    {{-- ══════════════════════════════════════════════════ --}}
+    <div class="settings-pane" id="pane-security">
+        <div class="settings-section">
+            <div class="settings-section-title">✦ إعدادات الجلسة وتسجيل الدخول</div>
+            <div class="settings-grid">
+                <div class="settings-field">
+                    <label for="set_session_lifetime">مدة انتهاء جلسة الويب (دقيقة)</label>
+                    <input id="set_session_lifetime" name="session_lifetime_minutes" type="number" value="{{ $settings['session_lifetime_minutes'] }}" required min="5" max="1440" dir="ltr">
+                    <span class="hint">من 5 إلى 1440 دقيقة</span>
+                </div>
+                <div class="settings-field">
+                    <label for="set_login_attempts">الحد الأقصى لمحاولات تسجيل الدخول</label>
+                    <input id="set_login_attempts" name="login_throttle_attempts" type="number" value="{{ $settings['login_throttle_attempts'] }}" required min="1" max="100" dir="ltr">
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="settings-section">
-        <div class="settings-section-title">⊞ دقة الأرقام وسياسة التقريب</div>
-        <div class="settings-grid">
-            <div class="settings-field">
-                <label>نوع حقل العملة (DB)</label>
-                <input type="text" value="DECIMAL(15, 2)" readonly>
-                <span class="hint">لا يوجد float أو double في أي حقل مالي</span>
-            </div>
-            <div class="settings-field">
-                <label>محرك الحساب</label>
-                <input type="text" value="bcmath — PHP" readonly>
-            </div>
-            <div class="settings-field">
-                <label>سياسة التقريب</label>
-                <input type="text" value="Half-Even (Banker's Rounding)" readonly>
-            </div>
-            <div class="settings-field">
-                <label>دقة العرض</label>
-                <input type="text" value="رقمان عشريان دائماً" readonly>
-            </div>
-        </div>
+    <div class="settings-section" style="grid-column: 1 / -1;">
+        <button type="submit" class="primary-button" data-submit>حفظ الإعدادات</button>
     </div>
-
-</div>
-
-{{-- ══════════════════════════════════════════════════ --}}
-{{-- PANE 3 — THEME                                    --}}
-{{-- ══════════════════════════════════════════════════ --}}
-<div class="settings-pane" id="pane-theme">
-
-    <div class="settings-section">
-        <div class="settings-section-title">◑ تفضيلات المظهر</div>
-
-        <div class="settings-toggle-row">
-            <div>
-                <strong>الوضع الداكن / الفاتح</strong>
-                <span>التبديل بين Dark Mode و Light Mode — يُحفظ التفضيل محلياً.</span>
-            </div>
-            <label class="toggle-switch">
-                <input type="checkbox" id="theme-toggle-settings">
-                <span class="toggle-slider"></span>
-            </label>
-        </div>
-
-        <div class="settings-toggle-row">
-            <div>
-                <strong>الخط المستخدم</strong>
-                <span>Tajawal — خط عربي عصري عالي الوضوح (Google Fonts)</span>
-            </div>
-            <span class="settings-badge on">مُفعّل</span>
-        </div>
-
-        <div class="settings-toggle-row">
-            <div>
-                <strong>اتجاه الواجهة</strong>
-                <span>RTL — من اليمين إلى اليسار بالكامل</span>
-            </div>
-            <span class="settings-badge on">مُفعّل</span>
-        </div>
-
-        <div class="settings-toggle-row">
-            <div>
-                <strong>موقع الشريط الجانبي</strong>
-                <span>يمين الشاشة على الديسكتوب — يسار على الموبايل (منزلق)</span>
-            </div>
-            <span class="settings-badge on">يمين</span>
-        </div>
-
-        <div class="settings-toggle-row">
-            <div>
-                <strong>انتقالات سلسة عند تبديل المظهر</strong>
-                <span>0.25s ease على الخلفيات والألوان</span>
-            </div>
-            <span class="settings-badge on">مُفعّل</span>
-        </div>
-    </div>
-
-    <div class="settings-section">
-        <div class="settings-section-title">◌ قيم الألوان الأساسية</div>
-        <div class="settings-grid">
-            <div class="settings-field">
-                <label>الخلفية الأساسية (Dark)</label>
-                <input type="text" value="#0F172A — Slate Navy" readonly>
-            </div>
-            <div class="settings-field">
-                <label>لون التمييز (Dark)</label>
-                <input type="text" value="#00F0FF — Cyber Cyan" readonly>
-            </div>
-            <div class="settings-field">
-                <label>الخلفية الأساسية (Light)</label>
-                <input type="text" value="#F1F5F9 — Cool Gray" readonly>
-            </div>
-            <div class="settings-field">
-                <label>لون التمييز (Light)</label>
-                <input type="text" value="#1D4ED8 — Royal Blue" readonly>
-            </div>
-        </div>
-    </div>
-
-</div>
-
-{{-- ══════════════════════════════════════════════════ --}}
-{{-- PANE 4 — SECURITY                                 --}}
-{{-- ══════════════════════════════════════════════════ --}}
-<div class="settings-pane" id="pane-security">
-
-    <div class="settings-section">
-        <div class="settings-section-title">✦ حالة الأمان والحماية</div>
-
-        <div class="settings-toggle-row">
-            <div>
-                <strong>سجل التدقيق التلقائي (Audit Log)</strong>
-                <span>تسجيل جميع العمليات الحساسة في قاعدة البيانات فور حدوثها</span>
-            </div>
-            <span class="settings-badge on">مُفعّل</span>
-        </div>
-
-        <div class="settings-toggle-row">
-            <div>
-                <strong>عزل بيانات المشاركين (IDOR Protection)</strong>
-                <span>كل مشارك لا يرى إلا بياناته الخاصة — محمي على مستوى الـ Policy</span>
-            </div>
-            <span class="settings-badge on">مُفعّل</span>
-        </div>
-
-        <div class="settings-toggle-row">
-            <div>
-                <strong>ثبات السجلات المالية المعتمدة</strong>
-                <span>السجلات المعتمدة (Approved) غير قابلة للتعديل أو الحذف نهائياً</span>
-            </div>
-            <span class="settings-badge on">مُفعّل</span>
-        </div>
-
-        <div class="settings-toggle-row">
-            <div>
-                <strong>Laravel Sanctum — API Auth</strong>
-                <span>المصادقة عبر Sanctum Tokens لكل طلبات API المشاركين</span>
-            </div>
-            <span class="settings-badge on">مُفعّل</span>
-        </div>
-
-        <div class="settings-toggle-row">
-            <div>
-                <strong>Rate Limiting — تقييد الطلبات</strong>
-                <span>10 محاولات كحد أقصى خلال 60 ثانية لتسجيل الدخول</span>
-            </div>
-            <span class="settings-badge on">مُفعّل</span>
-        </div>
-
-        <div class="settings-toggle-row">
-            <div>
-                <strong>التحقق بخطوتين (2FA)</strong>
-                <span>غير مُفعّل في الإصدار الحالي</span>
-            </div>
-            <span class="settings-badge off">غير مُفعّل</span>
-        </div>
-    </div>
-
-    <div class="settings-section">
-        <div class="settings-section-title">◷ إعدادات الجلسة والتوكن</div>
-        <div class="settings-grid">
-            <div class="settings-field">
-                <label>مدة انتهاء جلسة الويب</label>
-                <input type="text" value="120 دقيقة" readonly>
-            </div>
-            <div class="settings-field">
-                <label>مدة انتهاء API Token</label>
-                <input type="text" value="حسب إعدادات Sanctum" readonly>
-            </div>
-            <div class="settings-field">
-                <label>تدوير Refresh Token</label>
-                <input type="text" value="مُفعّل — يُلغى القديم فوراً" readonly>
-            </div>
-            <div class="settings-field">
-                <label>بيئة التشغيل الحالية</label>
-                <input type="text" value="{{ ucfirst(app()->environment()) }}" readonly>
-            </div>
-        </div>
-    </div>
-
-</div>
+</form>
 
 @endsection
 
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    var cb = document.getElementById('theme-toggle-settings');
-    if (!cb) return;
-    // Sync checkbox with current theme
-    function syncCb() { cb.checked = document.documentElement.classList.contains('light'); }
-    syncCb();
-    // Watch for changes triggered by the topbar toggle
-    new MutationObserver(syncCb).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    document.querySelectorAll('.settings-tab').forEach(function (tab) {
+        tab.addEventListener('click', function () {
+            document.querySelectorAll('.settings-tab').forEach(function (t) { t.classList.remove('active'); });
+            document.querySelectorAll('.settings-pane').forEach(function (p) { p.classList.remove('active'); });
+            tab.classList.add('active');
+            var pane = document.getElementById('pane-' + tab.dataset.tab);
+            if (pane) pane.classList.add('active');
+        });
+    });
 });
 </script>
 @endpush

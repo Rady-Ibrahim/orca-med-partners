@@ -62,6 +62,34 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ── Notification dropdown ─────────────────────────────
+    const notifDropdown = document.getElementById('notification-dropdown');
+    const notifTrigger = document.getElementById('notification-trigger');
+    const notifMenu = document.getElementById('notification-menu');
+
+    if (notifTrigger && notifMenu) {
+        notifTrigger.addEventListener('click', e => {
+            e.stopPropagation();
+            const isOpen = notifMenu.classList.toggle('open');
+            notifTrigger.setAttribute('aria-expanded', String(isOpen));
+        });
+
+        document.addEventListener('click', e => {
+            if (notifDropdown && !notifDropdown.contains(e.target)) {
+                notifMenu.classList.remove('open');
+                notifTrigger.setAttribute('aria-expanded', 'false');
+            }
+        });
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && notifMenu.classList.contains('open')) {
+                notifMenu.classList.remove('open');
+                notifTrigger.setAttribute('aria-expanded', 'false');
+                notifTrigger.focus();
+            }
+        });
+    }
+
     // ── Sidebar (mobile + desktop collapse) ──────────────
     const sidebarToggle = document.getElementById('sidebarToggle');
     const sidebarBackdrop = document.getElementById('sidebarBackdrop');
@@ -152,7 +180,10 @@ document.addEventListener('DOMContentLoaded', () => {
             try { data = JSON.parse(context.prefill); } catch { data = {}; }
             Object.entries(data).forEach(([name, value]) => {
                 const el = modal.querySelector(`[name="${name}"]`);
-                if (el && value !== null && value !== undefined) el.value = value;
+                if (el && value !== null && value !== undefined) {
+                    el.value = value;
+                    if (el.tagName === 'SELECT') el.dispatchEvent(new Event('change', { bubbles: true }));
+                }
             });
         }
         if (context.label) {
@@ -310,6 +341,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (el) {
                 if (el.type === 'checkbox') el.checked = Boolean(value);
                 else el.value = value ?? '';
+                if (el.tagName === 'SELECT') el.dispatchEvent(new Event('change', { bubbles: true }));
             }
         });
         if (btn.dataset.capitalValues) {
@@ -339,5 +371,75 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         total.textContent = sum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     });
+
+    // ── Searchable select (filter-by-name) ───────────────
+    const bindSearchableSelects = (root = document) => {
+        root.querySelectorAll('.searchable-select[data-searchable]').forEach(wrap => {
+            if (wrap.dataset.searchableReady) return;
+            wrap.dataset.searchableReady = '1';
+
+            const input = wrap.querySelector('.searchable-input');
+            const select = wrap.querySelector('.js-searchable-select');
+            const list = wrap.querySelector('.searchable-list');
+            if (!input || !select || !list) return;
+
+            const refreshLabel = () => {
+                const opt = select.options[select.selectedIndex];
+                if (opt && opt.value !== '') input.value = opt.textContent.trim();
+                else input.value = '';
+            };
+
+            const render = (filter) => {
+                const q = filter.trim().toLowerCase();
+                list.innerHTML = '';
+                let shown = 0;
+                Array.from(select.options).forEach(opt => {
+                    const label = opt.textContent.trim();
+                    if (q && !label.toLowerCase().includes(q)) return;
+                    const li = document.createElement('li');
+                    li.dataset.value = opt.value;
+                    li.dataset.label = label;
+                    li.textContent = label;
+                    if (String(opt.value) === String(select.value)) li.classList.add('selected');
+                    li.addEventListener('mousedown', ev => ev.preventDefault());
+                    li.addEventListener('click', () => {
+                        select.value = li.dataset.value;
+                        input.value = li.dataset.value !== '' ? li.dataset.label : '';
+                        input.classList.remove('open');
+                        render('');
+                        select.dispatchEvent(new Event('change', { bubbles: true }));
+                        if (input.value !== '') input.blur();
+                    });
+                    list.appendChild(li);
+                    shown++;
+                });
+                if (!shown) {
+                    const li = document.createElement('li');
+                    li.className = 'searchable-empty';
+                    li.textContent = 'لا توجد نتائج';
+                    list.appendChild(li);
+                }
+            };
+
+            input.addEventListener('focus', () => { render(input.value); input.classList.add('open'); });
+            input.addEventListener('input', () => render(input.value));
+            input.addEventListener('keydown', e => {
+                if (e.key === 'Escape') { input.classList.remove('open'); refreshLabel(); }
+            });
+            document.addEventListener('click', e => {
+                if (!wrap.contains(e.target)) {
+                    input.classList.remove('open');
+                    const cur = select.selectedOptions[0] ? select.selectedOptions[0].textContent.trim() : '';
+                    if (select.value === '' || input.value.trim() !== cur) refreshLabel();
+                }
+            });
+
+            select.addEventListener('change', refreshLabel);
+            refreshLabel();
+        });
+    };
+
+    bindSearchableSelects();
+    window.Orca.rebindSearchable = (root) => bindSearchableSelects(root || document);
 
 });

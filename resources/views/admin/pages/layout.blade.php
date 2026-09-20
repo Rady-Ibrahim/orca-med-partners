@@ -1,4 +1,5 @@
 @php
+    $companyName = (string) \App\Support\AppSettingBag::get('company_name', 'ORCA MED Partners');
     $routeName = request()->route()?->getName() ?? '';
     $isActive = fn (string $prefix) => str_starts_with($routeName, $prefix);
 @endphp
@@ -8,7 +9,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ $title ?? 'لوحة الإدارة' }} | ORCA MED Partners</title>
+    <title>{{ $title ?? 'لوحة الإدارة' }} | {{ $companyName }}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -22,7 +23,7 @@
             <div class="sidebar-brand">
                 <span class="brand-mark small">O</span>
                 <div>
-                    <strong>ORCA MED</strong>
+                    <strong>{{ strtoupper($companyName) }}</strong>
                     <small>PARTNERS</small>
                 </div>
             </div>

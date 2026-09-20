@@ -25,6 +25,7 @@ use App\Http\Requests\StoreFundRequest;
 use App\Http\Requests\StoreFundTransactionRequest;
 use App\Http\Requests\StoreSettlementPaymentRequest;
 use App\Http\Requests\UpdateFundRequest;
+use App\Models\AppSetting;
 use App\Models\CapitalSnapshot;
 use App\Models\CapitalSnapshotItem;
 use App\Models\DepreciationNote;
@@ -35,6 +36,7 @@ use App\Models\Investment;
 use App\Models\MonthlyProfit;
 use App\Models\Settlement;
 use App\Services\SecurityAuditService;
+use App\Support\AppSettingBag;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -587,7 +589,7 @@ final class AdminActionsController
 
         $data = $request->validate([
             'amount' => ['required', 'numeric', 'min:0', 'regex:/^\d+(?:\.\d{1,2})?$/'],
-            'rate' => ['required', 'numeric', 'min:0', 'max:1'],
+            'rate' => ['required', 'numeric', 'min:0', 'max:100'],
             'transaction_date' => ['required', 'date'],
             'year' => ['required', 'integer', 'min:2000', 'max:2100'],
             'month' => ['required', 'integer', 'min:1', 'max:12'],
@@ -604,7 +606,7 @@ final class AdminActionsController
                     ? (int) $data['fund_id']
                     : Fund::query()->where('code', 'depreciation_fund')->value('id'),
                 'amount' => (string) $data['amount'],
-                'rate' => (string) $data['rate'],
+                'rate' => $this->percentToRatio((string) $data['rate']),
                 'transaction_date' => $data['transaction_date'],
                 'year' => (int) $data['year'],
                 'month' => (int) $data['month'],
@@ -629,7 +631,7 @@ final class AdminActionsController
 
         $data = $request->validate([
             'amount' => ['sometimes', 'required', 'numeric', 'min:0', 'regex:/^\d+(?:\.\d{1,2})?$/'],
-            'rate' => ['sometimes', 'required', 'numeric', 'min:0', 'max:1'],
+            'rate' => ['sometimes', 'required', 'numeric', 'min:0', 'max:100'],
             'transaction_date' => ['sometimes', 'required', 'date'],
             'year' => ['sometimes', 'required', 'integer', 'min:2000', 'max:2100'],
             'month' => ['sometimes', 'required', 'integer', 'min:1', 'max:12'],
@@ -641,7 +643,7 @@ final class AdminActionsController
 
         $fillable = array_filter([
             'amount' => isset($data['amount']) ? (string) $data['amount'] : null,
-            'rate' => isset($data['rate']) ? (string) $data['rate'] : null,
+            'rate' => isset($data['rate']) ? $this->percentToRatio((string) $data['rate']) : null,
             'transaction_date' => $data['transaction_date'] ?? null,
             'year' => isset($data['year']) ? (int) $data['year'] : null,
             'month' => isset($data['month']) ? (int) $data['month'] : null,
@@ -735,6 +737,71 @@ final class AdminActionsController
         return redirect()->route('admin.investments')->with('success', 'تم حذف الاستثمار.');
     }
 
+    public function updateSettings(Request $request): JsonResponse|RedirectResponse
+    {
+        Gate::forUser($request->user())->authorize('settings.manage');
+
+        $data = $request->validate([
+            'company_name' => ['required', 'string', 'max:100'],
+            'currency_code' => ['required', 'string', 'max:10'],
+            'currency_symbol' => ['required', 'string', 'max:10'],
+            'date_format' => ['required', 'string', 'max:20'],
+            'roi_base_annual_rate' => ['required', 'numeric', 'min:0', 'max:100'],
+            'roi_growth_bonus_year1' => ['required', 'numeric', 'min:0', 'max:100'],
+            'roi_growth_bonus_year2' => ['required', 'numeric', 'min:0', 'max:100'],
+            'roi_growth_bonus_year3' => ['required', 'numeric', 'min:0', 'max:100'],
+            'roi_growth_bonus_year4' => ['required', 'numeric', 'min:0', 'max:100'],
+            'session_lifetime_minutes' => ['required', 'integer', 'min:5', 'max:1440'],
+            'login_throttle_attempts' => ['required', 'integer', 'min:1', 'max:100'],
+        ], [
+            'company_name.required' => 'اسم المنصة مطلوب.',
+            'currency_code.required' => 'كود العملة مطلوب.',
+            'currency_symbol.required' => 'رمز العملة مطلوب.',
+            'roi_base_annual_rate.required' => 'معدل العائد الأساسي مطلوب.',
+            'roi_base_annual_rate.min' => 'معدل العائد الأساسي يجب ألا يقل عن 0.',
+            'roi_base_annual_rate.max' => 'معدل العائد الأساسي يجب ألا يزيد عن 100.',
+            'roi_growth_bonus_year1.max' => 'بونص السنة الأولى يجب ألا يزيد عن 100.',
+            'roi_growth_bonus_year2.max' => 'بونص السنة الثانية يجب ألا يزيد عن 100.',
+            'roi_growth_bonus_year3.max' => 'بونص السنة الثالثة يجب ألا يزيد عن 100.',
+            'roi_growth_bonus_year4.max' => 'بونص باقي السنوات يجب ألا يزيد عن 100.',
+            'session_lifetime_minutes.required' => 'مدة الجلسة مطلوبة.',
+            'login_throttle_attempts.required' => 'حد محاولات الدخول مطلوب.',
+        ]);
+
+        $settings = [
+            'company_name' => $data['company_name'],
+            'currency_code' => $data['currency_code'],
+            'currency_symbol' => $data['currency_symbol'],
+            'date_format' => $data['date_format'],
+            'roi_base_annual_rate' => rtrim(rtrim(bcdiv((string) $data['roi_base_annual_rate'], '100', 6), '0'), '.'),
+            'roi_growth_bonuses' => [
+                rtrim(rtrim(bcdiv((string) $data['roi_growth_bonus_year1'], '100', 6), '0'), '.'),
+                rtrim(rtrim(bcdiv((string) $data['roi_growth_bonus_year2'], '100', 6), '0'), '.'),
+                rtrim(rtrim(bcdiv((string) $data['roi_growth_bonus_year3'], '100', 6), '0'), '.'),
+                rtrim(rtrim(bcdiv((string) $data['roi_growth_bonus_year4'], '100', 6), '0'), '.'),
+            ],
+            'session_lifetime_minutes' => (string) $data['session_lifetime_minutes'],
+            'login_throttle_attempts' => (string) $data['login_throttle_attempts'],
+        ];
+
+        foreach ($settings as $key => $value) {
+            AppSetting::query()->updateOrCreate(
+                ['key' => $key],
+                ['value' => $value, 'updated_by_admin_id' => $request->user()->id],
+            );
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'تم حفظ الإعدادات.',
+                'data' => ['roi_base_annual_rate' => AppSettingBag::get('roi_base_annual_rate', '0.216')],
+            ]);
+        }
+
+        return redirect()->route('admin.settings')->with('success', 'تم حفظ الإعدادات.');
+    }
+
     private function validateDistributionRates(array $data): void
     {
         DistributionRuleValidator::validate([
@@ -758,6 +825,11 @@ final class AdminActionsController
         }
 
         return $data;
+    }
+
+    private function percentToRatio(string $percent): string
+    {
+        return bcdiv($percent, '100', 4);
     }
 
     private function distributionRuleMessages(): array
