@@ -17,8 +17,11 @@ final class RoiSimulationRequest extends FormRequest
     {
         return [
             'base_capital' => ['required', 'numeric', 'gt:0', 'max:99999999999999.99'],
-            'months' => ['required', 'integer', 'min:1', 'max:360'],
-            'expected_monthly_rate' => ['required', 'numeric', 'min:-1', 'max:1'],
+            'years' => ['required', 'integer', 'min:1', 'max:50'],
+            'is_compounded' => ['sometimes', 'boolean'],
+            'base_annual_rate' => ['sometimes', 'numeric', 'min:-1', 'max:1'],
+            'growth_bonus' => ['sometimes', 'array', 'min:1'],
+            'growth_bonus.*' => ['numeric', 'min:-1', 'max:1'],
         ];
     }
 
@@ -26,10 +29,14 @@ final class RoiSimulationRequest extends FormRequest
     {
         return [
             'base_capital.gt' => 'The base capital must be a positive amount.',
-            'months.min' => 'The simulation must span at least one month.',
-            'months.max' => 'The simulation cannot exceed 360 months.',
-            'expected_monthly_rate.min' => 'The monthly rate cannot be below -100%.',
-            'expected_monthly_rate.max' => 'The monthly rate cannot exceed 100%.',
+            'years.min' => 'The simulation must span at least one year.',
+            'years.max' => 'The simulation cannot exceed 50 years.',
+            'is_compounded.boolean' => 'The is_compounded flag must be a boolean.',
+            'base_annual_rate.min' => 'The base annual rate cannot be below -100%.',
+            'base_annual_rate.max' => 'The base annual rate cannot exceed 100%.',
+            'growth_bonus.array' => 'The growth bonus must be provided as a list of annual rates.',
+            'growth_bonus.*.min' => 'Each growth bonus cannot be below -100%.',
+            'growth_bonus.*.max' => 'Each growth bonus cannot exceed 100%.',
         ];
     }
 }

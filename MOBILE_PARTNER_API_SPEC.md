@@ -220,16 +220,22 @@ For the "official **signed** statement" requirement: the settlement-statement PD
 `PUT /v1/me/settings/notifications` Body `{ "email": bool, "push": bool, "categories": ["financial","settlement","investment"] }` — requires new `notification_preferences` table.
 
 ### ❌ GAP — ROI Calculator (Interactive Investment Calculator)
-> **Updated:** endpoint implemented as a server-authoritative pure function (compound monthly, BCMath + half-even rounding).
+> **Updated:** endpoint implemented as a server-authoritative pure function (annual **compounded** ROI with a dynamic growth-rate bonus, BCMath + half-even rounding).
 ```
 POST /v1/me/tools/roi-simulation
-{ "base_capital": "525000.00", "months": 12, "expected_monthly_rate": "0.015" }
-→ { "base_capital": "525000.00", "months": 12, "expected_monthly_rate": "0.0150",
-    "projected_capital": "619244.00", "projected_profit": "94244.00",
-    "average_monthly_profit": "7853.67",
-    "schedule": [ { "month": 1, "capital": "532875.00", "profit": "7875.00" }, ... ] }
+{ "base_capital": "1000000.00", "years": 3, "is_compounded": true,
+  "base_annual_rate": "0.216",            // optional, default 0.216 (21.6%/year)
+  "growth_bonus": ["0.005","0.010","0.0075","0.005"] }  // optional ladder; last entry repeats for year 4+
+→ { "base_capital": "1000000.00", "years": 3, "is_compounded": true,
+    "base_annual_rate": "0.2160", "growth_bonus": ["0.0050","0.0100","0.0075"],
+    "projected_capital": "1831513.43", "projected_profit": "831513.43",
+    "average_annual_profit": "277171.14",
+    "schedule": [
+        { "year": 1, "expected_annual_rate": "0.2210", "profit": "221000.00",  "capital": "1221000.00" },
+        { "year": 2, "expected_annual_rate": "0.2260", "profit": "275946.00",  "capital": "1496946.00" },
+        { "year": 3, "expected_annual_rate": "0.2235", "profit": "334567.43",  "capital": "1831513.43" } ] }
 ```
-Rule: **server-authoritative only** — never trust client-provided formulas; validate numeric bounds (`base_capital > 0`, `months 1–360`, `rate -1..1`). Mark as `data.disclaimer` (projection ≠ guarantee). `schedule[].capital` is the closing capital for that month.
+Rule: **server-authoritative only** — never trust client-provided formulas; validate numeric bounds (`base_capital > 0`, `years 1–50`, `rate -1..1`, `growth_bonus` numeric array). The effective annual rate = base net rate (21.6%) + yearly growth bonus (year 1 +0.5%, year 2 +1.0%, year 3 +0.75%, year 4+ +0.5%). When `is_compounded` is true (default) profits are fully reinvested: beginning capital of year t = closing capital of year t-1. Mark as `data.disclaimer` (projection ≠ guarantee). `schedule[].capital` is the closing capital for that year.
 
 ### ❌ GAP — Security / 2FA
 No TOTP package installed. Admin page labels 2FA "غير مُفعّل". Endpoints to plan:
@@ -341,7 +347,7 @@ Every monetary value is immutable in storage; derived values are recomputed at r
 | 20 | Notifications — unread badge | `GET /v1/me/notifications/unread-count` | ❌ **GAP** |
 | 21 | Notifications — mark read / mark all | `PATCH /v1/me/notifications/{id}/read`, `PATCH /v1/me/notifications/read-all` | ❌ **GAP** |
 | 22 | Notifications — direct action navigation | add `action_target` column | ❌ **GAP** |
-| 23 | Tools — ROI calculator | `POST /v1/me/tools/roi-simulation` | ❌ **GAP** (blocked on formula) |
+| 23 | Tools — ROI calculator (annual compounded + growth bonus) | `POST /v1/me/tools/roi-simulation` | ✅ |
 | 24 | Settings — profile edit | `PATCH /v1/me/settings/profile` | ❌ **GAP** |
 | 25 | Settings — security / 2FA | `GET|POST /v1/me/settings/security/2fa/*` | ❌ **GAP** |
 | 26 | Settings — notification prefs | `PUT /v1/me/settings/notifications` | ❌ **GAP** |

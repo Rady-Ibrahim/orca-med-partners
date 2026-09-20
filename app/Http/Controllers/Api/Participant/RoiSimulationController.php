@@ -19,14 +19,16 @@ final class RoiSimulationController
 
         $result = $calculator->simulate(
             (string) $input['base_capital'],
-            (int) $input['months'],
-            (string) $input['expected_monthly_rate'],
+            (int) $input['years'],
+            (string) ($input['base_annual_rate'] ?? RoiCalculatorService::DEFAULT_BASE_ANNUAL_RATE),
+            array_map('strval', $input['growth_bonus'] ?? RoiCalculatorService::DEFAULT_GROWTH_BONUSES),
+            (bool) ($input['is_compounded'] ?? true),
         );
 
         return response()->json([
             'success' => true,
             'data' => $result + [
-                'disclaimer' => 'هذه محاكاة استرشادية عبر فائدة مركبة افتراضية ولا تمثل ضماناً للعائد الفعلي.',
+                'disclaimer' => 'هذه محاكاة استرشادية لأرباح سنوية مركبة تعتمد على معدل فاعلية سنوي افتراضي ولا تمثل ضماناً للعائد الفعلي.',
             ],
         ]);
     }

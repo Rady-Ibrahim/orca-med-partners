@@ -5,9 +5,14 @@ declare(strict_types=1);
 namespace App\Domain\Financial\Services;
 
 use App\Domain\Financial\ValueObjects\FinancialRoundingService;
+use InvalidArgumentException;
 
 final class RoiCalculatorService
 {
+    public const DEFAULT_BASE_ANNUAL_RATE = '0.216';
+
+    public const DEFAULT_GROWTH_BONUSES = ['0.005', '0.010', '0.0075', '0.005'];
+
     private const SCALE = 10;
 
     public function __construct(
@@ -15,30 +20,51 @@ final class RoiCalculatorService
     ) {}
 
     /**
-     * Authoritative server-side compound-interest projection.
+     * Authoritative server-side annual ROI projection with a dynamic growth
+     * rate bonus applied on top of a base net annual rate.
      *
-     * rate is a monthly decimal ratio (e.g. 0.015 = 1.5%/month). All math is
-     * performed with BCMath; every exposed monetary value is a 2-decimal money
-     * string. The schedule is per-month and 'capital' is the closing capital
-     * at the end of that month.
+     * baseAnnualRate is an annual decimal ratio (e.g. 0.216 = 21.6%/year). Each
+     * growthBonuses entry is an annual decimal ratio (e.g. 0.005 = +0.5%)
+     * added on top of the base rate for that year; the final bonus repeats for
+     * every year beyond the ladder (year 4+ keeps using the last bonus).
      *
-     * @return array{base_capital: string, months: int, expected_monthly_rate: string, projected_capital: string, projected_profit: string, average_monthly_profit: string, schedule: array<int, array{month: int, capital: string, profit: string}>}
+     * Compounding rule: the investor never withdraws profits. Beginning capital
+     * of year t = closing capital of year t-1, so the profit of every year is
+     * computed on the full accumulated balance (never just the original base).
+     * When isCompounded is false the profit stays flat on the original base
+     * capital while the schedule still tracks the cumulative projected balance.
+     *
+     * All math is performed with BCMath; every exposed monetary value is a
+     * 2-decimal money string and every rate is a 4-decimal decimal string.
+     *
+     * @param  list<string>  $growthBonuses
+     * @return array{base_capital: string, years: int, is_compounded: bool, base_annual_rate: string, growth_bonus: list<string>, projected_capital: string, projected_profit: string, average_annual_profit: string, schedule: list<array{year: int, expected_annual_rate: string, profit: string, capital: string}>}
      */
-    public function simulate(string $baseCapital, int $months, string $monthlyRate): array
-    {
+    public function simulate(
+        string $baseCapital,
+        int $years,
+        string $baseAnnualRate = self::DEFAULT_BASE_ANNUAL_RATE,
+        array $growthBonuses = self::DEFAULT_GROWTH_BONUSES,
+        bool $isCompounded = true,
+    ): array {
         $opening = $this->rounding->money($baseCapital);
-        $rate = $this->rounding->rate($monthlyRate);
+        $baseRate = $this->rounding->rate($baseAnnualRate);
+        $bonuses = $this->normalisedBonuses($growthBonuses, $years);
+
         $carry = $opening;
         $schedule = [];
 
-        for ($month = 1; $month <= $months; $month++) {
-            $profit = bcmul($carry, $rate, self::SCALE);
-            $closing = bcadd($carry, $profit, self::SCALE);
+        for ($year = 1; $year <= $years; $year++) {
+            $effectiveRate = $this->rounding->rate(bcadd($baseRate, $bonuses[$year - 1], self::SCALE));
+            $profitBase = $isCompounded ? $carry : $opening;
+            $profit = $this->rounding->money(bcmul($profitBase, $effectiveRate, self::SCALE));
+            $closing = $this->rounding->money(bcadd($carry, $profit, self::SCALE));
 
             $schedule[] = [
-                'month' => $month,
-                'capital' => $this->rounding->money($closing),
-                'profit' => $this->rounding->money($profit),
+                'year' => $year,
+                'expected_annual_rate' => $effectiveRate,
+                'profit' => $profit,
+                'capital' => $closing,
             ];
 
             $carry = $closing;
@@ -49,12 +75,33 @@ final class RoiCalculatorService
 
         return [
             'base_capital' => $opening,
-            'months' => $months,
-            'expected_monthly_rate' => $rate,
+            'years' => $years,
+            'is_compounded' => $isCompounded,
+            'base_annual_rate' => $baseRate,
+            'growth_bonus' => $bonuses,
             'projected_capital' => $projectedCapital,
             'projected_profit' => $projectedProfit,
-            'average_monthly_profit' => $this->rounding->money(bcdiv($projectedProfit, (string) $months, self::SCALE)),
+            'average_annual_profit' => $this->rounding->money(bcdiv($projectedProfit, (string) $years, self::SCALE)),
             'schedule' => $schedule,
         ];
+    }
+
+    /**
+     * @param  list<string>  $bonuses
+     * @return list<string>
+     */
+    private function normalisedBonuses(array $bonuses, int $years): array
+    {
+        if ($bonuses === []) {
+            throw new InvalidArgumentException('Growth bonus ladder cannot be empty.');
+        }
+
+        $normalised = array_map(fn (mixed $bonus): string => $this->rounding->rate((string) $bonus), $bonuses);
+
+        if ($years <= count($normalised)) {
+            return array_slice($normalised, 0, $years);
+        }
+
+        return array_merge($normalised, array_fill(0, $years - count($normalised), $normalised[array_key_last($normalised)]));
     }
 }
