@@ -20,15 +20,14 @@ final class AdminParticipantController
 {
     public function __construct(
         private readonly SecurityAuditService $audit,
-    ) {
-    }
+    ) {}
 
     public function create(): View
     {
         return view('admin.pages.participant-form', [
             'participant' => null,
-            'title'       => 'مشارك جديد',
-            'formAction'  => 'create',
+            'title' => 'مشارك جديد',
+            'formAction' => 'create',
         ]);
     }
 
@@ -37,13 +36,13 @@ final class AdminParticipantController
         $data = $request->validated();
 
         $participant = Participant::query()->create([
-            'first_name'           => $data['first_name'],
-            'last_name'            => $data['last_name'],
-            'username'             => $data['username'],
-            'email'                => $data['email'] ?? null,
-            'password'             => $data['password'],
-            'status'               => $data['status'],
-            'created_by_admin_id'  => $request->user()?->getKey(),
+            'first_name' => $data['first_name'],
+            'last_name' => $data['last_name'],
+            'username' => $data['username'],
+            'email' => $data['email'] ?? null,
+            'password' => $data['password'],
+            'status' => $data['status'],
+            'created_by_admin_id' => $request->user()?->getKey(),
         ]);
 
         $this->audit->log(
@@ -54,21 +53,21 @@ final class AdminParticipantController
             [
                 'new' => [
                     'username' => $participant->username,
-                    'email'    => $participant->email,
-                    'status'   => $participant->status,
+                    'email' => $participant->email,
+                    'status' => $participant->status,
                 ],
             ],
         );
 
-        return redirect()->route('admin.participants')->with('success', 'تم إنشاء حساب المشارك "' . $participant->username . '" بنجاح.');
+        return redirect()->route('admin.participants')->with('success', 'تم إنشاء حساب المشارك "'.$participant->username.'" بنجاح.');
     }
 
     public function edit(Participant $participant): View
     {
         return view('admin.pages.participant-form', [
             'participant' => $participant,
-            'title'       => 'تعديل المشارك',
-            'formAction'  => 'edit',
+            'title' => 'تعديل المشارك',
+            'formAction' => 'edit',
         ]);
     }
 
@@ -76,7 +75,10 @@ final class AdminParticipantController
     {
         $data = $request->validated();
 
-        if (empty($data)) {
+        $password = $data['password'] ?? null;
+        unset($data['password'], $data['password_confirmation']);
+
+        if (empty($data) && ! $password) {
             if ($request->wantsJson()) {
                 return response()->json(['success' => true, 'message' => 'لا توجد تغييرات.']);
             }
@@ -86,13 +88,15 @@ final class AdminParticipantController
 
         $oldValues = [
             'first_name' => $participant->first_name,
-            'last_name'  => $participant->last_name,
-            'username'   => $participant->username,
-            'email'      => $participant->email,
-            'status'     => $participant->status,
+            'last_name' => $participant->last_name,
+            'username' => $participant->username,
+            'email' => $participant->email,
+            'status' => $participant->status,
         ];
 
-        $participant->update($data);
+        if (! empty($data)) {
+            $participant->update($data);
+        }
 
         $stored = $participant->refresh()->only(['first_name', 'last_name', 'username', 'email', 'status']);
         $storedSent = array_intersect_key($stored, $data);
@@ -101,8 +105,8 @@ final class AdminParticipantController
         if ($storedSent != $expected) {
             Log::error('[ParticipantUpdate] Persistence check failed — record not saved as sent.', [
                 'participant_id' => $participant->getKey(),
-                'expected'       => $expected,
-                'stored'         => $stored,
+                'expected' => $expected,
+                'stored' => $stored,
             ]);
 
             if ($request->wantsJson()) {
@@ -117,6 +121,19 @@ final class AdminParticipantController
                 ->with('error', 'تعذّر حفظ التعديلات. لم يتم تحديث البيانات فعلياً، راجع السجلات.');
         }
 
+        if (! empty($password)) {
+            $participant->update(['password' => $password]);
+            $participant->tokens()->delete();
+
+            $this->audit->log(
+                'participant_password_changed',
+                $request->user(),
+                $participant::class,
+                $participant->getKey(),
+                ['new' => ['password' => '[redacted]']],
+            );
+        }
+
         $this->audit->log(
             'participant_updated',
             $request->user(),
@@ -126,26 +143,26 @@ final class AdminParticipantController
                 'old' => $oldValues,
                 'new' => [
                     'first_name' => $participant->first_name,
-                    'last_name'  => $participant->last_name,
-                    'username'   => $participant->username,
-                    'email'      => $participant->email,
-                    'status'     => $participant->status,
+                    'last_name' => $participant->last_name,
+                    'username' => $participant->username,
+                    'email' => $participant->email,
+                    'status' => $participant->status,
                 ],
             ],
         );
 
         if ($request->wantsJson()) {
-            return response()->json(['success' => true, 'message' => 'تم تحديث بيانات المشارك "' . $participant->username . '" بنجاح.']);
+            return response()->json(['success' => true, 'message' => 'تم تحديث بيانات المشارك "'.$participant->username.'" بنجاح.']);
         }
 
-        return redirect()->route('admin.participants')->with('success', 'تم تحديث بيانات المشارك "' . $participant->username . '" بنجاح.');
+        return redirect()->route('admin.participants')->with('success', 'تم تحديث بيانات المشارك "'.$participant->username.'" بنجاح.');
     }
 
     public function password(Participant $participant): View
     {
         return view('admin.pages.participant-password', [
             'participant' => $participant,
-            'title'       => 'تغيير كلمة المرور',
+            'title' => 'تغيير كلمة المرور',
         ]);
     }
 
@@ -165,7 +182,7 @@ final class AdminParticipantController
             ['new' => ['password' => '[redacted]']],
         );
 
-        return redirect()->route('admin.participants')->with('success', 'تم تغيير كلمة مرور المشارك "' . $participant->username . '" بنجاح.');
+        return redirect()->route('admin.participants')->with('success', 'تم تغيير كلمة مرور المشارك "'.$participant->username.'" بنجاح.');
     }
 
     public function revokeTokens(Request $request, Participant $participant): JsonResponse

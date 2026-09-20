@@ -264,4 +264,60 @@ final class AdminParticipantManagementTest extends TestCase
             ])
             ->assertSessionHasErrors('password');
     }
+
+    public function test_listing_edit_modal_has_optional_password_reveal_fields(): void
+    {
+        $admin = $this->admin();
+        Participant::factory()->create(['first_name' => 'أحمد']);
+
+        $this->withSession(['web_admin_id' => $admin->id])
+            ->get('/admin/participants')
+            ->assertOk()
+            ->assertSee('modal-participant-edit')
+            ->assertSee('pe_password')
+            ->assertSee('pe_password_confirmation');
+    }
+
+    public function test_password_can_be_changed_from_edit_route_and_revokes_tokens(): void
+    {
+        $admin = $this->admin();
+        $participant = Participant::factory()->create(['password' => Hash::make('OldPass123')]);
+        $participant->createToken('mobile');
+        $this->assertSame(1, $participant->tokens()->count());
+
+        $this->withSession(['web_admin_id' => $admin->id])
+            ->putJson("/admin/participants/{$participant->id}", [
+                'password' => 'FreshPass789',
+                'password_confirmation' => 'FreshPass789',
+            ])
+            ->assertOk()
+            ->assertJsonPath('success', true);
+
+        $participant->refresh();
+        $this->assertTrue(Hash::check('FreshPass789', $participant->password));
+        $this->assertSame(0, $participant->tokens()->count());
+
+        $this->assertDatabaseHas('audit_logs', [
+            'auditable_type' => Participant::class,
+            'auditable_id' => $participant->id,
+            'action' => 'participant_password_changed',
+            'actor_id' => $admin->id,
+        ]);
+    }
+
+    public function test_edit_route_password_validates_confirmation(): void
+    {
+        $admin = $this->admin();
+        $participant = Participant::factory()->create(['password' => Hash::make('OldPass123')]);
+
+        $this->withSession(['web_admin_id' => $admin->id])
+            ->putJson("/admin/participants/{$participant->id}", [
+                'password' => 'FreshPass789',
+                'password_confirmation' => 'Different789',
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['password']);
+
+        $this->assertTrue(Hash::check('OldPass123', $participant->fresh()->password));
+    }
 }

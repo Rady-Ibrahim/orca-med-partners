@@ -372,6 +372,19 @@ document.addEventListener('DOMContentLoaded', () => {
         total.textContent = sum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     });
 
+    // ── Password reveal toggle ───────────────────────────
+    document.addEventListener('click', e => {
+        const btn = e.target.closest('.js-password-toggle');
+        if (!btn) return;
+        const input = btn.closest('.password-field')?.querySelector('input[type="password"], input[type="text"]');
+        if (!input) return;
+        const reveal = input.type === 'password';
+        input.type = reveal ? 'text' : 'password';
+        btn.classList.toggle('active', reveal);
+        btn.setAttribute('aria-pressed', String(reveal));
+        btn.setAttribute('aria-label', reveal ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور');
+    });
+
     // ── Searchable select (filter-by-name) ───────────────
     const bindSearchableSelects = (root = document) => {
         root.querySelectorAll('.searchable-select[data-searchable]').forEach(wrap => {
