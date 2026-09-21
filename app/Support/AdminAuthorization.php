@@ -7,7 +7,9 @@ namespace App\Support;
 class AdminAuthorization
 {
     public const ROLE_SUPER_ADMIN = 'super-admin';
+
     public const ROLE_FINANCIAL_MANAGER = 'financial-manager';
+
     public const ROLE_EMPLOYEE = 'employee';
 
     public static function roles(): array
@@ -48,6 +50,7 @@ class AdminAuthorization
             'settlements.approve',
             'settlements.pay',
             'reports.view',
+            'projections.view',
             'reports.export',
             'notifications.view',
             'distribution_rules.view',
@@ -90,6 +93,7 @@ class AdminAuthorization
                 'settlements.approve',
                 'settlements.pay',
                 'reports.view',
+                'projections.view',
                 'reports.export',
                 'notifications.view',
                 'distribution_rules.view',

@@ -88,12 +88,11 @@ final class CreateMonthlyProfitAction
         });
     }
 
-    private function wireFundComponents(MonthlyProfit $profit, MonthlyProfitCalculationResult $result, CapitalSnapshot $snapshot): void
+private function wireFundComponents(MonthlyProfit $profit, MonthlyProfitCalculationResult $result, CapitalSnapshot $snapshot): void
     {
         $funds = [
             'growth' => ['fund' => $this->fundByCode('growth_fund'), 'amount' => $result->growthAmount],
             'incentive' => ['fund' => $this->fundByCode('incentive_fund'), 'amount' => $result->incentiveAmount],
-            'depreciation' => ['fund' => $this->fundByCode('depreciation_fund'), 'amount' => $result->depreciationAmount],
         ];
 
         foreach ($funds as $type => $config) {
@@ -104,7 +103,7 @@ final class CreateMonthlyProfitAction
                 continue;
             }
 
-foreach ($result->participantAllocations as $allocation) {
+            foreach ($result->participantAllocations as $allocation) {
                 ParticipantFundAllocation::query()->create([
                     'fund_id' => $fund->id,
                     'monthly_profit_id' => $profit->id,
@@ -115,7 +114,7 @@ foreach ($result->participantAllocations as $allocation) {
             }
         }
 
-        $depreciationFund = $funds['depreciation']['fund'];
+        $depreciationFund = $this->fundByCode('depreciation_fund');
         if ($depreciationFund && bccomp($result->depreciationAmount, '0', 2) > 0) {
             DepreciationNote::query()->create([
                 'participant_id' => null,
@@ -135,6 +134,6 @@ foreach ($result->participantAllocations as $allocation) {
 
     private function fundByCode(string $code): ?Fund
     {
-        return Fund::query()->where('code', $code)->first();
+        return Fund::resolveSystemFund($code);
     }
 }

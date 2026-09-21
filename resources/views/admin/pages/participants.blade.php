@@ -47,6 +47,8 @@
                         <th>البريد الإلكتروني</th>
                         <th>الحالة</th>
                         <th>الاستثمار</th>
+                        <th>رأس المال</th>
+                        <th>النسبة</th>
                         <th>تاريخ الانضمام</th>
                         <th>إجراءات</th>
                     </tr>
@@ -60,6 +62,8 @@
                             <td>{{ $item['email'] }}</td>
                             <td><span class="status-badge status-{{ $item['status'] }}">{{ $item['status'] === 'active' ? 'نشط' : 'غير نشط' }}</span></td>
                             <td class="numeric">{{ $item['investment'] }} ر.س</td>
+                            <td class="numeric">{{ $item['capital'] }} ر.س</td>
+                            <td class="numeric">{{ $item['ratio'] }}</td>
                             <td class="muted">{{ $item['joined'] }}</td>
                             <td>
                                 <div class="row-actions">

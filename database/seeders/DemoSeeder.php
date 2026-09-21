@@ -285,6 +285,11 @@ class DemoSeeder extends Seeder
 
         $funds = [
             [
+                'code' => 'management_fund',
+                'name' => 'حساب الإدارة',
+                'description' => 'حصة الإدارة الشهرية (25%)',
+            ],
+            [
                 'code' => 'growth_fund',
                 'name' => 'صندوق النمو',
                 'description' => 'صندوق تراكم حصص النمو الشهرية',
@@ -358,6 +363,7 @@ class DemoSeeder extends Seeder
         $growthFund = Fund::query()->where('code', 'growth_fund')->first();
         $incentiveFund = Fund::query()->where('code', 'incentive_fund')->first();
         $depreciationFund = Fund::query()->where('code', 'depreciation_fund')->first();
+        $managementFund = Fund::query()->where('code', 'management_fund')->first();
 
         $ruleSnapshot = [
             'management_fee_rate' => '0.2500',
@@ -504,19 +510,10 @@ class DemoSeeder extends Seeder
                         'allocation_type' => 'incentive',
                     ]);
                 }
-
-                if ($depreciationFund) {
-                    ParticipantFundAllocation::query()->create([
-                        'fund_id' => $depreciationFund->id,
-                        'monthly_profit_id' => $profit->id,
-                        'participant_id' => $participant->id,
-                        'amount' => bcmul($depreciationAmount, $ratio, 2),
-                        'allocation_type' => 'depreciation',
-                    ]);
-                }
             }
 
             // ─── Fund Transactions ───
+            $this->recordFundTransaction($managementFund, $profit, $managementAmount, 'profit_allocation', $m['date'], $superAdmin);
             $this->recordFundTransaction($growthFund, $profit, $growthAmount, 'profit_allocation', $m['date'], $superAdmin);
             $this->recordFundTransaction($incentiveFund, $profit, $incentiveAmount, 'profit_allocation', $m['date'], $superAdmin);
             $this->recordFundTransaction($depreciationFund, $profit, $depreciationAmount, 'profit_allocation', $m['date'], $superAdmin);
@@ -582,7 +579,7 @@ class DemoSeeder extends Seeder
 
     private function recalculateFundBalances(): void
     {
-        foreach (['growth_fund', 'incentive_fund', 'depreciation_fund'] as $code) {
+        foreach (['management_fund', 'growth_fund', 'incentive_fund', 'depreciation_fund'] as $code) {
             $fund = Fund::query()->where('code', $code)->first();
             if (! $fund) {
                 continue;

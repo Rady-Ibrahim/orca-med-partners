@@ -25,6 +25,7 @@ final class AdminSidebarAuditTest extends TestCase
                 '/admin/funds',
                 '/admin/depreciation',
                 '/admin/reports',
+                '/admin/projection-analytics',
                 '/admin/notifications',
                 '/admin/distribution-rules',
                 '/admin/settings',
@@ -55,13 +56,14 @@ final class AdminSidebarAuditTest extends TestCase
         $this->withSession(['web_admin_id' => $admin->id])->get('/admin/funds')->assertOk();
         $this->withSession(['web_admin_id' => $admin->id])->get('/admin/depreciation')->assertOk();
         $this->withSession(['web_admin_id' => $admin->id])->get('/admin/reports')->assertOk();
+        $this->withSession(['web_admin_id' => $admin->id])->get('/admin/projection-analytics')->assertOk();
         $this->withSession(['web_admin_id' => $admin->id])->get('/admin/notifications')->assertOk();
         $this->withSession(['web_admin_id' => $admin->id])->get('/admin/distribution-rules')->assertOk();
         $this->withSession(['web_admin_id' => $admin->id])->get('/admin/settings')->assertOk();
         $this->withSession(['web_admin_id' => $admin->id])->get('/admin/audit-logs')->assertOk();
     }
 
-    public function test_reports_notifications_and_audit_logs_require_their_specific_permissions(): void
+    public function test_reports_projections_notifications_and_audit_logs_require_their_specific_permissions(): void
     {
         $allowed = Admin::factory()->create([
             'username' => 'module-permissions-allowed',
@@ -69,11 +71,12 @@ final class AdminSidebarAuditTest extends TestCase
             'status' => 'active',
             'name' => 'Reports Access',
             'role' => 'employee',
-            'permissions' => ['reports.view', 'notifications.view', 'audit_logs.view'],
+            'permissions' => ['reports.view', 'projections.view', 'notifications.view', 'audit_logs.view'],
             'is_super_admin' => false,
         ]);
 
         $this->withSession(['web_admin_id' => $allowed->id])->get('/admin/reports')->assertOk();
+        $this->withSession(['web_admin_id' => $allowed->id])->get('/admin/projection-analytics')->assertOk();
         $this->withSession(['web_admin_id' => $allowed->id])->get('/admin/notifications')->assertOk();
         $this->withSession(['web_admin_id' => $allowed->id])->get('/admin/audit-logs')->assertOk();
 
@@ -88,6 +91,7 @@ final class AdminSidebarAuditTest extends TestCase
         ]);
 
         $this->withSession(['web_admin_id' => $blocked->id])->get('/admin/reports')->assertForbidden();
+        $this->withSession(['web_admin_id' => $blocked->id])->get('/admin/projection-analytics')->assertForbidden();
         $this->withSession(['web_admin_id' => $blocked->id])->get('/admin/notifications')->assertForbidden();
         $this->withSession(['web_admin_id' => $blocked->id])->get('/admin/audit-logs')->assertForbidden();
     }

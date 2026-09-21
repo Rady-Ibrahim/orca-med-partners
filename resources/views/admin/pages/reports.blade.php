@@ -44,7 +44,7 @@
                 <h2>التقارير التفصيلية</h2>
             </div>
         </div>
-        @foreach ([['participants', 'المشاركون'], ['investments', 'الاستثمارات'], ['capital', 'رأس المال'], ['monthly-profits', 'الأرباح الشهرية'], ['annual-profits', 'الأرباح السنوية'], ['distribution', 'التوزيعات'], ['funds', 'الصناديق'], ['fund-transactions', 'حركات الصناديق'], ['depreciation', 'الإهلاك'], ['settlements', 'التسويات السنوية'], ['due-paid', 'المستحق والمدفوع'], ['capital-growth', 'نمو رأس المال']] as [$key, $label])
+        @foreach ([['participants', 'المشاركون'], ['investments', 'الاستثمارات'], ['capital', 'رأس المال'], ['monthly-profits', 'الأرباح الشهرية'], ['annual-profits', 'الأرباح السنوية'], ['distribution', 'التوزيعات'], ['funds', 'الصناديق'], ['fund-transactions', 'حركات الصناديق'], ['fund-shares', 'حصص المشاركين في الصناديق'], ['depreciation', 'الإهلاك'], ['settlements', 'التسويات السنوية'], ['due-paid', 'المستحق والمدفوع'], ['capital-growth', 'نمو رأس المال']] as [$key, $label])
             <a class="report-index-link"
                 href="{{ route('admin.reports.show', $key) }}"><span>{{ $label }}</span><b>←</b></a>
         @endforeach

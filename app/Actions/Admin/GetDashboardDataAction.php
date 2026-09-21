@@ -14,6 +14,7 @@ use App\Models\MonthlyProfit;
 use App\Models\Notification;
 use App\Models\Participant;
 use App\Models\Settlement;
+use App\Support\DecimalFormatter;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -23,8 +24,8 @@ final class GetDashboardDataAction
     {
         $latestSnapshot = DB::table('capital_snapshots')->latest('snapshot_date')->first();
         $approvedProfit = MonthlyProfit::query()->where('year', $year)->where('status', 'approved');
-        $approvedProfitTotal = (string) (clone $approvedProfit)->sum('gross_profit');
-        $distributedTotal = (string) (clone $approvedProfit)->sum('distributed_amount');
+        $approvedProfitTotal = $this->moneyDecimal((clone $approvedProfit)->sum('gross_profit'));
+        $distributedTotal = $this->moneyDecimal((clone $approvedProfit)->sum('distributed_amount'));
 
         $monthlyProfits = (clone $approvedProfit)
             ->select('month', DB::raw('SUM(gross_profit) as gross_profit'), DB::raw('SUM(distributed_amount) as distributed_amount'))
@@ -35,8 +36,8 @@ final class GetDashboardDataAction
 
             return [
                 'label' => Carbon::create()->month($month)->locale('ar')->monthName,
-                'gross' => (string) ($row->gross_profit ?? '0.00'),
-                'distributed' => (string) ($row->distributed_amount ?? '0.00'),
+                'gross' => $this->moneyDecimal($row->gross_profit ?? '0.00'),
+                'distributed' => $this->moneyDecimal($row->distributed_amount ?? '0.00'),
             ];
         })->values()->all();
         $chartMax = '1.00';
@@ -78,25 +79,38 @@ final class GetDashboardDataAction
         $investmentTotals = Investment::query()
             ->select('participant_id', DB::raw('SUM(amount) as total_amount'))
             ->groupBy('participant_id')->get()->keyBy('participant_id');
-        $recentParticipants = Participant::query()->latest('created_at')->limit(6)->get()->map(function (Participant $participant) use ($investmentTotals): array {
+        $capitalShares = collect();
+        $snapshotTotal = '0.00';
+        if ($latestSnapshot) {
+            $snapshotTotal = (string) $latestSnapshot->total_capital;
+            $capitalShares = DB::table('capital_snapshot_items')
+                ->where('capital_snapshot_id', $latestSnapshot->id)
+                ->get()
+                ->mapWithKeys(fn ($item): array => [(int) $item->participant_id => (string) $item->participant_capital_snapshot]);
+        }
+        $recentParticipants = Participant::query()->latest('created_at')->limit(6)->get()->map(function (Participant $participant) use ($investmentTotals, $capitalShares, $snapshotTotal): array {
+            $capital = $capitalShares->get($participant->id, '0.00');
+
             return [
                 'name' => trim($participant->first_name.' '.$participant->last_name),
                 'username' => $participant->username,
                 'status' => $participant->status,
                 'joined' => $participant->created_at?->format('Y-m-d'),
                 'investment' => (string) ($investmentTotals->get($participant->id)->total_amount ?? '0.00'),
+                'capital' => $this->moneyDecimal($capital),
+                'ratio' => DecimalFormatter::ratioPercent($capital, $snapshotTotal).'%',
             ];
         })->all();
 
         return [
             'year' => $year,
             'kpis' => [
-                'capital' => (string) ($latestSnapshot?->total_capital ?? '0.00'),
-                'investments' => (string) Investment::query()->sum('amount'),
+                'capital' => $this->moneyDecimal($latestSnapshot?->total_capital ?? '0.00'),
                 'participants' => Participant::query()->where('status', 'active')->count(),
                 'approved_profits' => $approvedProfitTotal,
-                'amount_due' => (string) (clone $settlementQuery)->sum('amount_due'),
-                'paid' => (string) (clone $settlementQuery)->sum('paid_amount'),
+                'net_profit' => $distributedTotal,
+                'amount_due' => $this->moneyDecimal((clone $settlementQuery)->sum('amount_due')),
+                'paid' => $this->moneyDecimal((clone $settlementQuery)->sum('paid_amount')),
             ],
             'monthly_series' => $monthlySeries,
             'chart_max' => $chartMax,
@@ -153,5 +167,10 @@ final class GetDashboardDataAction
             'fund_total' => (string) Fund::query()->sum('current_balance'),
             'distributed_total' => $distributedTotal,
         ];
+    }
+
+    private function moneyDecimal(mixed $value): string
+    {
+        return number_format((float) $value, 2, '.', '');
     }
 }

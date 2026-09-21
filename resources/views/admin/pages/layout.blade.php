@@ -63,6 +63,10 @@
                     <span class="nav-icon">⌇</span>
                     <span class="nav-text">الإهلاك</span>
                 </a>
+                <a class="nav-link @if($isActive('admin.projection-analytics')) active @endif" href="{{ route('admin.projection-analytics') }}">
+                    <span class="nav-icon">◒</span>
+                    <span class="nav-text">توقعات الاستثمار</span>
+                </a>
 
                 <div class="sidebar-label nav-section">النظام</div>
                 <a class="nav-link @if($isActive('admin.reports')) active @endif" href="{{ route('admin.reports') }}">

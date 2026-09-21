@@ -63,13 +63,14 @@ final class ApproveMonthlyProfitAction
         }
 
         $entries = [
+            'management_fund' => (string) $profit->management_amount,
             'growth_fund' => (string) $profit->growth_amount,
             'incentive_fund' => (string) $profit->incentive_amount,
             'depreciation_fund' => (string) $profit->depreciation_amount,
         ];
 
         foreach ($entries as $code => $amount) {
-            $fund = Fund::query()->where('code', $code)->first();
+            $fund = Fund::resolveSystemFund($code);
 
             if (! $fund || bccomp($amount, '0', 2) <= 0) {
                 continue;

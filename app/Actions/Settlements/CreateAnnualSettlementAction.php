@@ -5,14 +5,12 @@ declare(strict_types=1);
 namespace App\Actions\Settlements;
 
 use App\Domain\Financial\Exceptions\InvalidAnnualSettlementException;
+use App\Domain\Financial\Services\SettlementAmountDueService;
 use App\Domain\Financial\ValueObjects\FinancialRoundingService;
 use App\Models\Admin;
-use App\Models\MonthlyProfit;
 use App\Models\Settlement;
 use App\Models\SettlementItem;
-use App\Models\ParticipantFundAllocation;
 use App\Services\SecurityAuditService;
-use App\Domain\Financial\Services\SettlementAmountDueService;
 use Illuminate\Support\Facades\DB;
 
 final class CreateAnnualSettlementAction
@@ -51,23 +49,12 @@ final class CreateAnnualSettlementAction
                 ));
             }
 
-            $fundByParticipant = ParticipantFundAllocation::query()
-                ->join('monthly_profits', 'monthly_profits.id', '=', 'participant_fund_allocations.monthly_profit_id')
-                ->where('monthly_profits.year', $year)
-                ->where('monthly_profits.status', 'approved')
-                ->select('participant_fund_allocations.participant_id', DB::raw('SUM(participant_fund_allocations.amount) as amount'))
-                ->groupBy('participant_fund_allocations.participant_id')
-                ->pluck('amount', 'participant_id');
-
             $profitTotal = '0.00';
             foreach ($profitByParticipant as $amount) {
                 $profitTotal = bcadd($profitTotal, $amount, 2);
             }
 
             $fundTotal = '0.00';
-            foreach ($fundByParticipant as $amount) {
-                $fundTotal = bcadd($fundTotal, (string) $amount, 2);
-            }
             $totalDue = $this->amountDue->calculate($profitTotal, $fundTotal, $previousPayments)['amount_due'];
 
             $settlement = Settlement::query()->create([
@@ -77,14 +64,14 @@ final class CreateAnnualSettlementAction
                 'status' => 'draft',
                 'total_distributed_amount' => $profitTotal,
                 'participant_profit_share' => $profitTotal,
-                'participant_fund_share' => $fundTotal,
+                'participant_fund_share' => '0.00',
                 'net_payable' => $totalDue,
                 'amount_due' => $totalDue,
                 'paid_amount' => '0.00',
                 'created_by_admin_id' => $admin->id,
                 'notes' => $parentId
-                    ? sprintf('Revision settlement. Amount due (%s) = approved annual participant profit + approved fund allocations − previous payments already recorded on the parent settlement.', $totalDue)
-                    : 'Amount due equals approved annual participant profit plus approved participant fund allocations. Principal remains excluded. Previous payments are recorded separately in settlement_payments.',
+                    ? sprintf('Revision settlement. Amount due (%s) = approved annual participant profit − previous payments already recorded on the parent settlement.', $totalDue)
+                    : 'Amount due equals the approved annual participant profit share only (65% model). Fund shares (growth + incentive) remain in their funds and are reported separately, not paid out. Principal remains excluded. Previous payments are recorded separately in settlement_payments.',
             ]);
 
             foreach ($profitByParticipant as $participantId => $amount) {
@@ -92,8 +79,8 @@ final class CreateAnnualSettlementAction
                     'settlement_id' => $settlement->id,
                     'participant_id' => $participantId,
                     'profit_share' => $amount,
-                    'fund_share' => (string) ($fundByParticipant[$participantId] ?? '0.00'),
-                    'net_payable' => bcadd($amount, (string) ($fundByParticipant[$participantId] ?? '0.00'), 2),
+                    'fund_share' => '0.00',
+                    'net_payable' => $amount,
                     'payment_status' => 'pending',
                     'paid_amount' => '0.00',
                 ]);

@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Domain\Financial\Services\FinancialCalculationService;
+use App\Domain\Financial\Services\FinancialCalculationServiceContract;
 use App\Models\Admin;
 use App\Models\AuditLog;
 use App\Models\CapitalSnapshot;
@@ -13,8 +15,6 @@ use App\Models\MonthlyProfit;
 use App\Models\Notification;
 use App\Models\Participant;
 use App\Models\Settlement;
-use App\Domain\Financial\Services\FinancialCalculationService;
-use App\Domain\Financial\Services\FinancialCalculationServiceContract;
 use App\Policies\AdminPolicy;
 use App\Policies\AuditLogPolicy;
 use App\Policies\CapitalSnapshotPolicy;
@@ -110,6 +110,7 @@ class AppServiceProvider extends ServiceProvider
             'settlements.approve',
             'settlements.pay',
             'reports.view',
+            'projections.view',
             'reports.export',
             'notifications.view',
             'distribution_rules.view',

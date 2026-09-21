@@ -182,7 +182,7 @@ final class AdminActionsController
         Gate::forUser($request->user())->authorize('manage', $fund);
 
         try {
-            if (in_array($fund->code, ['depreciation_fund', 'growth_fund', 'incentive_fund'], true)) {
+            if (Fund::canonicalCodeOf($fund) !== null) {
                 throw new ImmutableFinancialRecordException('لا يمكن حذف الصناديق البرمجية الأساسية.');
             }
 

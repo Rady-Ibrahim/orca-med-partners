@@ -44,7 +44,12 @@ final class SidebarPageDataAction
             $query->where('status', $filters['status']);
         }
 
-        return $query->paginate(15)->withQueryString()->through(function (Participant $participant): array {
+        $capitalShares = $this->latestCapitalShares();
+
+        return $query->paginate(15)->withQueryString()->through(function (Participant $participant) use ($capitalShares): array {
+            $capital = $capitalShares[$participant->getKey()]['capital'] ?? '0.00';
+            $total = $capitalShares['__total__'] ?? '0.00';
+
             return [
                 'id' => $participant->getKey(),
                 'name' => trim($participant->first_name.' '.$participant->last_name) ?: $participant->username,
@@ -55,6 +60,8 @@ final class SidebarPageDataAction
                 'email' => $participant->email ?? '—',
                 'status' => $participant->status,
                 'investment' => DecimalFormatter::money($participant->investments_sum_amount ?? '0'),
+                'capital' => DecimalFormatter::money($capital),
+                'ratio' => DecimalFormatter::ratioPercent($capital, $total).'%',
                 'joined' => $participant->created_at?->format('Y-m-d'),
                 'edit_payload' => [
                     'first_name' => $participant->first_name,
@@ -66,6 +73,24 @@ final class SidebarPageDataAction
                 ],
             ];
         });
+    }
+
+    private function latestCapitalShares(): array
+    {
+        $snapshot = CapitalSnapshot::query()->latest('snapshot_date')->first();
+        if (! $snapshot) {
+            return [];
+        }
+
+        $shares = ['__total__' => (string) $snapshot->total_capital];
+        foreach ($snapshot->items as $item) {
+            $shares[(int) $item->participant_id] = [
+                'capital' => (string) $item->participant_capital_snapshot,
+                'ratio' => (string) $item->participant_ratio_snapshot,
+            ];
+        }
+
+        return $shares;
     }
 
     public function investments(array $filters = []): LengthAwarePaginator
@@ -325,7 +350,7 @@ final class SidebarPageDataAction
                 'status' => $fund->status,
                 'transactions' => $fund->transactions_count,
                 'description' => $fund->description ?? '',
-                'system_group' => in_array($fund->code, ['depreciation_fund', 'growth_fund', 'incentive_fund'], true),
+                'system_group' => $fund->isSystemFund(),
                 'transaction_items' => $fund->transactions->map(fn ($t): array => [
                     'id' => $t->getKey(),
                     'type' => $t->transaction_type,

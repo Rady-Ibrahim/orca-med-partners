@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AdminActionsController;
 use App\Http\Controllers\Admin\AdminParticipantController;
+use App\Http\Controllers\Admin\ProjectionAnalyticsController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\SidebarPageController;
 use App\Http\Controllers\AdminDashboardController;
@@ -54,6 +55,7 @@ Route::middleware('ensure.web.admin')->prefix('admin')->name('admin.')->group(fu
     Route::patch('/depreciation/{depreciationNote}', [AdminActionsController::class, 'updateDepreciation'])->name('depreciation.update');
     Route::delete('/depreciation/{depreciationNote}', [AdminActionsController::class, 'destroyDepreciation'])->name('depreciation.destroy');
     Route::get('/reports', [SidebarPageController::class, 'reports'])->name('reports');
+    Route::get('/projection-analytics', [ProjectionAnalyticsController::class, 'index'])->name('projection-analytics');
     Route::get('/reports/{report}/export/excel', [ReportController::class, 'excel'])->name('reports.export.excel');
     Route::get('/reports/{report}/export/pdf', [ReportController::class, 'pdf'])->name('reports.export.pdf');
     Route::get('/reports/{report}', [ReportController::class, 'index'])->name('reports.show');

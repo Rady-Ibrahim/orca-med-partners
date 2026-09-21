@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\Participant\DashboardController;
 use App\Http\Controllers\Api\Participant\FinancialResourceController;
 use App\Http\Controllers\Api\Participant\MeController;
 use App\Http\Controllers\Api\Participant\NotificationActionController;
+use App\Http\Controllers\Api\Participant\ProfitProjectionController;
 use App\Http\Controllers\Api\Participant\ReceiptController;
 use App\Http\Controllers\Api\Participant\ReportController;
 use App\Http\Controllers\Api\Participant\RoiSimulationController;
@@ -41,6 +42,10 @@ Route::prefix('v1')->group(function () {
 
     Route::middleware('throttle:60,1')->group(function () {
         Route::get('/legal/terms', [LegalController::class, 'terms']);
+    });
+
+    Route::middleware('throttle:30,1')->group(function () {
+        Route::post('/partner/profit-projection', [ProfitProjectionController::class, 'project']);
     });
 
     Route::middleware('ensure.api.context')->group(function () {

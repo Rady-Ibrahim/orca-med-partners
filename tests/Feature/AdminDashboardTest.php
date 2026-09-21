@@ -36,7 +36,8 @@ final class AdminDashboardTest extends TestCase
             ->assertOk()
             ->assertSee('لوحة التحكم')
             ->assertSee('إجمالي رأس المال')
-            ->assertSee('لا توجد بيانات صناديق لهذه الفترة')
+            ->assertSee('الصناديق التشغيلية')
+            ->assertSee('حساب الإدارة')
             ->assertSee('لوحة الإدارة');
     }
 

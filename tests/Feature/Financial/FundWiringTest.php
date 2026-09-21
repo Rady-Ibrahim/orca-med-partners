@@ -15,8 +15,8 @@ use App\Models\DepreciationNote;
 use App\Models\DistributionRule;
 use App\Models\Fund;
 use App\Models\Participant;
-use App\Models\ParticipantFundAllocation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
@@ -30,7 +30,7 @@ final class FundWiringTest extends TestCase
 
         $profit = app(CreateMonthlyProfitAction::class)->execute($admin, $snapshot, $rule, '100.00', 2026, 1);
 
-        static::assertDatabaseCount('participant_fund_allocations', 3);
+        static::assertDatabaseCount('participant_fund_allocations', 2);
         static::assertDatabaseHas('participant_fund_allocations', [
             'monthly_profit_id' => $profit->id,
             'participant_id' => $participant->id,
@@ -43,10 +43,8 @@ final class FundWiringTest extends TestCase
             'amount' => '2.50',
             'allocation_type' => 'incentive',
         ]);
-        static::assertDatabaseHas('participant_fund_allocations', [
+        static::assertDatabaseMissing('participant_fund_allocations', [
             'monthly_profit_id' => $profit->id,
-            'participant_id' => $participant->id,
-            'amount' => '5.00',
             'allocation_type' => 'depreciation',
         ]);
 
@@ -66,30 +64,39 @@ final class FundWiringTest extends TestCase
 
         $approved = app(ApproveMonthlyProfitAction::class)->execute($admin, $profit);
 
-        static::assertDatabaseCount('fund_transactions', 3);
+        static::assertDatabaseCount('fund_transactions', 4);
 
-        $depreciation = FundTransactionType::DEPOSIT->value;
+        $deposit = FundTransactionType::DEPOSIT->value;
+        static::assertDatabaseHas('fund_transactions', [
+            'fund_id' => $this->fund('management_fund')->id,
+            'monthly_profit_id' => $approved->id,
+            'transaction_type' => $deposit,
+            'amount' => '25.00',
+            'resulting_balance' => '25.00',
+            'reference' => "PROFIT-{$approved->id}",
+        ]);
         static::assertDatabaseHas('fund_transactions', [
             'fund_id' => $this->fund('depreciation_fund')->id,
             'monthly_profit_id' => $approved->id,
-            'transaction_type' => $depreciation,
+            'transaction_type' => $deposit,
             'amount' => '5.00',
             'resulting_balance' => '5.00',
             'reference' => "PROFIT-{$approved->id}",
         ]);
         static::assertDatabaseHas('fund_transactions', [
             'fund_id' => $this->fund('growth_fund')->id,
-            'transaction_type' => $depreciation,
+            'transaction_type' => $deposit,
             'amount' => '2.50',
             'resulting_balance' => '2.50',
         ]);
         static::assertDatabaseHas('fund_transactions', [
             'fund_id' => $this->fund('incentive_fund')->id,
-            'transaction_type' => $depreciation,
+            'transaction_type' => $deposit,
             'amount' => '2.50',
             'resulting_balance' => '2.50',
         ]);
 
+        static::assertSame('25.00', (string) $this->fund('management_fund')->current_balance);
         static::assertSame('2.50', (string) $this->fund('growth_fund')->current_balance);
         static::assertSame('5.00', (string) $this->fund('depreciation_fund')->current_balance);
     }
@@ -104,7 +111,7 @@ final class FundWiringTest extends TestCase
         app(ApproveMonthlyProfitAction::class)->execute($admin, $revision);
 
         static::assertSame(2, $revision->version);
-        static::assertDatabaseCount('fund_transactions', 3);
+        static::assertDatabaseCount('fund_transactions', 4);
         static::assertSame('5.00', (string) $this->fund('depreciation_fund')->current_balance);
     }
 
@@ -116,6 +123,44 @@ final class FundWiringTest extends TestCase
 
         $this->expectException(ImmutableFinancialRecordException::class);
         $this->fund('depreciation_fund')->delete();
+    }
+
+    public function test_production_style_local_funds_are_resolved_by_arabic_name_and_deposited(): void
+    {
+        [$admin, $snapshot, $rule, $participant] = $this->financialContext(2026, 5);
+
+        DB::table('funds')->whereIn('code', Fund::SYSTEM_FUND_CODES)->delete();
+        $byCode = ['1000' => 'depreciation_fund', '1001' => 'growth_fund', '1002' => 'incentive_fund', '1003' => 'management_fund'];
+        $byName = ['1000' => 'صندوق الاهلاك', '1001' => 'صندوق معدل النمو', '1002' => 'صندوق حافز مشارك', '1003' => 'نسبه اداره راس المال'];
+        foreach ($byCode as $code => $canonical) {
+            Fund::query()->create([
+                'code' => $code,
+                'name' => $byName[$code],
+                'current_balance' => '0.00',
+                'status' => 'active',
+                'created_by_admin_id' => $admin->id,
+            ]);
+        }
+
+        $profit = app(CreateMonthlyProfitAction::class)->execute($admin, $snapshot, $rule, '100.00', 2026, 5);
+
+        static::assertDatabaseCount('participant_fund_allocations', 2);
+        static::assertDatabaseHas('participant_fund_allocations', [
+            'monthly_profit_id' => $profit->id,
+            'participant_id' => $participant->id,
+            'amount' => '2.50',
+            'allocation_type' => 'growth',
+        ]);
+
+        app(ApproveMonthlyProfitAction::class)->execute($admin, $profit);
+
+        static::assertDatabaseCount('fund_transactions', 4);
+        static::assertSame('25.00', (string) Fund::query()->where('code', '1003')->firstOrFail()->current_balance);
+        static::assertSame('2.50', (string) Fund::query()->where('code', '1001')->firstOrFail()->current_balance);
+        static::assertSame('5.00', (string) Fund::query()->where('code', '1000')->firstOrFail()->current_balance);
+
+        $this->expectException(ImmutableFinancialRecordException::class);
+        Fund::query()->where('code', '1003')->firstOrFail()->delete();
     }
 
     /** @return array{Admin, CapitalSnapshot, DistributionRule, Participant} */
@@ -147,9 +192,10 @@ final class FundWiringTest extends TestCase
             'created_by_admin_id' => $admin->id,
         ]);
 
-        Fund::query()->create(['code' => 'growth_fund', 'name' => 'Growth Fund', 'current_balance' => '0.00', 'status' => 'active', 'created_by_admin_id' => $admin->id]);
-        Fund::query()->create(['code' => 'incentive_fund', 'name' => 'Incentive Fund', 'current_balance' => '0.00', 'status' => 'active', 'created_by_admin_id' => $admin->id]);
-        Fund::query()->create(['code' => 'depreciation_fund', 'name' => 'Depreciation Fund', 'current_balance' => '0.00', 'status' => 'active', 'created_by_admin_id' => $admin->id]);
+        Fund::query()->firstOrCreate(['code' => 'growth_fund'], ['name' => 'Growth Fund', 'current_balance' => '0.00', 'status' => 'active', 'created_by_admin_id' => $admin->id]);
+        Fund::query()->firstOrCreate(['code' => 'incentive_fund'], ['name' => 'Incentive Fund', 'current_balance' => '0.00', 'status' => 'active', 'created_by_admin_id' => $admin->id]);
+        Fund::query()->firstOrCreate(['code' => 'depreciation_fund'], ['name' => 'Depreciation Fund', 'current_balance' => '0.00', 'status' => 'active', 'created_by_admin_id' => $admin->id]);
+        Fund::query()->firstOrCreate(['code' => 'management_fund'], ['name' => 'Management Fund', 'current_balance' => '0.00', 'status' => 'active', 'created_by_admin_id' => $admin->id]);
 
         return [$admin, $snapshot, $rule, $participant];
     }

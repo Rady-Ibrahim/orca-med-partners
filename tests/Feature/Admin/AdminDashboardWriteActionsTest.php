@@ -188,7 +188,7 @@ final class AdminDashboardWriteActionsTest extends TestCase
 
         $settlement = Settlement::query()->where('year', 2026)->firstOrFail();
         $this->assertSame('draft', $settlement->status);
-        $this->assertSame('75.00', (string) $settlement->amount_due);
+        $this->assertSame('65.00', (string) $settlement->amount_due);
 
         $this->withSession(['web_admin_id' => $admin->id])
             ->postJson("/admin/settlements/{$settlement->id}/approve")
@@ -200,7 +200,7 @@ final class AdminDashboardWriteActionsTest extends TestCase
 
         $this->withSession(['web_admin_id' => $admin->id])
             ->postJson("/admin/settlements/{$settlement->id}/payments", [
-                'amount' => '75.00',
+                'amount' => '65.00',
                 'paid_at' => '2026-02-28',
                 'payment_source' => 'bank',
                 'payment_method' => 'تحويل بنكي',
@@ -211,7 +211,7 @@ final class AdminDashboardWriteActionsTest extends TestCase
 
         $settlement->refresh();
         $this->assertSame('paid', $settlement->status);
-        $this->assertSame('75.00', (string) $settlement->paid_amount);
+        $this->assertSame('65.00', (string) $settlement->paid_amount);
 
         $this->withSession(['web_admin_id' => $admin->id])
             ->postJson("/admin/settlements/{$settlement->id}/revision")
@@ -362,7 +362,7 @@ final class AdminDashboardWriteActionsTest extends TestCase
 
         $this->withSession(['web_admin_id' => $admin->id])
             ->postJson("/admin/settlements/{$settlement->id}/payments", [
-                'amount' => '75.00',
+                'amount' => '65.00',
                 'paid_at' => '2026-02-28',
                 'payment_source' => 'bank',
                 'payment_method' => 'تحويل بنكي',

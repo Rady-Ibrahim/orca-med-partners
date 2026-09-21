@@ -72,6 +72,10 @@
                     <span class="nav-icon">⌇</span>
                     <span class="nav-text">الإهلاك</span>
                 </a>
+                <a class="nav-link" href="{{ route('admin.projection-analytics') }}">
+                    <span class="nav-icon">◒</span>
+                    <span class="nav-text">توقعات الاستثمار</span>
+                </a>
 
                 <div class="sidebar-label nav-section">النظام</div>
                 <a class="nav-link" href="{{ route('admin.reports') }}">
@@ -220,12 +224,6 @@
                         <em>آخر لقطة رأس مال</em>
                     </article>
                     <article class="kpi-card">
-                        <div class="kpi-icon blue">↗</div>
-                        <span>إجمالي الاستثمارات</span>
-                        <strong>{{ $formatMoney($kpis['investments']) }} <small>ر.س</small></strong>
-                        <em>كل الاستثمارات المسجلة</em>
-                    </article>
-                    <article class="kpi-card">
                         <div class="kpi-icon cyan">◉</div>
                         <span>المشاركون النشطون</span>
                         <strong>{{ number_format($kpis['participants']) }}</strong>
@@ -366,6 +364,8 @@
                                     <tr>
                                         <th>المشارك</th>
                                         <th>الاستثمار</th>
+                                        <th>رأس المال</th>
+                                        <th>النسبة</th>
                                         <th>الحالة</th>
                                         <th>تاريخ الانضمام</th>
                                     </tr>
@@ -384,6 +384,8 @@
                                                 </div>
                                             </td>
                                             <td class="numeric">{{ $formatMoney($participant['investment']) }}</td>
+                                            <td class="numeric">{{ $formatMoney($participant['capital']) }}</td>
+                                            <td class="numeric">{{ $participant['ratio'] }}</td>
                                             <td>
                                                 <span
                                                     class="status-badge status-{{ $participant['status'] }}">{{ $statusLabels[$participant['status']] ?? $participant['status'] }}</span>
@@ -392,7 +394,7 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="4">
+                                            <td colspan="6">
                                                 <div class="empty-state compact">
                                                     <span>◉</span>
                                                     <p>لا توجد بيانات مشاركين</p>
