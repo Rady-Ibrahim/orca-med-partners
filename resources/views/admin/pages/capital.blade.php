@@ -19,19 +19,6 @@
 
 <form class="page-filter-bar" method="GET" action="{{ route('admin.capital') }}">
     <label>
-        السنة
-        <input type="number" name="year" value="{{ request('year') }}" placeholder="2025" min="2020" max="2099">
-    </label>
-    <label>
-        الشهر
-        <select name="month">
-            <option value="">الكل</option>
-            @foreach(range(1,12) as $m)
-                <option value="{{ $m }}" @selected((int)request('month') === $m)>{{ $m }}</option>
-            @endforeach
-        </select>
-    </label>
-    <label>
         الحالة
         <select name="status">
             <option value="">الكل</option>
@@ -54,8 +41,6 @@
                 <thead>
                     <tr>
                         <th>تاريخ اللقطة</th>
-                        <th>السنة</th>
-                        <th>الشهر</th>
                         <th>إجمالي رأس المال</th>
                         <th>الحالة</th>
                         <th>إجراءات</th>
@@ -65,12 +50,12 @@
                     @foreach ($items as $item)
                         <tr>
                             <td>{{ $item['date'] }}</td>
-                            <td>{{ $item['year'] }}</td>
-                            <td>{{ $item['month'] }}</td>
                             <td class="numeric">{{ $item['total'] }} ر.س</td>
                             <td><span class="status-badge status-{{ $item['status'] }}">{{ $item['status'] === 'final' ? 'نهائي' : $item['status'] }}</span></td>
                             <td>
                                 <div class="row-actions">
+                                    <button type="button" class="action-history" data-history-modal
+                                        data-history='@json($item["history"])'>سجل التعديلات</button>
                                     <button type="button" class="action-edit" data-fill-modal="modal-capital-edit"
                                         data-action-url="{{ route('admin.capital.update', $item['id']) }}"
                                         data-edit='@json($item["edit_payload"])'
@@ -101,24 +86,12 @@
             @csrf
             <div class="modal-body">
                 <div class="modal-grid">
-                    <div class="om-field">
+                    <div class="om-field full">
                         <label for="capital_date">تاريخ اللقطة</label>
                         <input id="capital_date" name="snapshot_date" type="date" required value="{{ now()->toDateString() }}">
+                        <span class="hint">يُشتق شهر وسنة اللقطة تلقائياً من التاريخ</span>
                     </div>
-                    <div class="om-field">
-                        <label for="capital_year">السنة</label>
-                        <input id="capital_year" name="year" type="number" required min="2000" max="2100"
-                            value="{{ now()->year }}">
-                    </div>
-                    <div class="om-field">
-                        <label for="capital_month">الشهر</label>
-                        <select id="capital_month" name="month" required>
-                            @foreach (range(1, 12) as $m)
-                                <option value="{{ $m }}" @selected($m === (int) now()->format('n'))>{{ $m }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="om-field">
+                    <div class="om-field full">
                         <label>الإجمالي المحسوب</label>
                         <div class="hint" id="capitalTotal" data-capital-total style="font-size:15px;font-weight:800;color:var(--text-head)">0.00</div>
                     </div>
@@ -160,23 +133,12 @@
             @method('PATCH')
             <div class="modal-body">
                 <div class="modal-grid">
-                    <div class="om-field">
+                    <div class="om-field full">
                         <label for="capital_edit_date">تاريخ اللقطة</label>
                         <input id="capital_edit_date" name="snapshot_date" type="date" required>
+                        <span class="hint">يُشتق شهر وسنة اللقطة تلقائياً من التاريخ</span>
                     </div>
-                    <div class="om-field">
-                        <label for="capital_edit_year">السنة</label>
-                        <input id="capital_edit_year" name="year" type="number" required min="2000" max="2100">
-                    </div>
-                    <div class="om-field">
-                        <label for="capital_edit_month">الشهر</label>
-                        <select id="capital_edit_month" name="month" required>
-                            @foreach (range(1, 12) as $m)
-                                <option value="{{ $m }}">{{ $m }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="om-field">
+                    <div class="om-field full">
                         <label>الإجمالي المحسوب</label>
                         <div class="hint" id="capitalTotalEdit" data-capital-total style="font-size:15px;font-weight:800;color:var(--text-head)">0.00</div>
                     </div>
@@ -204,6 +166,24 @@
                 <button type="submit" class="primary-button" data-submit>حفظ التعديلات</button>
             </div>
         </form>
+    </div>
+</div>
+
+{{-- ── سجل التعديلات ── --}}
+<div class="modal-backdrop" id="modal-capital-history" hidden>
+    <div class="modal-card wide">
+        <div class="modal-header">
+            <h3>سجل تعديلات رأس المال</h3>
+            <button type="button" class="modal-close" data-modal-close aria-label="إغلاق">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="history-list" data-history-list>
+                <p class="hint" style="color:var(--text-faint)">لا توجد تعديلات على هذه اللقطة حتى الآن.</p>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="secondary-button" data-modal-close>إغلاق</button>
+        </div>
     </div>
 </div>
 @endsection

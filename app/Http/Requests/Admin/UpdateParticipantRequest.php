@@ -29,6 +29,7 @@ final class UpdateParticipantRequest extends FormRequest
             'first_name' => ['sometimes', 'required', 'string', 'max:255'],
             'last_name' => ['sometimes', 'required', 'string', 'max:255'],
             'username' => ['sometimes', 'required', 'string', 'min:3', 'max:50', 'regex:/^[a-zA-Z0-9._-]+$/', Rule::unique('participants', 'username')->ignore($participantId)],
+            'code' => ['sometimes', 'required', 'string', 'max:50', 'regex:/^[a-zA-Z0-9._-]+$/', Rule::unique('participants', 'code')->ignore($participantId)],
             'email' => ['nullable', 'string', 'max:255', Rule::unique('participants', 'email')->ignore($participantId)],
             'status' => ['sometimes', 'required', 'string', Rule::in(['active', 'inactive'])],
             'password' => ['sometimes', 'nullable', 'string', 'min:8', 'confirmed'],
@@ -41,6 +42,9 @@ final class UpdateParticipantRequest extends FormRequest
         return [
             'username.unique' => 'اسم المستخدم مستخدم بالفعل',
             'username.regex' => 'اسم المستخدم يجب أن يحتوي على أحرف وأرقام ونقاط أو شرطات فقط',
+            'code.required' => 'كود المشارك مطلوب',
+            'code.unique' => 'كود المشارك مستخدم بالفعل',
+            'code.regex' => 'كود المشارك يجب أن يحتوي على أحرف وأرقام ونقاط أو شرطات فقط',
             'email.unique' => 'البريد الإلكتروني مستخدم بالفعل',
             'password.min' => 'كلمة المرور يجب ألا تقل عن 8 أحرف',
             'password.confirmed' => 'تأكيد كلمة المرور غير مطابق',

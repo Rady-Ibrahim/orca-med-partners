@@ -72,13 +72,13 @@
                                         <button type="button" class="action-approve" data-post
                                             data-url="{{ route('admin.investments.approve', $item['id']) }}"
                                             data-confirm="هل أنت متأكد من اعتماد استثمار «{{ $item['participant'] }}» بقيمة {{ $item['amount'] }} ر.س؟">اعتماد</button>
-                                        <button type="button" class="action-edit" data-fill-modal="modal-investment-edit"
-                                            data-action-url="{{ route('admin.investments.update', $item['id']) }}"
-                                            data-edit='@json($item["edit_payload"])'>تعديل</button>
-                                        <button type="button" class="action-danger" data-post data-method="DELETE"
-                                            data-url="{{ route('admin.investments.destroy', $item['id']) }}"
-                                            data-confirm="سيتم حذف استثمار «{{ $item['participant'] }}» بقيمة {{ $item['amount'] }} ر.س. متابعة؟">حذف</button>
                                     @endif
+                                    <button type="button" class="action-edit" data-fill-modal="modal-investment-edit"
+                                        data-action-url="{{ route('admin.investments.update', $item['id']) }}"
+                                        data-edit='@json($item["edit_payload"])'>تعديل</button>
+                                    <button type="button" class="action-danger" data-post data-method="DELETE"
+                                        data-url="{{ route('admin.investments.destroy', $item['id']) }}"
+                                        data-confirm="سيتم حذف استثمار «{{ $item['participant'] }}» بقيمة {{ $item['amount'] }} ر.س. متابعة؟">حذف</button>
                                 </div>
                             </td>
                         </tr>

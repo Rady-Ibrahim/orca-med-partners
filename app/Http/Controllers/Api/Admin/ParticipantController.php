@@ -14,9 +14,7 @@ use Illuminate\Support\Facades\Gate;
 
 final class ParticipantController
 {
-    public function __construct(private SecurityAuditService $audit)
-    {
-    }
+    public function __construct(private SecurityAuditService $audit) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -31,6 +29,7 @@ final class ParticipantController
                 $inner->where('first_name', 'like', "%{$search}%")
                     ->orWhere('last_name', 'like', "%{$search}%")
                     ->orWhere('username', 'like', "%{$search}%")
+                    ->orWhere('code', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%");
             });
         }
@@ -44,8 +43,9 @@ final class ParticipantController
                 'id' => $participant->getKey(),
                 'first_name' => $participant->first_name,
                 'last_name' => $participant->last_name,
-                'name' => trim($participant->first_name . ' ' . $participant->last_name) ?: $participant->username,
+                'name' => trim($participant->first_name.' '.$participant->last_name) ?: $participant->username,
                 'username' => $participant->username,
+                'code' => $participant->code,
                 'email' => $participant->email,
                 'status' => $participant->status,
                 'role' => $participant->role,
@@ -74,6 +74,7 @@ final class ParticipantController
             'first_name' => $data['first_name'],
             'last_name' => $data['last_name'],
             'username' => $data['username'],
+            'code' => $data['code'] ?? null,
             'email' => $data['email'] ?? null,
             'password' => $data['password'],
             'status' => $data['status'],
@@ -85,6 +86,7 @@ final class ParticipantController
         $this->audit->log('participant_created', $admin, Participant::class, $participant->getKey(), [
             'new' => [
                 'username' => $participant->username,
+                'code' => $participant->code,
                 'email' => $participant->email,
                 'status' => $participant->status,
             ],
@@ -103,6 +105,7 @@ final class ParticipantController
             'first_name' => $participant->first_name,
             'last_name' => $participant->last_name,
             'username' => $participant->username,
+            'code' => $participant->code,
             'email' => $participant->email,
             'status' => $participant->status,
         ];
@@ -111,6 +114,7 @@ final class ParticipantController
             'first_name' => $data['first_name'],
             'last_name' => $data['last_name'],
             'username' => $data['username'],
+            'code' => $data['code'] ?? $participant->code,
             'email' => $data['email'] ?? null,
             'status' => $data['status'],
         ]);
@@ -121,6 +125,7 @@ final class ParticipantController
                 'first_name' => $participant->first_name,
                 'last_name' => $participant->last_name,
                 'username' => $participant->username,
+                'code' => $participant->code,
                 'email' => $participant->email,
                 'status' => $participant->status,
             ],

@@ -83,6 +83,10 @@
                                             data-action-url="{{ route('admin.monthly-profits.revise', $item['id']) }}"
                                             data-prefill='{"gross_profit":"{{ $item['gross_raw'] }}"}'>إنشاء مراجعة</button>
                                     @endif
+                                    <button type="button" class="action-danger" data-post
+                                        data-method="DELETE"
+                                        data-url="{{ route('admin.monthly-profits.destroy', $item['id']) }}"
+                                        data-confirm="سيتم حذف أرباح فترة {{ $item['period'] }} مع تخصيصاتها نهائياً. متابعة؟">حذف</button>
                                 </div>
                             </td>
                         </tr>

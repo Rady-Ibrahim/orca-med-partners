@@ -77,11 +77,15 @@
                                             data-action-url="{{ route('admin.settlements.payment', $item['id']) }}"
                                             data-orca-label='{"#settlementYearCaption":"{{ $item['year'] }} — المستحق {{ $item['amount_due'] }} ر.س"}'>تسجيل دفعة</button>
                                     @endif
-                                    @if ($item['status'] === 'approved')
-                                        <button type="button" class="action-danger" data-post
+                                    @if (in_array($item['status'], ['approved', 'paid'], true))
+                                        <button type="button" class="action-neutral" data-post
                                             data-url="{{ route('admin.settlements.revise', $item['id']) }}"
                                             data-confirm="سيتم إنشاء تسوية معدلة لسنة {{ $item['year'] }} مع احتساب المدفوعات السابقة. متابعة؟">إنشاء تسوية معدلة</button>
                                     @endif
+                                    <button type="button" class="action-danger" data-post
+                                        data-method="DELETE"
+                                        data-url="{{ route('admin.settlements.destroy', $item['id']) }}"
+                                        data-confirm="سيتم حذف تسوية سنة {{ $item['year'] }} مع دفعاتها وملاحظاتها نهائياً. متابعة؟">حذف</button>
                                 </div>
                             </td>
                         </tr>

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Domain\Financial\Exceptions\ImmutableFinancialRecordException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -15,12 +14,6 @@ class SettlementAdjustment extends Model
     protected function casts(): array
     {
         return ['amount' => 'decimal:2'];
-    }
-
-    protected static function booted(): void
-    {
-        static::updating(fn(): never => throw new ImmutableFinancialRecordException('Settlement adjustments are immutable.'));
-        static::deleting(fn(): never => throw new ImmutableFinancialRecordException('Settlement adjustments cannot be deleted.'));
     }
 
     public function settlement(): BelongsTo

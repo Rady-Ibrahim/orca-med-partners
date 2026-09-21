@@ -138,4 +138,39 @@ final class FundBalanceService
             ));
         }
     }
+
+    public function recalculateRunningBalances(Fund $fund, ?Admin $actor = null): void
+    {
+        DB::transaction(function () use ($fund, $actor) {
+            $lockedFund = Fund::query()
+                ->whereKey($fund->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $running = '0.00';
+            foreach ($lockedFund->transactions()->orderBy('id')->get() as $transaction) {
+                $running = match ($transaction->transaction_type) {
+                    FundTransactionType::DEPOSIT->value => bcadd($running, (string) $transaction->amount, 2),
+                    FundTransactionType::WITHDRAWAL->value => bcsub($running, (string) $transaction->amount, 2),
+                    FundTransactionType::ADJUSTMENT->value => bcadd($running, (string) $transaction->amount, 2),
+                    default => throw new RuntimeException('Unsupported persisted fund transaction type.'),
+                };
+
+                $transaction->resulting_balance = $running;
+                $transaction->saveQuietly();
+            }
+
+            $oldBalance = (string) $lockedFund->current_balance;
+            $lockedFund->current_balance = $running;
+            $lockedFund->save();
+
+            if ($actor !== null) {
+                $this->audit->log('fund_balance_recalculated', $actor, 'fund', $lockedFund->id, [
+                    'old_balance' => $oldBalance,
+                    'new_balance' => $running,
+                    'fund_id' => $lockedFund->id,
+                ]);
+            }
+        });
+    }
 }

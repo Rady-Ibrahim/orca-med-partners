@@ -30,7 +30,7 @@ final class AdminFundTransactionUpdateTest extends TestCase
     private function fundWithTransaction(Admin $admin): array
     {
         $fund = Fund::query()->create([
-            'code' => 'txn_fund_' . uniqid(),
+            'code' => 'txn_fund_'.uniqid(),
             'name' => 'صندوق الحركات',
             'current_balance' => '200.00',
             'status' => 'active',
@@ -87,7 +87,7 @@ final class AdminFundTransactionUpdateTest extends TestCase
         $this->assertSame('200.00', (string) $fund->fresh()->current_balance);
     }
 
-    public function test_fund_transaction_amount_is_locked(): void
+    public function test_fund_transaction_amount_can_be_edited_and_balances_recalculated(): void
     {
         $admin = $this->admin();
         [$fund, $fundTransaction] = $this->fundWithTransaction($admin);
@@ -96,13 +96,17 @@ final class AdminFundTransactionUpdateTest extends TestCase
             ->patchJson("/admin/funds/{$fund->id}/transactions/{$fundTransaction->id}", [
                 'amount' => '500.00',
             ])
-            ->assertOk();
+            ->assertOk()
+            ->assertJsonPath('success', true);
 
-        $this->assertSame('200.00', (string) $fundTransaction->fresh()->amount);
-        $this->assertSame('200.00', (string) $fund->fresh()->current_balance);
+        $this->assertSame('500.00', (string) $fundTransaction->fresh()->amount);
+        $this->assertSame('-500.00', (string) $fundTransaction->fresh()->resulting_balance);
+        $this->assertSame('-500.00', (string) $fund->fresh()->current_balance);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'fund_transaction_updated']);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'fund_balance_recalculated']);
     }
 
-    public function test_fund_transaction_type_and_balance_are_locked(): void
+    public function test_fund_transaction_type_can_be_edited(): void
     {
         $admin = $this->admin();
         [$fund, $fundTransaction] = $this->fundWithTransaction($admin);
@@ -112,21 +116,24 @@ final class AdminFundTransactionUpdateTest extends TestCase
                 'transaction_type' => 'deposit',
                 'resulting_balance' => '999.99',
             ])
-            ->assertOk();
+            ->assertOk()
+            ->assertJsonPath('success', true);
 
         $fresh = $fundTransaction->fresh();
-        $this->assertSame('withdrawal', $fresh->transaction_type);
+        $this->assertSame('deposit', $fresh->transaction_type);
         $this->assertSame('200.00', (string) $fresh->resulting_balance);
+        $this->assertSame('200.00', (string) $fund->fresh()->current_balance);
     }
 
-    public function test_model_level_guard_blocks_reordering_financial_fields(): void
+    public function test_model_level_edit_of_financial_fields_is_allowed(): void
     {
         $admin = $this->admin();
         [, $fundTransaction] = $this->fundWithTransaction($admin);
 
-        $this->expectException(\App\Domain\Financial\Exceptions\ImmutableFinancialRecordException::class);
         $fundTransaction->amount = '999.99';
         $fundTransaction->save();
+
+        $this->assertDatabaseHas('fund_transactions', ['id' => $fundTransaction->id, 'amount' => '999.99']);
     }
 
     public function test_transaction_update_rejects_transaction_not_in_fund(): void
@@ -134,7 +141,7 @@ final class AdminFundTransactionUpdateTest extends TestCase
         $admin = $this->admin();
         [$fund, $fundTransaction] = $this->fundWithTransaction($admin);
         $otherFund = Fund::query()->create([
-            'code' => 'other_fund_' . uniqid(),
+            'code' => 'other_fund_'.uniqid(),
             'name' => 'صندوق آخر',
             'current_balance' => '0.00',
             'status' => 'active',
@@ -148,16 +155,18 @@ final class AdminFundTransactionUpdateTest extends TestCase
             ->assertStatus(404);
     }
 
-    public function test_fund_transaction_cannot_be_deleted(): void
+    public function test_fund_transaction_can_be_deleted(): void
     {
         $admin = $this->admin();
         [$fund, $fundTransaction] = $this->fundWithTransaction($admin);
 
         $this->withSession(['web_admin_id' => $admin->id])
             ->deleteJson("/admin/funds/{$fund->id}/transactions/{$fundTransaction->id}")
-            ->assertStatus(405);
+            ->assertOk()
+            ->assertJsonPath('success', true);
 
-        $this->assertDatabaseHas('fund_transactions', ['id' => $fundTransaction->id]);
+        $this->assertDatabaseMissing('fund_transactions', ['id' => $fundTransaction->id]);
+        $this->assertSame('0.00', (string) $fund->fresh()->current_balance);
     }
 
     public function test_funds_page_renders_transactions_list_and_edit_action(): void
@@ -168,7 +177,7 @@ final class AdminFundTransactionUpdateTest extends TestCase
         $this->withSession(['web_admin_id' => $admin->id])
             ->get('/admin/funds')
             ->assertOk()
-            ->assertSee('modal-fund-txn-list-' . $fund->id)
+            ->assertSee('modal-fund-txn-list-'.$fund->id)
             ->assertSee('modal-transaction-edit')
             ->assertSee('حركات الصندوق');
     }

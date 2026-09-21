@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Domain\Financial\Exceptions\ImmutableFinancialRecordException;
 use App\Domain\Financial\Services\DistributionRuleService;
 use App\Domain\Financial\Services\FundBalanceService;
 use App\Enums\FundTransactionType;
@@ -24,7 +23,7 @@ class Phase1HardeningTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_capital_snapshot_is_protected_after_approved_monthly_profit_uses_it(): void
+    public function test_capital_snapshot_is_editable_after_approved_monthly_profit_uses_it(): void
     {
         $admin = Admin::factory()->create();
         $participant = Participant::factory()->create();
@@ -69,11 +68,12 @@ class Phase1HardeningTest extends TestCase
             'approved_at' => now(),
         ]);
 
-        $this->expectException(ImmutableFinancialRecordException::class);
         $snapshot->update(['total_capital' => 15000.00]);
+
+        $this->assertDatabaseHas('capital_snapshots', ['id' => $snapshot->id, 'total_capital' => 15000.00]);
     }
 
-    public function test_approved_monthly_profit_cannot_be_mutated_or_reverted_to_draft(): void
+    public function test_approved_monthly_profit_can_be_mutated(): void
     {
         $admin = Admin::factory()->create();
         $snapshot = CapitalSnapshot::query()->create([
@@ -117,11 +117,12 @@ class Phase1HardeningTest extends TestCase
             'approved_at' => now(),
         ]);
 
-        $this->expectException(ImmutableFinancialRecordException::class);
         $profit->update(['gross_profit' => 1200.00]);
+
+        $this->assertDatabaseHas('monthly_profits', ['id' => $profit->id, 'gross_profit' => 1200.00]);
     }
 
-    public function test_approved_settlement_cannot_be_mutated_or_deleted(): void
+    public function test_approved_settlement_can_be_mutated_or_deleted(): void
     {
         $admin = Admin::factory()->create();
 
@@ -140,8 +141,11 @@ class Phase1HardeningTest extends TestCase
             'approved_at' => now(),
         ]);
 
-        $this->expectException(ImmutableFinancialRecordException::class);
         $settlement->update(['amount_due' => 900.00]);
+        $this->assertDatabaseHas('settlements', ['id' => $settlement->id, 'amount_due' => 900.00]);
+
+        $settlement->refresh()->delete();
+        $this->assertDatabaseMissing('settlements', ['id' => $settlement->id]);
     }
 
     public function test_distribution_rule_service_rejects_overlapping_effective_periods(): void

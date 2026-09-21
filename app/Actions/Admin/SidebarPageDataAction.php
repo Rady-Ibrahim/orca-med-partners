@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Actions\Admin;
 
+use App\Models\Admin;
 use App\Models\AppSetting;
 use App\Models\AuditLog;
 use App\Models\CapitalSnapshot;
+use App\Models\CapitalSnapshotItem;
 use App\Models\DepreciationNote;
 use App\Models\DistributionRule;
 use App\Models\Fund;
@@ -18,6 +20,7 @@ use App\Models\Settlement;
 use App\Support\DecimalFormatter;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 
 final class SidebarPageDataAction
 {
@@ -33,7 +36,8 @@ final class SidebarPageDataAction
                 $q->where('first_name', 'like', "%{$s}%")
                     ->orWhere('last_name', 'like', "%{$s}%")
                     ->orWhere('username', 'like', "%{$s}%")
-                    ->orWhere('email', 'like', "%{$s}%");
+                    ->orWhere('email', 'like', "%{$s}%")
+                    ->orWhere('code', 'like', "%{$s}%");
             });
         }
         if (! empty($filters['status'])) {
@@ -47,6 +51,7 @@ final class SidebarPageDataAction
                 'first_name' => $participant->first_name,
                 'last_name' => $participant->last_name,
                 'username' => $participant->username,
+                'code' => $participant->code ?? '—',
                 'email' => $participant->email ?? '—',
                 'status' => $participant->status,
                 'investment' => DecimalFormatter::money($participant->investments_sum_amount ?? '0'),
@@ -55,6 +60,7 @@ final class SidebarPageDataAction
                     'first_name' => $participant->first_name,
                     'last_name' => $participant->last_name,
                     'username' => $participant->username,
+                    'code' => $participant->code ?? '',
                     'email' => $participant->email ?? '',
                     'status' => $participant->status,
                 ],
@@ -111,22 +117,47 @@ final class SidebarPageDataAction
     {
         $query = CapitalSnapshot::query()->with('items')->latest('snapshot_date');
 
-        if (! empty($filters['year'])) {
-            $query->where('year', $filters['year']);
-        }
-        if (! empty($filters['month'])) {
-            $query->where('month', $ilters['month']);
-        }
         if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }
 
-        return $query->paginate(15)->withQueryString()->through(function (CapitalSnapshot $snapshot): array {
+        $paginator = $query->paginate(15)->withQueryString();
+
+        $snapshotIds = collect($paginator->items())
+            ->map(fn (CapitalSnapshot $snapshot): int => (int) $snapshot->getKey());
+
+        $participantNames = Participant::query()->get()
+            ->mapWithKeys(fn (Participant $p): array => [
+                $p->getKey() => trim($p->first_name.' '.$p->last_name) ?: $p->username,
+            ]);
+
+        $history = collect();
+        if ($snapshotIds->isNotEmpty()) {
+            $itemIds = CapitalSnapshotItem::query()
+                ->whereIn('capital_snapshot_id', $snapshotIds)
+                ->pluck('id');
+
+            $logs = AuditLog::query()
+                ->where(function ($q) use ($snapshotIds): void {
+                    $q->where('auditable_type', 'capital_snapshot')->whereIn('auditable_id', $snapshotIds);
+                })
+                ->orWhere(function ($q) use ($itemIds): void {
+                    $q->where('auditable_type', 'capital_snapshot_item')->whereIn('auditable_id', $itemIds);
+                })
+                ->oldest('created_at')
+                ->get();
+
+            $history = $logs->groupBy(fn (AuditLog $log): int => $log->auditable_type === 'capital_snapshot_item'
+                ? (int) ($log->metadata['snapshot_id'] ?? 0)
+                : (int) $log->auditable_id);
+        }
+
+        return $paginator->through(function (CapitalSnapshot $snapshot) use ($history, $participantNames): array {
+            $snapshotId = (int) $snapshot->getKey();
+
             return [
                 'id' => $snapshot->getKey(),
                 'date' => $snapshot->snapshot_date?->format('Y-m-d'),
-                'year' => $snapshot->year,
-                'month' => $snapshot->month,
                 'total' => DecimalFormatter::money($snapshot->total_capital),
                 'total_raw' => (string) $snapshot->total_capital,
                 'status' => $snapshot->status,
@@ -136,12 +167,83 @@ final class SidebarPageDataAction
                 ])->values()->toArray(),
                 'edit_payload' => [
                     'snapshot_date' => $snapshot->snapshot_date?->format('Y-m-d'),
-                    'year' => $snapshot->year,
-                    'month' => $snapshot->month,
                     'total_capital' => (string) $snapshot->total_capital,
                 ],
+                'history' => $history->get($snapshotId, collect())->map(fn (AuditLog $log): array => [
+                    'date' => $log->created_at?->format('Y-m-d H:i'),
+                    'actor' => $this->auditActorLabel($log),
+                    'description' => $this->describeCapitalChange($log, $participantNames),
+                ])->values()->all(),
             ];
         });
+    }
+
+    private function auditActorLabel(AuditLog $log): string
+    {
+        if ($log->actor_type === Admin::class && $log->actor_id) {
+            $admin = Admin::query()->find($log->actor_id);
+            if ($admin) {
+                return $admin->name ?: "مسؤول #{$log->actor_id}";
+            }
+        }
+
+        return '—';
+    }
+
+    private function describeCapitalChange(AuditLog $log, Collection $participantNames): string
+    {
+        if ($log->action === 'capital_snapshot_created') {
+            $new = $log->new_values ?? [];
+            $date = $this->auditDateLabel($new['snapshot_date'] ?? null);
+
+            return 'إنشاء اللقطة'
+                .($date !== '—' ? " بتاريخ {$date}" : '')
+                .(isset($new['total_capital']) ? ' بإجمالي '.DecimalFormatter::money($new['total_capital']).' ر.س' : '');
+        }
+
+        if ($log->action === 'capital_snapshot_item_updated') {
+            $meta = $log->metadata ?? [];
+            $participantId = (int) ($meta['participant_id'] ?? 0);
+            $name = $participantNames[$participantId] ?? "مشارك #{$participantId}";
+
+            return "تعديل رأس مال {$name} من ".DecimalFormatter::money($meta['old_capital'] ?? '0')
+                .' إلى '.DecimalFormatter::money($meta['new_capital'] ?? '0').' ر.س';
+        }
+
+        if ($log->action === 'capital_snapshot_updated') {
+            $old = $log->old_values ?? [];
+            $new = $log->new_values ?? [];
+            $parts = [];
+
+            if ($this->auditDateLabel($old['snapshot_date'] ?? null) !== $this->auditDateLabel($new['snapshot_date'] ?? null)) {
+                $parts[] = 'التاريخ من '.$this->auditDateLabel($old['snapshot_date'] ?? null)
+                    .' إلى '.$this->auditDateLabel($new['snapshot_date'] ?? null);
+            }
+            if (($old['total_capital'] ?? null) !== ($new['total_capital'] ?? null)) {
+                $parts[] = 'الإجمالي من '.DecimalFormatter::money($old['total_capital'] ?? '0')
+                    .' إلى '.DecimalFormatter::money($new['total_capital'] ?? '0').' ر.س';
+            }
+            if (($old['status'] ?? null) !== ($new['status'] ?? null)) {
+                $parts[] = 'الحالة من '.($old['status'] ?? '—').' إلى '.($new['status'] ?? '—');
+            }
+
+            return $parts === [] ? 'تحديث اللقطة' : 'تعديل: '.implode('، ', $parts);
+        }
+
+        return $log->action;
+    }
+
+    private function auditDateLabel(mixed $value): string
+    {
+        if (empty($value)) {
+            return '—';
+        }
+
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format('Y-m-d');
+        }
+
+        return substr((string) $value, 0, 10);
     }
 
     public function monthlyProfits(array $filters = []): LengthAwarePaginator
@@ -236,6 +338,8 @@ final class SidebarPageDataAction
                     'notes' => $t->notes ?? '',
                     'linked' => $t->monthly_profit_id !== null,
                     'edit_payload' => [
+                        'amount' => (string) $t->amount,
+                        'transaction_type' => $t->transaction_type,
                         'reference' => $t->reference ?? '',
                         'description' => $t->description ?? '',
                         'notes' => $t->notes ?? '',

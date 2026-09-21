@@ -30,7 +30,7 @@ final class AdminFundCrudTest extends TestCase
     private function fund(Admin $admin, array $overrides = []): Fund
     {
         return Fund::query()->create(array_merge([
-            'code' => 'test_fund_' . uniqid(),
+            'code' => 'test_fund_'.uniqid(),
             'name' => 'صندوق اختبار',
             'current_balance' => '0.00',
             'status' => 'active',
@@ -113,16 +113,18 @@ final class AdminFundCrudTest extends TestCase
         $this->assertDatabaseMissing('funds', ['id' => $fund->id]);
     }
 
-    public function test_fund_with_transactions_cannot_be_deleted(): void
+    public function test_fund_with_transactions_can_be_deleted(): void
     {
         $admin = $this->admin();
         $fund = $this->fundWithTransaction($admin);
 
         $this->withSession(['web_admin_id' => $admin->id])
             ->deleteJson("/admin/funds/{$fund->id}")
-            ->assertStatus(422);
+            ->assertOk()
+            ->assertJsonPath('success', true);
 
-        $this->assertDatabaseHas('funds', ['id' => $fund->id]);
+        $this->assertDatabaseMissing('funds', ['id' => $fund->id]);
+        $this->assertDatabaseCount('fund_transactions', 0);
     }
 
     public function test_system_fund_cannot_be_deleted(): void

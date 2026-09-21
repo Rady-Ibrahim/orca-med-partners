@@ -6,7 +6,6 @@ namespace Tests\Feature\Financial;
 
 use App\Actions\Financial\ApproveMonthlyProfitAction;
 use App\Actions\Financial\CreateMonthlyProfitAction;
-use App\Domain\Financial\Exceptions\ImmutableFinancialRecordException;
 use App\Models\Admin;
 use App\Models\CapitalSnapshot;
 use App\Models\DepreciationNote;
@@ -42,7 +41,7 @@ final class DeleteProtectionTest extends TestCase
 
         $this->assertSoftDeleted('participants', ['id' => $participant->id]);
         $this->assertSame(1, Investment::query()->where('participant_id', $participant->id)->count());
-        static::assertDatabaseHas('investments', ['participant_id' => $participant->id]);
+        self::assertDatabaseHas('investments', ['participant_id' => $participant->id]);
     }
 
     public function test_admin_is_soft_deleted(): void
@@ -53,7 +52,7 @@ final class DeleteProtectionTest extends TestCase
         $this->assertSoftDeleted('admins', ['id' => $admin->id]);
     }
 
-    public function test_approved_investment_cannot_be_deleted(): void
+    public function test_approved_investment_can_be_deleted(): void
     {
         $admin = Admin::factory()->create(['is_super_admin' => true]);
         $participant = Participant::factory()->create();
@@ -66,30 +65,37 @@ final class DeleteProtectionTest extends TestCase
             'approved_at' => now(),
         ]);
 
-        $this->expectException(ImmutableFinancialRecordException::class);
         $investment->delete();
+
+        $this->assertDatabaseMissing('investments', ['id' => $investment->id]);
     }
 
-    public function test_distribution_rule_referenced_by_profit_cannot_be_deleted(): void
+    public function test_distribution_rule_referenced_by_profit_can_be_deleted_via_controller(): void
     {
         [$admin, $snapshot, $rule] = $this->financialContext(2026, 5);
-        app(CreateMonthlyProfitAction::class)->execute($admin, $snapshot, $rule, '100.00', 2026, 5);
+        $profit = app(CreateMonthlyProfitAction::class)->execute($admin, $snapshot, $rule, '100.00', 2026, 5);
 
-        $this->expectException(ImmutableFinancialRecordException::class);
-        $rule->delete();
+        $this->ruleDeleteControllerSimulation($rule);
+
+        $this->assertDatabaseMissing('distribution_rules', ['id' => $rule->id]);
+        $this->assertDatabaseHas('monthly_profits', [
+            'id' => $profit->id,
+            'distribution_rule_id' => null,
+        ]);
     }
 
-    public function test_capital_snapshot_used_by_approved_profit_is_immutable(): void
+    public function test_capital_snapshot_used_by_approved_profit_can_be_updated(): void
     {
         [$admin, $snapshot, $rule] = $this->financialContext(2026, 6);
         $profit = app(CreateMonthlyProfitAction::class)->execute($admin, $snapshot, $rule, '100.00', 2026, 6);
         app(ApproveMonthlyProfitAction::class)->execute($admin, $profit);
 
-        $this->expectException(ImmutableFinancialRecordException::class);
         $snapshot->update(['total_capital' => '200.00']);
+
+        $this->assertDatabaseHas('capital_snapshots', ['id' => $snapshot->id, 'total_capital' => '200.00']);
     }
 
-    public function test_depreciation_note_linked_to_approved_profit_cannot_be_modified_or_deleted(): void
+    public function test_depreciation_note_linked_to_approved_profit_can_be_modified_and_deleted(): void
     {
         [$admin, $snapshot, $rule] = $this->financialContext(2026, 7);
         $profit = app(CreateMonthlyProfitAction::class)->execute($admin, $snapshot, $rule, '100.00', 2026, 7);
@@ -97,15 +103,11 @@ final class DeleteProtectionTest extends TestCase
 
         $note = DepreciationNote::query()->where('monthly_profit_id', $profit->id)->firstOrFail();
 
-        try {
-            $note->update(['amount' => '9.99']);
-            static::fail('Modifying a depreciation note linked to an approved profit should throw.');
-        } catch (ImmutableFinancialRecordException) {
-            static::assertTrue(true);
-        }
+        $note->update(['amount' => '9.99']);
+        $this->assertDatabaseHas('depreciation_notes', ['id' => $note->id, 'amount' => '9.99']);
 
-        $this->expectException(ImmutableFinancialRecordException::class);
         $note->delete();
+        $this->assertDatabaseMissing('depreciation_notes', ['id' => $note->id]);
     }
 
     public function test_depreciation_note_standalone_can_be_deleted_when_not_approved_linked(): void
@@ -128,27 +130,39 @@ final class DeleteProtectionTest extends TestCase
         $this->assertDatabaseMissing('depreciation_notes', ['id' => $note->id]);
     }
 
-    public function test_fund_allocation_linked_to_approved_profit_cannot_be_deleted(): void
+    public function test_fund_allocation_linked_to_approved_profit_can_be_deleted(): void
     {
         [$admin, $snapshot, $rule, $participant] = $this->financialContext(2026, 8);
         $profit = app(CreateMonthlyProfitAction::class)->execute($admin, $snapshot, $rule, '100.00', 2026, 8);
         app(ApproveMonthlyProfitAction::class)->execute($admin, $profit);
 
         $allocation = ParticipantFundAllocation::query()->where('monthly_profit_id', $profit->id)->firstOrFail();
-        static::assertSame($participant->id, $allocation->participant_id);
+        self::assertSame($participant->id, $allocation->participant_id);
 
-        $this->expectException(ImmutableFinancialRecordException::class);
         $allocation->delete();
+        $this->assertDatabaseMissing('participant_fund_allocations', ['id' => $allocation->id]);
     }
 
-    public function test_monthly_profit_approved_is_immutable_when_amount_changes(): void
+    public function test_monthly_profit_approved_can_be_updated_and_deleted(): void
     {
         [$admin, $snapshot, $rule] = $this->financialContext(2026, 9);
         $profit = app(CreateMonthlyProfitAction::class)->execute($admin, $snapshot, $rule, '100.00', 2026, 9);
         $approved = app(ApproveMonthlyProfitAction::class)->execute($admin, $profit);
 
-        $this->expectException(ImmutableFinancialRecordException::class);
         $approved->update(['gross_profit' => '200.00']);
+        $this->assertDatabaseHas('monthly_profits', ['id' => $approved->id, 'gross_profit' => '200.00']);
+
+        $approved->refresh()->delete();
+        $this->assertDatabaseMissing('monthly_profits', ['id' => $approved->id]);
+    }
+
+    /**
+     * Emulates AdminActionsController::destroyDistributionRule: null references, then delete.
+     */
+    private function ruleDeleteControllerSimulation(DistributionRule $rule): void
+    {
+        MonthlyProfit::query()->where('distribution_rule_id', $rule->id)->update(['distribution_rule_id' => null]);
+        $rule->delete();
     }
 
     /** @return array{Admin, CapitalSnapshot, DistributionRule, Participant} */
@@ -183,6 +197,7 @@ final class DeleteProtectionTest extends TestCase
         Fund::query()->create(['code' => 'growth_fund', 'name' => 'Growth Fund', 'current_balance' => '0.00', 'status' => 'active', 'created_by_admin_id' => $admin->id]);
         Fund::query()->create(['code' => 'incentive_fund', 'name' => 'Incentive Fund', 'current_balance' => '0.00', 'status' => 'active', 'created_by_admin_id' => $admin->id]);
         Fund::query()->create(['code' => 'depreciation_fund', 'name' => 'Depreciation Fund', 'current_balance' => '0.00', 'status' => 'active', 'created_by_admin_id' => $admin->id]);
+
         return [$admin, $snapshot, $rule, $participant];
     }
 }

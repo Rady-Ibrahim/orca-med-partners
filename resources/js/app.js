@@ -359,6 +359,45 @@ document.addEventListener('DOMContentLoaded', () => {
         target.querySelector('input, select, textarea')?.focus?.();
     });
 
+    document.addEventListener('click', e => {
+        const btn = e.target.closest('[data-history-modal]');
+        if (!btn) return;
+        const target = document.getElementById('modal-capital-history');
+        if (!target) return;
+        let data;
+        try { data = JSON.parse(btn.dataset.history || '[]'); } catch { data = []; }
+        const list = target.querySelector('[data-history-list]');
+        if (list) {
+            list.innerHTML = '';
+            if (!data.length) {
+                const empty = document.createElement('p');
+                empty.className = 'hint';
+                empty.style.color = 'var(--text-faint)';
+                empty.textContent = 'لا توجد تعديلات على هذه اللقطة حتى الآن.';
+                list.appendChild(empty);
+            } else {
+                data.forEach(entry => {
+                    const item = document.createElement('div');
+                    item.className = 'history-item';
+                    const head = document.createElement('div');
+                    head.className = 'history-item-head';
+                    const date = document.createElement('strong');
+                    date.textContent = entry.date || '';
+                    const actor = document.createElement('span');
+                    actor.textContent = entry.actor ? `بواسطة ${entry.actor}` : '';
+                    head.appendChild(date);
+                    head.appendChild(actor);
+                    const body = document.createElement('p');
+                    body.textContent = entry.description || '';
+                    item.appendChild(head);
+                    item.appendChild(body);
+                    list.appendChild(item);
+                });
+            }
+        }
+        target.removeAttribute('hidden');
+    });
+
     document.addEventListener('input', e => {
         if (!e.target.classList?.contains('js-capital-input')) return;
         const form = e.target.closest('form[data-ajax-form]');

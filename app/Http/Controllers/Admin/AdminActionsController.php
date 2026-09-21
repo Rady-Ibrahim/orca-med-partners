@@ -16,11 +16,11 @@ use App\Actions\Settlements\CreateAnnualSettlementAction;
 use App\Actions\Settlements\CreateSettlementRevisionAction;
 use App\Actions\Settlements\RecordSettlementPaymentAction;
 use App\Domain\Financial\Exceptions\FundBalanceDriftException;
-use App\Domain\Financial\Exceptions\ImmutableFinancialRecordException;
 use App\Domain\Financial\Exceptions\InvalidAnnualSettlementException;
 use App\Domain\Financial\Exceptions\InvalidCapitalSnapshotException;
 use App\Domain\Financial\Exceptions\InvalidGrossProfitException;
 use App\Domain\Financial\Rules\DistributionRuleValidator;
+use App\Domain\Financial\Services\FundBalanceService;
 use App\Http\Requests\StoreFundRequest;
 use App\Http\Requests\StoreFundTransactionRequest;
 use App\Http\Requests\StoreSettlementPaymentRequest;
@@ -40,6 +40,7 @@ use App\Support\AppSettingBag;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use InvalidArgumentException;
@@ -47,6 +48,11 @@ use Throwable;
 
 final class AdminActionsController
 {
+    public function __construct(
+        private FundBalanceService $funds,
+        private SecurityAuditService $audit,
+    ) {}
+
     public function storeMonthlyProfit(Request $request, CreateMonthlyProfitAction $action): JsonResponse|RedirectResponse
     {
         abort_if($request->user()->cannot('create', MonthlyProfit::class), 403, 'Forbidden.');
@@ -113,6 +119,28 @@ final class AdminActionsController
         }
 
         return redirect()->route('admin.monthly-profits')->with('success', 'تم إنشاء مراجعة الأرباح الشهرية.');
+    }
+
+    public function destroyMonthlyProfit(Request $request, MonthlyProfit $monthlyProfit): JsonResponse|RedirectResponse
+    {
+        abort_if($request->user()->cannot('approve', $monthlyProfit), 403, 'Forbidden.');
+
+        $profitId = (int) $monthlyProfit->getKey();
+        $period = sprintf('%04d / %02d', $monthlyProfit->year, $monthlyProfit->month);
+
+        try {
+            $monthlyProfit->delete();
+        } catch (Throwable $e) {
+            return $this->fail($request, $e, 'تعذر حذف فترة الأرباح.');
+        }
+
+        $this->audit->log('monthly_profit_deleted', $request->user(), 'monthly_profit', $profitId, ['period' => $period]);
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'تم حذف فترة الأرباح.']);
+        }
+
+        return redirect()->route('admin.monthly-profits')->with('success', 'تم حذف فترة الأرباح.');
     }
 
     public function storeFund(StoreFundRequest $request, CreateFundAction $action): JsonResponse|RedirectResponse
@@ -198,38 +226,79 @@ final class AdminActionsController
         $this->ensureTransactionBelongsToFund($fundTransaction, $fund);
 
         $data = $request->validate([
+            'transaction_type' => ['sometimes', 'in:deposit,withdrawal,adjustment'],
+            'amount' => ['sometimes', 'numeric', 'min:0.01', 'regex:/^\d+(?:\.\d{1,2})?$/'],
             'reference' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],
             'transaction_date' => ['sometimes', 'date'],
         ]);
 
-        $old = $fundTransaction->only(['reference', 'description', 'notes', 'transaction_date']);
+        $old = $fundTransaction->only(['transaction_type', 'amount', 'reference', 'description', 'notes', 'transaction_date']);
 
         try {
-            $fundTransaction->fill([
-                'reference' => $data['reference'] ?? null,
-                'description' => $data['description'] ?? null,
-                'notes' => $data['notes'] ?? null,
-                'transaction_date' => $data['transaction_date'] ?? $fundTransaction->transaction_date?->toDateString(),
-            ])->save();
-        } catch (ImmutableFinancialRecordException $e) {
-            return $this->fail($request, $e, 'لا يمكن تعديل المبلغ أو النوع أو رصيد الحركة المالية.');
+            DB::transaction(function () use ($data, $fundTransaction, $request): void {
+                if (array_key_exists('transaction_type', $data)) {
+                    $fundTransaction->transaction_type = $data['transaction_type'];
+                }
+                if (array_key_exists('amount', $data)) {
+                    $fundTransaction->amount = (string) $data['amount'];
+                }
+                if (array_key_exists('transaction_date', $data)) {
+                    $fundTransaction->transaction_date = $data['transaction_date'];
+                }
+                $fundTransaction->fill([
+                    'reference' => $data['reference'] ?? $fundTransaction->reference,
+                    'description' => $data['description'] ?? $fundTransaction->description,
+                    'notes' => $data['notes'] ?? $fundTransaction->notes,
+                ])->save();
+
+                if (array_key_exists('transaction_type', $data) || array_key_exists('amount', $data)) {
+                    $this->funds->recalculateRunningBalances($fundTransaction->fund, $request->user());
+                }
+            });
         } catch (Throwable $e) {
             return $this->fail($request, $e, 'تعذر تحديث الحركة المالية.');
         }
 
-        app(SecurityAuditService::class)->log('fund_transaction_updated', $request->user(), 'fund_transaction', $fundTransaction->id, [
+        $this->audit->log('fund_transaction_updated', $request->user(), 'fund_transaction', $fundTransaction->id, [
             'fund_id' => $fund->id,
             'old' => $old,
-            'new' => $fundTransaction->only(['reference', 'description', 'notes', 'transaction_date']),
+            'new' => $fundTransaction->only(['transaction_type', 'amount', 'reference', 'description', 'notes', 'transaction_date']),
         ]);
 
         if ($request->wantsJson()) {
-            return response()->json(['success' => true, 'message' => 'تم تحديث الحركة المالية.', 'data' => ['id' => $fundTransaction->id]]);
+            return response()->json(['success' => true, 'message' => 'تم تحديث الحركة المالية.', 'data' => ['id' => $fundTransaction->id, 'balance' => $fundTransaction->fund?->current_balance]]);
         }
 
         return redirect()->route('admin.funds')->with('success', 'تم تحديث الحركة المالية.');
+    }
+
+    public function destroyFundTransaction(Request $request, Fund $fund, FundTransaction $fundTransaction): JsonResponse|RedirectResponse
+    {
+        Gate::forUser($request->user())->authorize('manage', $fund);
+
+        $this->ensureTransactionBelongsToFund($fundTransaction, $fund);
+
+        $old = $fundTransaction->only(['transaction_type', 'amount', 'resulting_balance', 'transaction_date']);
+        $fundId = (int) $fund->getKey();
+
+        try {
+            DB::transaction(function () use ($fundTransaction, $fundId, $request): void {
+                $fundTransaction->delete();
+                $this->funds->recalculateRunningBalances(Fund::query()->findOrFail($fundId), $request->user());
+            });
+        } catch (Throwable $e) {
+            return $this->fail($request, $e, 'تعذر حذف الحركة المالية.');
+        }
+
+        $this->audit->log('fund_transaction_deleted', $request->user(), 'fund_transaction', $fundTransaction->id, ['fund_id' => $fundId, 'old' => $old]);
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'تم حذف الحركة المالية.', 'data' => ['id' => $fundId, 'balance' => Fund::query()->findOrFail($fundId)->current_balance]]);
+        }
+
+        return redirect()->route('admin.funds')->with('success', 'تم حذف الحركة المالية.');
     }
 
     private function ensureTransactionBelongsToFund(FundTransaction $fundTransaction, Fund $fund): void
@@ -361,21 +430,50 @@ final class AdminActionsController
         return redirect()->route('admin.settlements')->with('success', 'تم إنشاء تسوية معدلة.');
     }
 
+    public function destroySettlement(Request $request, Settlement $settlement): JsonResponse|RedirectResponse
+    {
+        Gate::forUser($request->user())->authorize('revise', $settlement);
+
+        $settlementId = (int) $settlement->getKey();
+        $year = (int) $settlement->year;
+
+        try {
+            DB::transaction(function () use ($settlement): void {
+                foreach ($settlement->payments as $payment) {
+                    $payment->receipt?->delete();
+                }
+                $settlement->payments()->delete();
+                $settlement->adjustments()->delete();
+                $settlement->delete();
+            });
+        } catch (Throwable $e) {
+            return $this->fail($request, $e, 'تعذر حذف التسوية السنوية.');
+        }
+
+        $this->audit->log('settlement_deleted', $request->user(), 'settlement', $settlementId, ['year' => $year]);
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'تم حذف التسوية السنوية.']);
+        }
+
+        return redirect()->route('admin.settlements')->with('success', 'تم حذف التسوية السنوية.');
+    }
+
     public function storeCapitalSnapshot(Request $request): JsonResponse|RedirectResponse
     {
         abort_if($request->user()->cannot('capital.manage'), 403, 'Forbidden.');
 
         $data = $request->validate([
             'snapshot_date' => ['required', 'date'],
-            'year' => ['required', 'integer', 'min:2000', 'max:2100'],
-            'month' => ['required', 'integer', 'min:1', 'max:12'],
             'total_capital' => ['nullable', 'numeric', 'min:0'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.participant_id' => ['required', 'integer', 'exists:participants,id'],
             'items.*.capital' => ['required', 'numeric', 'min:0'],
         ]);
 
-        $snapshot = DB::transaction(function () use ($data, $request): CapitalSnapshot {
+        $snapshotDate = Carbon::parse($data['snapshot_date']);
+
+        $snapshot = DB::transaction(function () use ($data, $snapshotDate, $request): CapitalSnapshot {
             $totalCapital = '0.00';
             foreach ($data['items'] as $item) {
                 $totalCapital = bcadd($totalCapital, number_format((float) $item['capital'], 2, '.', ''), 2);
@@ -383,8 +481,8 @@ final class AdminActionsController
 
             $snapshot = CapitalSnapshot::query()->create([
                 'snapshot_date' => $data['snapshot_date'],
-                'year' => (int) $data['year'],
-                'month' => (int) $data['month'],
+                'year' => $snapshotDate->year,
+                'month' => $snapshotDate->month,
                 'total_capital' => isset($data['total_capital']) && $data['total_capital'] !== null ? (string) $data['total_capital'] : $totalCapital,
                 'status' => 'final',
                 'created_by_admin_id' => $request->user()->id,
@@ -421,8 +519,6 @@ final class AdminActionsController
 
         $data = $request->validate([
             'snapshot_date' => ['sometimes', 'date'],
-            'year' => ['sometimes', 'integer', 'min:2000', 'max:2100'],
-            'month' => ['sometimes', 'integer', 'min:1', 'max:12'],
             'total_capital' => ['sometimes', 'nullable', 'numeric', 'min:0'],
             'items' => ['sometimes', 'array', 'min:1'],
             'items.*.participant_id' => ['sometimes', 'integer', 'exists:participants,id'],
@@ -430,33 +526,20 @@ final class AdminActionsController
         ]);
 
         try {
-            DB::transaction(function () use ($data, $capitalSnapshot): void {
-                $capitalSnapshot->fill($data)->save();
+            DB::transaction(function () use ($data, $capitalSnapshot, $request): void {
+                if (array_key_exists('snapshot_date', $data)) {
+                    $capitalSnapshot->snapshot_date = $data['snapshot_date'];
+                    $parsed = Carbon::parse($data['snapshot_date']);
+                    $capitalSnapshot->year = $parsed->year;
+                    $capitalSnapshot->month = $parsed->month;
+                }
+                if (array_key_exists('total_capital', $data) && $data['total_capital'] !== null && ! array_key_exists('items', $data)) {
+                    $capitalSnapshot->total_capital = (string) $data['total_capital'];
+                }
+                $capitalSnapshot->save();
 
                 if (array_key_exists('items', $data) && $data['items'] !== null) {
-                    $totalCapital = '0.00';
-                    foreach ($data['items'] as $item) {
-                        $totalCapital = bcadd($totalCapital, number_format((float) $item['capital'], 2, '.', ''), 2);
-                    }
-
-                    $capitalSnapshot->items()->delete();
-
-                    foreach ($data['items'] as $index => $item) {
-                        $capital = number_format((float) $item['capital'], 2, '.', '');
-                        $ratio = bccomp($totalCapital, '0.00', 2) === 0
-                            ? '0.0000'
-                            : bcdiv($capital, $totalCapital, 4);
-
-                        CapitalSnapshotItem::query()->create([
-                            'capital_snapshot_id' => $capitalSnapshot->id,
-                            'participant_id' => (int) $item['participant_id'],
-                            'participant_capital_snapshot' => $capital,
-                            'participant_ratio_snapshot' => $ratio,
-                            'calculation_metadata' => ['index' => $index],
-                        ]);
-                    }
-
-                    $capitalSnapshot->update(['total_capital' => $totalCapital]);
+                    $capitalSnapshot->syncItems($data['items'], $request->user());
                 }
             });
         } catch (Throwable $e) {
@@ -570,11 +653,18 @@ final class AdminActionsController
     {
         Gate::forUser($request->user())->authorize('update', $distributionRule);
 
+        $ruleId = (int) $distributionRule->getKey();
+
         try {
-            $distributionRule->delete();
+            DB::transaction(function () use ($distributionRule): void {
+                $distributionRule->monthlyProfits()->update(['distribution_rule_id' => null]);
+                $distributionRule->delete();
+            });
         } catch (Throwable $e) {
             return $this->fail($request, $e, 'تعذر حذف قاعدة التوزيع.');
         }
+
+        $this->audit->log('distribution_rule_deleted', $request->user(), 'distribution_rule', $ruleId, []);
 
         if ($request->wantsJson()) {
             return response()->json(['success' => true, 'message' => 'تم حذف قاعدة التوزيع.']);
@@ -690,7 +780,6 @@ final class AdminActionsController
     public function updateInvestment(Request $request, Investment $investment): JsonResponse|RedirectResponse
     {
         abort_if($request->user()->cannot('update', $investment), 403, 'Forbidden.');
-        abort_if($investment->status !== 'pending', 403, 'يمكن تعديل الاستثمارات قيد الانتظار فقط.');
 
         $data = $request->validate([
             'participant_id' => ['sometimes', 'required', 'integer', 'exists:participants,id'],
@@ -722,7 +811,6 @@ final class AdminActionsController
     public function destroyInvestment(Request $request, Investment $investment): JsonResponse|RedirectResponse
     {
         abort_if($request->user()->cannot('update', $investment), 403, 'Forbidden.');
-        abort_if($investment->status !== 'pending', 403, 'يمكن حذف الاستثمارات قيد الانتظار فقط.');
 
         try {
             $investment->delete();
@@ -865,8 +953,7 @@ final class AdminActionsController
     private function fail(Request $request, Throwable $e, string $fallbackMessage): JsonResponse|RedirectResponse
     {
         $message = $fallbackMessage;
-        if ($e instanceof ImmutableFinancialRecordException
-            || $e instanceof InvalidAnnualSettlementException
+        if ($e instanceof InvalidAnnualSettlementException
             || $e instanceof FundBalanceDriftException
             || $e instanceof InvalidCapitalSnapshotException
             || $e instanceof InvalidGrossProfitException

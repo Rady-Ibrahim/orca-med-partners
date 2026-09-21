@@ -55,6 +55,13 @@
             @error('username') <span class="hint" style="color:var(--red)">{{ $message }}</span> @enderror
         </div>
         <div class="settings-field">
+            <label for="code">كود المشارك</label>
+            <input id="code" name="code" value="{{ old('code', $participant?->code) }}"
+                required dir="ltr" style="text-align:right" placeholder="PC-100">
+            <span class="hint">كود مميز للمشارك يُستخدم في البحث والفلاتر</span>
+            @error('code') <span class="hint" style="color:var(--red)">{{ $message }}</span> @enderror
+        </div>
+        <div class="settings-field">
             <label for="email">البريد الإلكتروني</label>
             <input id="email" name="email" type="email" value="{{ old('email', $participant?->email) }}"
                 dir="ltr" style="text-align:right">

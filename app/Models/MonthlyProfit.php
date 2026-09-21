@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Domain\Financial\Exceptions\ImmutableFinancialRecordException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -48,33 +47,6 @@ class MonthlyProfit extends Model
             'approved_at' => 'datetime',
             'distribution_rule_snapshot' => 'array',
         ];
-    }
-
-    protected static function booted(): void
-    {
-        static::updating(function (self $profit) {
-            $dirtyAttributes = array_keys($profit->getDirty());
-            $isSupersedingTransition = $profit->status === 'superseded'
-                && count(array_diff($dirtyAttributes, ['status', 'updated_at'])) === 0;
-
-            if ($profit->getOriginal('status') === 'approved' && ! $isSupersedingTransition) {
-                throw new ImmutableFinancialRecordException('Approved monthly profit records are immutable and cannot be updated.');
-            }
-
-            if ($profit->getOriginal('status') === 'superseded') {
-                throw new ImmutableFinancialRecordException('Superseded monthly profit records are immutable.');
-            }
-
-            if ($profit->getOriginal('status') !== 'approved' && $profit->status === 'approved') {
-                throw new ImmutableFinancialRecordException('Monthly profit approval must be performed by the financial approval action.');
-            }
-        });
-
-        static::deleting(function (self $profit) {
-            if ($profit->status === 'approved') {
-                throw new ImmutableFinancialRecordException('Approved monthly profit records cannot be deleted.');
-            }
-        });
     }
 
     public function capitalSnapshot(): BelongsTo

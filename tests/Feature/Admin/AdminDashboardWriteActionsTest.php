@@ -8,6 +8,7 @@ use App\Actions\Financial\ApproveMonthlyProfitAction;
 use App\Actions\Financial\CreateMonthlyProfitAction;
 use App\Models\Admin;
 use App\Models\CapitalSnapshot;
+use App\Models\DepreciationNote;
 use App\Models\DistributionRule;
 use App\Models\Fund;
 use App\Models\MonthlyProfit;
@@ -324,6 +325,137 @@ final class AdminDashboardWriteActionsTest extends TestCase
             ->assertJsonPath('success', false);
 
         $this->assertDatabaseCount('distribution_rules', 0);
+    }
+
+    public function test_admin_can_delete_approved_monthly_profit_from_web(): void
+    {
+        $admin = $this->admin();
+        [$snapshot, $rule] = $this->financialContext($admin);
+        $profit = app(CreateMonthlyProfitAction::class)->execute($admin, $snapshot, $rule, '100.00', 2026, 2);
+        app(ApproveMonthlyProfitAction::class)->execute($admin, $profit);
+
+        $this->withSession(['web_admin_id' => $admin->id])
+            ->deleteJson("/admin/monthly-profits/{$profit->id}")
+            ->assertOk()
+            ->assertJsonPath('success', true);
+
+        $this->assertDatabaseMissing('monthly_profits', ['id' => $profit->id]);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'monthly_profit_deleted']);
+    }
+
+    public function test_admin_can_delete_paid_settlement_from_web_with_payments_cleanup(): void
+    {
+        $admin = $this->admin();
+        [$snapshot, $rule] = $this->financialContext($admin);
+        $profit = app(CreateMonthlyProfitAction::class)->execute($admin, $snapshot, $rule, '100.00', 2026, 2);
+        app(ApproveMonthlyProfitAction::class)->execute($admin, $profit);
+
+        $this->withSession(['web_admin_id' => $admin->id])
+            ->postJson('/admin/settlements', ['year' => 2026])
+            ->assertStatus(201)
+            ->assertJsonPath('success', true);
+
+        $settlement = Settlement::query()->where('year', 2026)->firstOrFail();
+        $this->withSession(['web_admin_id' => $admin->id])
+            ->postJson("/admin/settlements/{$settlement->id}/approve")
+            ->assertOk();
+
+        $this->withSession(['web_admin_id' => $admin->id])
+            ->postJson("/admin/settlements/{$settlement->id}/payments", [
+                'amount' => '75.00',
+                'paid_at' => '2026-02-28',
+                'payment_source' => 'bank',
+                'payment_method' => 'تحويل بنكي',
+                'reference' => 'TRF-2026-0002',
+            ])
+            ->assertOk();
+
+        $settlement->refresh();
+        $this->assertSame('paid', $settlement->status);
+
+        $this->withSession(['web_admin_id' => $admin->id])
+            ->deleteJson("/admin/settlements/{$settlement->id}")
+            ->assertOk()
+            ->assertJsonPath('success', true);
+
+        $this->assertDatabaseMissing('settlements', ['id' => $settlement->id]);
+        $this->assertDatabaseCount('settlement_payments', 0);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'settlement_deleted']);
+    }
+
+    public function test_admin_can_create_capital_snapshot_without_year_month_derived_from_date(): void
+    {
+        $admin = $this->admin();
+        $first = Participant::factory()->create();
+
+        $this->withSession(['web_admin_id' => $admin->id])
+            ->postJson('/admin/capital', [
+                'snapshot_date' => '2026-03-01',
+                'items' => [
+                    ['participant_id' => $first->id, 'capital' => '1000.00'],
+                ],
+            ])
+            ->assertStatus(201)
+            ->assertJsonPath('success', true);
+
+        $snapshot = CapitalSnapshot::query()->where('year', 2026)->where('month', 3)->firstOrFail();
+        $this->assertSame('1000.00', (string) $snapshot->total_capital);
+        $this->assertSame('2026-03-01', $snapshot->snapshot_date->toDateString());
+    }
+
+    public function test_updating_capital_items_logs_snapshot_item_updated_audit(): void
+    {
+        $admin = $this->admin();
+        $participant = Participant::factory()->create();
+        $snapshot = CapitalSnapshot::query()->create([
+            'snapshot_date' => '2026-04-15',
+            'year' => 2026,
+            'month' => 4,
+            'total_capital' => '100.00',
+            'status' => 'final',
+            'created_by_admin_id' => $admin->id,
+        ]);
+        $snapshot->items()->create([
+            'participant_id' => $participant->id,
+            'participant_capital_snapshot' => '100.00',
+            'participant_ratio_snapshot' => '1.0000',
+        ]);
+
+        $this->withSession(['web_admin_id' => $admin->id])
+            ->patchJson("/admin/capital/{$snapshot->id}", [
+                'items' => [
+                    ['participant_id' => $participant->id, 'capital' => '250.00'],
+                ],
+            ])
+            ->assertOk()
+            ->assertJsonPath('success', true);
+
+        $this->assertDatabaseHas('audit_logs', ['action' => 'capital_snapshot_item_updated']);
+        $this->assertSame('250.00', (string) $snapshot->fresh()->total_capital);
+    }
+
+    public function test_admin_can_update_and_delete_depreciation_note_linked_to_approved_profit_from_web(): void
+    {
+        $admin = $this->admin();
+        [$snapshot, $rule] = $this->financialContext($admin);
+        $profit = app(CreateMonthlyProfitAction::class)->execute($admin, $snapshot, $rule, '100.00', 2026, 2);
+        app(ApproveMonthlyProfitAction::class)->execute($admin, $profit);
+
+        $note = DepreciationNote::query()->where('monthly_profit_id', $profit->id)->firstOrFail();
+
+        $this->withSession(['web_admin_id' => $admin->id])
+            ->patchJson("/admin/depreciation/{$note->id}", [
+                'description' => 'محدثة',
+            ])
+            ->assertOk()
+            ->assertJsonPath('success', true);
+
+        $this->withSession(['web_admin_id' => $admin->id])
+            ->deleteJson("/admin/depreciation/{$note->id}")
+            ->assertOk()
+            ->assertJsonPath('success', true);
+
+        $this->assertDatabaseMissing('depreciation_notes', ['id' => $note->id]);
     }
 
     /** @return array{CapitalSnapshot, DistributionRule} */

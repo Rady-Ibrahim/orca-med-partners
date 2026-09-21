@@ -10,17 +10,15 @@ use App\Actions\Settlements\CreateAnnualSettlementAction;
 use App\Actions\Settlements\CreateSettlementRevisionAction;
 use App\Actions\Settlements\MarkSettlementPaidAction;
 use App\Actions\Settlements\RecordSettlementPaymentAction;
-use App\Domain\Financial\Exceptions\ImmutableFinancialRecordException;
 use App\Domain\Financial\Exceptions\InvalidAnnualSettlementException;
 use App\Models\Admin;
 use App\Models\CapitalSnapshot;
 use App\Models\DistributionRule;
+use App\Models\Fund;
 use App\Models\MonthlyProfit;
 use App\Models\Participant;
+use App\Models\ParticipantFundAllocation;
 use App\Models\ParticipantProfitAllocation;
-use App\Models\Settlement;
-use App\Models\SettlementItem;
-use App\Models\Fund;
 use App\Support\AdminAuthorization;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -62,7 +60,7 @@ class AnnualSettlementTest extends TestCase
             'status' => 'approved',
         ]);
 
-        \App\Models\ParticipantFundAllocation::query()->create([
+        ParticipantFundAllocation::query()->create([
             'fund_id' => Fund::query()->create(['code' => 'GROWTH-2026', 'name' => 'Growth Fund'])->id,
             'monthly_profit_id' => $effective->id,
             'participant_id' => $first->id,
@@ -108,27 +106,29 @@ class AnnualSettlementTest extends TestCase
         self::assertDatabaseHas('audit_logs', ['action' => 'settlement_paid']);
     }
 
-    public function test_approved_settlement_and_items_are_immutable(): void
+    public function test_approved_settlement_and_items_can_be_edited(): void
     {
         [$admin] = $this->createApprovedAnnualData(2028);
         $settlement = app(CreateAnnualSettlementAction::class)->execute($admin, 2028);
         $approved = app(ApproveSettlementAction::class)->execute($admin, $settlement);
 
-        $this->expectException(ImmutableFinancialRecordException::class);
         $approved->amount_due = '999.00';
         $approved->save();
+
+        $this->assertDatabaseHas('settlements', ['id' => $approved->id, 'amount_due' => '999.00']);
     }
 
-    public function test_approved_settlement_items_are_immutable(): void
+    public function test_approved_settlement_items_are_editable(): void
     {
         [$admin] = $this->createApprovedAnnualData(2031);
         $settlement = app(CreateAnnualSettlementAction::class)->execute($admin, 2031);
         app(ApproveSettlementAction::class)->execute($admin, $settlement);
         $item = $settlement->items()->firstOrFail();
 
-        $this->expectException(ImmutableFinancialRecordException::class);
         $item->net_payable = '999.00';
         $item->save();
+
+        $this->assertDatabaseHas('settlement_items', ['id' => $item->id, 'net_payable' => '999.00']);
     }
 
     public function test_participant_settlement_screens_show_own_due_not_aggregate(): void
@@ -144,7 +144,7 @@ class AnnualSettlementTest extends TestCase
             'share_ratio' => '1.0000',
             'status' => 'approved',
         ]);
-        \App\Models\ParticipantFundAllocation::query()->create([
+        ParticipantFundAllocation::query()->create([
             'fund_id' => Fund::query()->create(['code' => 'INC-2040', 'name' => 'Incentive'])->id,
             'monthly_profit_id' => $profit->id,
             'participant_id' => $first->id,
@@ -171,7 +171,7 @@ class AnnualSettlementTest extends TestCase
         self::assertSame('25.00', $secondList['amount_due']);
         self::assertSame('25.00', $secondList['remaining']);
 
-        $detail = $this->withToken($firstToken)->getJson('/api/v1/me/settlements/' . $settlement->id)->assertOk()->json('data');
+        $detail = $this->withToken($firstToken)->getJson('/api/v1/me/settlements/'.$settlement->id)->assertOk()->json('data');
         self::assertSame('45.00', $detail['amount_due']);
         self::assertSame('45.00', $detail['remaining']);
         self::assertSame('70.00', $detail['settlement_total_due']);
@@ -185,8 +185,8 @@ class AnnualSettlementTest extends TestCase
         $otherToken = $other->createToken('participant-api', ['*'])->plainTextToken;
 
         $this->withToken($ownerToken)->getJson('/api/v1/participant/settlements')->assertOk();
-        $this->withToken($ownerToken)->getJson('/api/v1/participant/settlements/' . $settlement->id)->assertOk();
-        $this->withToken($otherToken)->getJson('/api/v1/participant/settlements/' . $settlement->id)->assertForbidden();
+        $this->withToken($ownerToken)->getJson('/api/v1/participant/settlements/'.$settlement->id)->assertOk();
+        $this->withToken($otherToken)->getJson('/api/v1/participant/settlements/'.$settlement->id)->assertForbidden();
         $this->withToken($ownerToken)->postJson('/api/v1/admin/settlements', ['year' => 2029])->assertForbidden();
     }
 
@@ -196,9 +196,9 @@ class AnnualSettlementTest extends TestCase
         $token = $admin->createToken('admin-api', ['*'])->plainTextToken;
 
         $created = $this->withToken($token)->postJson('/api/v1/admin/settlements', ['year' => 2030])->assertCreated()->json('data');
-        $this->withToken($token)->getJson('/api/v1/admin/settlements/' . $created['id'])->assertOk();
-        $this->withToken($token)->postJson('/api/v1/admin/settlements/' . $created['id'] . '/approve')->assertOk();
-        $this->withToken($token)->postJson('/api/v1/admin/settlements/' . $created['id'] . '/paid')->assertOk();
+        $this->withToken($token)->getJson('/api/v1/admin/settlements/'.$created['id'])->assertOk();
+        $this->withToken($token)->postJson('/api/v1/admin/settlements/'.$created['id'].'/approve')->assertOk();
+        $this->withToken($token)->postJson('/api/v1/admin/settlements/'.$created['id'].'/paid')->assertOk();
     }
 
     public function test_amount_due_does_not_invent_prior_deductions_or_include_principal(): void
@@ -228,7 +228,7 @@ class AnnualSettlementTest extends TestCase
         self::assertDatabaseCount('fund_transactions', 0);
     }
 
-    public function test_partial_and_final_payments_are_immutable_and_reconciled(): void
+    public function test_partial_and_final_payments_are_reconciled_and_editable(): void
     {
         [$admin] = $this->createApprovedAnnualData(2038, '100.00');
         $settlement = app(ApproveSettlementAction::class)->execute($admin, app(CreateAnnualSettlementAction::class)->execute($admin, 2038));
@@ -244,9 +244,8 @@ class AnnualSettlementTest extends TestCase
         self::assertCount(2, $paid->payments);
 
         $payment = $paid->payments->first();
-        $this->expectException(ImmutableFinancialRecordException::class);
-        $payment->amount = '99.00';
-        $payment->save();
+        $payment->update(['amount' => '55.00']);
+        $this->assertDatabaseHas('settlement_payments', ['id' => $payment->id, 'amount' => '55.00']);
     }
 
     public function test_draft_can_be_cancelled_but_finalized_settlement_cannot(): void
@@ -331,7 +330,7 @@ class AnnualSettlementTest extends TestCase
         $first = Participant::factory()->create(['status' => 'active', 'password' => Hash::make('secret123')]);
         $second = Participant::factory()->create(['status' => 'active', 'password' => Hash::make('secret123')]);
         $snapshot = CapitalSnapshot::query()->create([
-            'snapshot_date' => $year . '-01-31',
+            'snapshot_date' => $year.'-01-31',
             'year' => $year,
             'month' => 1,
             'total_capital' => '100.00',
@@ -339,8 +338,8 @@ class AnnualSettlementTest extends TestCase
             'created_by_admin_id' => $admin->id,
         ]);
         $rule = DistributionRule::query()->create([
-            'effective_from' => $year . '-01-01',
-            'effective_to' => $year . '-12-31',
+            'effective_from' => $year.'-01-01',
+            'effective_to' => $year.'-12-31',
             'management_fee_rate' => '0.2500',
             'depreciation_fund_rate' => '0.0500',
             'growth_fund_rate' => '0.0250',

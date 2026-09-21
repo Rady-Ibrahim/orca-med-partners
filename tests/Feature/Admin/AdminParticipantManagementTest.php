@@ -60,6 +60,7 @@ final class AdminParticipantManagementTest extends TestCase
                 'first_name' => 'أحمد',
                 'last_name' => 'محمد',
                 'username' => 'ahmed.mohamed',
+                'code' => 'PC-AHMED',
                 'email' => 'ahmed@example.com',
                 'password' => 'StrongPass123',
                 'password_confirmation' => 'StrongPass123',
@@ -70,6 +71,7 @@ final class AdminParticipantManagementTest extends TestCase
 
         $this->assertDatabaseHas('participants', [
             'username' => 'ahmed.mohamed',
+            'code' => 'PC-AHMED',
             'email' => 'ahmed@example.com',
             'status' => 'active',
             'created_by_admin_id' => $admin->id,
@@ -98,6 +100,7 @@ final class AdminParticipantManagementTest extends TestCase
                 'first_name' => 'أحمد',
                 'last_name' => 'محمد',
                 'username' => 'taken.user',
+                'code' => 'PC-TAKEN-WEB',
                 'email' => 'taken@example.com',
                 'password' => 'short',
                 'password_confirmation' => 'short',

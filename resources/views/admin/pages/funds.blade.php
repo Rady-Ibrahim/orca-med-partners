@@ -263,6 +263,10 @@
                                                 <button type="button" class="action-edit" data-fill-modal="modal-transaction-edit"
                                                     data-action-url="{{ route('admin.funds.transactions.update', [$item['id'], $txn['id']]) }}"
                                                     data-edit='@json($txn["edit_payload"])'>تعديل</button>
+                                                <button type="button" class="action-danger" data-post
+                                                    data-method="DELETE"
+                                                    data-url="{{ route('admin.funds.transactions.destroy', [$item['id'], $txn['id']]) }}"
+                                                    data-confirm="سيتم حذف هذه الحركة وإعادة احتساب أرصدة الصندوق. متابعة؟">حذف</button>
                                             </div>
                                         </td>
                                     </tr>
@@ -279,7 +283,7 @@
     </div>
 @endforeach
 
-{{-- ── تعديل حركة مالية (بيانات وصفية فقط) ── --}}
+{{-- ── تعديل حركة مالية ── --}}
 <div class="modal-backdrop" id="modal-transaction-edit" hidden>
     <div class="modal-card">
         <div class="modal-header">
@@ -290,8 +294,20 @@
             @csrf
             @method('PATCH')
             <div class="modal-body">
-                <p class="hint" style="margin-bottom:12px">المبلغ والنوع والرصيد محميّان ولا يمكن تغييرهما؛ يمكن تعديل البيانات الوصفية فقط.</p>
+                <p class="hint" style="margin-bottom:12px">عند تعديل المبلغ أو النوع يتم إعادة احتساب أرصدة الصندوق تلقائياً.</p>
                 <div class="modal-grid">
+                    <div class="om-field">
+                        <label for="txn_edit_type">نوع الحركة</label>
+                        <select id="txn_edit_type" name="transaction_type" required>
+                            <option value="deposit">إيداع</option>
+                            <option value="withdrawal">سحب</option>
+                            <option value="adjustment">تسوية</option>
+                        </select>
+                    </div>
+                    <div class="om-field">
+                        <label for="txn_edit_amount">المبلغ (ر.س)</label>
+                        <input id="txn_edit_amount" name="amount" type="number" required min="0.01" step="0.01" placeholder="0.00">
+                    </div>
                     <div class="om-field">
                         <label for="txn_ref">المرجع</label>
                         <input id="txn_ref" name="reference" dir="ltr" placeholder="INV-2025-001">

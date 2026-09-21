@@ -87,7 +87,7 @@ final class AdminInvestmentEditDeleteTest extends TestCase
         $this->assertDatabaseCount('investments', 0);
     }
 
-    public function test_approved_investment_cannot_be_edited(): void
+    public function test_approved_investment_can_be_edited(): void
     {
         $admin = $this->admin();
         $investment = $this->pendingInvestment($admin);
@@ -101,12 +101,13 @@ final class AdminInvestmentEditDeleteTest extends TestCase
             ->patchJson("/admin/investments/{$investment->id}", [
                 'amount' => '5000.00',
             ])
-            ->assertStatus(403);
+            ->assertOk()
+            ->assertJsonPath('success', true);
 
-        $this->assertSame('1000.00', (string) $investment->fresh()->amount);
+        $this->assertSame('5000.00', (string) $investment->fresh()->amount);
     }
 
-    public function test_approved_investment_cannot_be_deleted(): void
+    public function test_approved_investment_can_be_deleted(): void
     {
         $admin = $this->admin();
         $investment = $this->pendingInvestment($admin);
@@ -118,8 +119,9 @@ final class AdminInvestmentEditDeleteTest extends TestCase
 
         $this->withSession(['web_admin_id' => $admin->id])
             ->deleteJson("/admin/investments/{$investment->id}")
-            ->assertStatus(403);
+            ->assertOk()
+            ->assertJsonPath('success', true);
 
-        $this->assertDatabaseHas('investments', ['id' => $investment->id]);
+        $this->assertDatabaseMissing('investments', ['id' => $investment->id]);
     }
 }

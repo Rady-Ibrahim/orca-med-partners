@@ -7,20 +7,17 @@ namespace Tests\Feature\Financial;
 use App\Actions\Financial\ApproveMonthlyProfitAction;
 use App\Actions\Financial\CreateMonthlyProfitAction;
 use App\Actions\Financial\CreateMonthlyProfitRevisionAction;
-use App\Domain\Financial\Exceptions\ImmutableFinancialRecordException;
 use App\Domain\Financial\Exceptions\InvalidCapitalSnapshotException;
 use App\Domain\Financial\Services\FinancialCalculationServiceContract;
 use App\Domain\Financial\ValueObjects\MonthlyProfitCalculationResult;
 use App\Models\Admin;
 use App\Models\CapitalSnapshot;
 use App\Models\DistributionRule;
-use App\Models\MonthlyProfit;
 use App\Models\Participant;
-use App\Models\ParticipantProfitAllocation;
 use App\Support\AdminAuthorization;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Database\QueryException;
 use Mockery;
 use Tests\TestCase;
 
@@ -95,15 +92,17 @@ class MonthlyProfitEngineTest extends TestCase
         self::assertDatabaseCount('monthly_profits', 0);
     }
 
-    public function test_approval_immutability_and_revision_preserve_the_original(): void
+    public function test_approved_profit_amount_can_be_edited_and_revision_still_preserves_the_original(): void
     {
         [$admin, $snapshot, $rule] = $this->financialContext(2026, 3);
         $profit = app(CreateMonthlyProfitAction::class)->execute($admin, $snapshot, $rule, '100.00', 2026, 3);
         $approved = app(ApproveMonthlyProfitAction::class)->execute($admin, $profit);
 
-        $this->expectException(ImmutableFinancialRecordException::class);
         $approved->gross_profit = '200.00';
         $approved->save();
+
+        self::assertSame('200.00', (string) $approved->fresh()->gross_profit);
+        self::assertDatabaseHas('monthly_profits', ['id' => $approved->id, 'gross_profit' => '200.00']);
     }
 
     public function test_revision_creates_a_new_version_and_supersedes_the_old_record(): void

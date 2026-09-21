@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Domain\Financial\Exceptions\ImmutableFinancialRecordException;
-use App\Services\SecurityAuditService;
 use App\Services\ParticipantNotificationService;
+use App\Services\SecurityAuditService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -39,21 +38,6 @@ class DepreciationNote extends Model
 
     protected static function booted(): void
     {
-        static::deleting(function (self $note): void {
-            if ($note->monthly_profit_id !== null
-                && $note->monthlyProfit?->status === 'approved') {
-                throw new ImmutableFinancialRecordException('Depreciation notes linked to an approved profit period cannot be deleted.');
-            }
-        });
-
-        static::updating(function (self $note): void {
-            if ($note->monthly_profit_id !== null
-                && $note->monthlyProfit?->status === 'approved'
-                && array_key_exists('amount', $note->getDirty())) {
-                throw new ImmutableFinancialRecordException('Depreciation notes linked to an approved profit period cannot be modified.');
-            }
-        });
-
         static::created(function (self $note): void {
             app(SecurityAuditService::class)->log('depreciation_created', $note->created_by_admin_id ? Admin::query()->find($note->created_by_admin_id) : null, 'depreciation_note', $note->id, ['new' => $note->only(['amount', 'rate', 'transaction_date', 'year', 'month', 'description', 'admin_note'])]);
             if ($note->participant) {

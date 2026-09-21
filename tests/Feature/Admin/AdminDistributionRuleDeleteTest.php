@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace Tests\Feature\Admin;
 
 use App\Models\Admin;
+use App\Models\CapitalSnapshot;
+use App\Models\CapitalSnapshotItem;
 use App\Models\DistributionRule;
 use App\Models\MonthlyProfit;
+use App\Models\Participant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
@@ -76,12 +79,12 @@ final class AdminDistributionRuleDeleteTest extends TestCase
         $this->assertDatabaseCount('distribution_rules', 0);
     }
 
-    public function test_distribution_rule_referenced_by_monthly_profit_cannot_be_deleted(): void
+    public function test_distribution_rule_referenced_by_monthly_profit_can_be_deleted(): void
     {
         $admin = $this->admin();
         $rule = $this->rule($admin);
-        $participant = \App\Models\Participant::factory()->create();
-        $snapshot = \App\Models\CapitalSnapshot::query()->create([
+        $participant = Participant::factory()->create();
+        $snapshot = CapitalSnapshot::query()->create([
             'snapshot_date' => '2026-01-31',
             'year' => 2026,
             'month' => 1,
@@ -89,14 +92,14 @@ final class AdminDistributionRuleDeleteTest extends TestCase
             'status' => 'final',
             'created_by_admin_id' => $admin->id,
         ]);
-        \App\Models\CapitalSnapshotItem::query()->create([
+        CapitalSnapshotItem::query()->create([
             'capital_snapshot_id' => $snapshot->id,
             'participant_id' => $participant->id,
             'participant_capital_snapshot' => '10000.00',
             'participant_ratio_snapshot' => '1.0000',
         ]);
 
-        MonthlyProfit::query()->create([
+        $profit = MonthlyProfit::query()->create([
             'capital_snapshot_id' => $snapshot->id,
             'distribution_rule_id' => $rule->id,
             'year' => 2026,
@@ -115,8 +118,10 @@ final class AdminDistributionRuleDeleteTest extends TestCase
 
         $this->withSession(['web_admin_id' => $admin->id])
             ->deleteJson("/admin/distribution-rules/{$rule->id}")
-            ->assertStatus(422);
+            ->assertOk()
+            ->assertJsonPath('success', true);
 
-        $this->assertDatabaseHas('distribution_rules', ['id' => $rule->id]);
+        $this->assertDatabaseMissing('distribution_rules', ['id' => $rule->id]);
+        $this->assertDatabaseHas('monthly_profits', ['id' => $profit->id, 'distribution_rule_id' => null]);
     }
 }

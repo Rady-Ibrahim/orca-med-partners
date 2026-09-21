@@ -39,6 +39,7 @@ final class AdminParticipantController
             'first_name' => $data['first_name'],
             'last_name' => $data['last_name'],
             'username' => $data['username'],
+            'code' => $data['code'] ?? null,
             'email' => $data['email'] ?? null,
             'password' => $data['password'],
             'status' => $data['status'],
@@ -53,6 +54,7 @@ final class AdminParticipantController
             [
                 'new' => [
                     'username' => $participant->username,
+                    'code' => $participant->code,
                     'email' => $participant->email,
                     'status' => $participant->status,
                 ],
@@ -90,6 +92,7 @@ final class AdminParticipantController
             'first_name' => $participant->first_name,
             'last_name' => $participant->last_name,
             'username' => $participant->username,
+            'code' => $participant->code,
             'email' => $participant->email,
             'status' => $participant->status,
         ];
@@ -98,7 +101,7 @@ final class AdminParticipantController
             $participant->update($data);
         }
 
-        $stored = $participant->refresh()->only(['first_name', 'last_name', 'username', 'email', 'status']);
+        $stored = $participant->refresh()->only(['first_name', 'last_name', 'username', 'code', 'email', 'status']);
         $storedSent = array_intersect_key($stored, $data);
         $expected = array_intersect_key($data, $stored);
 
@@ -145,6 +148,7 @@ final class AdminParticipantController
                     'first_name' => $participant->first_name,
                     'last_name' => $participant->last_name,
                     'username' => $participant->username,
+                    'code' => $participant->code,
                     'email' => $participant->email,
                     'status' => $participant->status,
                 ],

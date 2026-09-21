@@ -5,13 +5,14 @@ declare(strict_types=1);
 namespace Tests\Feature\Financial;
 
 use App\Domain\Financial\Exceptions\FundBalanceDriftException;
-use App\Domain\Financial\Exceptions\ImmutableFinancialRecordException;
 use App\Domain\Financial\Services\FundBalanceService;
 use App\Enums\FundTransactionType;
 use App\Models\Admin;
 use App\Models\Fund;
 use App\Models\FundTransaction;
+use App\Models\Participant;
 use App\Support\AdminAuthorization;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -31,8 +32,8 @@ class FundLedgerTest extends TestCase
             'description' => 'Operational fund',
         ])->assertCreated()->json('data');
 
-        $this->withToken($token)->getJson('/api/v1/admin/funds/' . $created['id'])->assertOk();
-        $this->withToken($token)->patchJson('/api/v1/admin/funds/' . $created['id'], [
+        $this->withToken($token)->getJson('/api/v1/admin/funds/'.$created['id'])->assertOk();
+        $this->withToken($token)->patchJson('/api/v1/admin/funds/'.$created['id'], [
             'name' => 'Updated Depreciation Fund',
         ])->assertOk();
 
@@ -69,7 +70,7 @@ class FundLedgerTest extends TestCase
         foreach (['0', '0.00', '-1.00', '1.001', 'not-money'] as $amount) {
             try {
                 $service->applyTransaction($fund, $amount, FundTransactionType::DEPOSIT);
-                self::fail('Invalid amount was accepted: ' . $amount);
+                self::fail('Invalid amount was accepted: '.$amount);
             } catch (\RuntimeException) {
                 self::assertTrue(true);
             }
@@ -83,7 +84,7 @@ class FundLedgerTest extends TestCase
         $fund = Fund::query()->create(['code' => 'ROLLBACK-001', 'name' => 'Rollback Fund']);
         $service = app(FundBalanceService::class);
 
-        $this->expectException(\Illuminate\Database\QueryException::class);
+        $this->expectException(QueryException::class);
         try {
             $service->applyTransaction($fund, '50.00', FundTransactionType::DEPOSIT, monthlyProfitId: 999999);
         } finally {
@@ -92,14 +93,47 @@ class FundLedgerTest extends TestCase
         }
     }
 
-    public function test_fund_transactions_are_immutable_and_drift_is_detected(): void
+    public function test_fund_transaction_amount_can_be_edited_and_recalculated(): void
     {
+        $admin = $this->adminWithFundPermission();
         $fund = Fund::query()->create(['code' => 'DRIFT-001', 'name' => 'Drift Fund']);
-        $transaction = app(FundBalanceService::class)->applyTransaction($fund, '10.00', FundTransactionType::DEPOSIT);
+        $service = app(FundBalanceService::class);
+        $service->applyTransaction($fund, '10.00', FundTransactionType::DEPOSIT, createdByAdminId: $admin->id, actor: $admin);
+        $service->applyTransaction($fund, '5.00', FundTransactionType::DEPOSIT, createdByAdminId: $admin->id, actor: $admin);
 
-        $this->expectException(ImmutableFinancialRecordException::class);
-        $transaction->amount = '20.00';
-        $transaction->save();
+        $first = $fund->fresh()->transactions->first();
+        self::assertInstanceOf(FundTransaction::class, $first);
+        $first->update(['amount' => '20.00']);
+
+        $fund->refresh();
+        self::assertFalse($service->reconcile($fund)['is_consistent'], 'Balance must drift until recalculated.');
+
+        $service->recalculateRunningBalances($fund->fresh(), $admin);
+        $fund->refresh();
+
+        self::assertSame('25.00', (string) $fund->fresh()->current_balance);
+        self::assertSame('25.00', (string) $fund->transactions->last()->resulting_balance);
+        self::assertTrue($service->reconcile($fund->fresh())['is_consistent']);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'fund_balance_recalculated']);
+    }
+
+    public function test_fund_transaction_can_be_deleted_and_balances_recalculated(): void
+    {
+        $admin = $this->adminWithFundPermission();
+        $fund = Fund::query()->create(['code' => 'DEL-001', 'name' => 'Deletable Fund']);
+        $service = app(FundBalanceService::class);
+        $service->applyTransaction($fund, '100.00', FundTransactionType::DEPOSIT, createdByAdminId: $admin->id, actor: $admin);
+        $withdrawal = $service->applyTransaction($fund, '40.00', FundTransactionType::WITHDRAWAL, createdByAdminId: $admin->id, actor: $admin);
+        $service->applyTransaction($fund, '10.00', FundTransactionType::DEPOSIT, createdByAdminId: $admin->id, actor: $admin);
+
+        $withdrawal->delete();
+        $service->recalculateRunningBalances($fund->fresh(), $admin);
+        $fund->refresh();
+
+        self::assertSame('110.00', (string) $fund->current_balance);
+        self::assertDatabaseCount('fund_transactions', 2);
+        self::assertTrue($service->reconcile($fund->fresh())['is_consistent']);
+        self::assertDatabaseMissing('fund_transactions', ['id' => $withdrawal->id]);
     }
 
     public function test_reconciliation_detects_intentional_balance_drift(): void
@@ -117,16 +151,16 @@ class FundLedgerTest extends TestCase
 
     public function test_participant_cannot_create_or_modify_fund_transactions(): void
     {
-        $participant = \App\Models\Participant::factory()->create(['status' => 'active']);
+        $participant = Participant::factory()->create(['status' => 'active']);
         $fund = Fund::query()->create(['code' => 'READ-ONLY-001', 'name' => 'Read Only Fund']);
         $token = $participant->createToken('participant-api', ['*'])->plainTextToken;
 
-        $this->withToken($token)->postJson('/api/v1/admin/funds/' . $fund->id . '/transactions', [
+        $this->withToken($token)->postJson('/api/v1/admin/funds/'.$fund->id.'/transactions', [
             'transaction_type' => 'deposit',
             'amount' => '10.00',
         ])->assertForbidden();
 
-        $this->withToken($token)->patchJson('/api/v1/admin/funds/' . $fund->id, [
+        $this->withToken($token)->patchJson('/api/v1/admin/funds/'.$fund->id, [
             'name' => 'Tampered',
         ])->assertForbidden();
     }
@@ -143,7 +177,7 @@ class FundLedgerTest extends TestCase
         $token = $employee->createToken('admin-api', ['*'])->plainTextToken;
 
         $this->withToken($token)->getJson('/api/v1/admin/funds')->assertOk();
-        $this->withToken($token)->postJson('/api/v1/admin/funds/' . $fund->id . '/transactions', [
+        $this->withToken($token)->postJson('/api/v1/admin/funds/'.$fund->id.'/transactions', [
             'transaction_type' => 'deposit',
             'amount' => '1.00',
         ])->assertForbidden();
@@ -155,7 +189,7 @@ class FundLedgerTest extends TestCase
         $fund = Fund::query()->create(['code' => 'API-001', 'name' => 'API Fund']);
         $token = $admin->createToken('admin-api', ['*'])->plainTextToken;
 
-        $this->withToken($token)->postJson('/api/v1/admin/funds/' . $fund->id . '/transactions', [
+        $this->withToken($token)->postJson('/api/v1/admin/funds/'.$fund->id.'/transactions', [
             'transaction_type' => 'deposit',
             'amount' => '0.10',
             'transaction_date' => '2026-09-06',
@@ -163,7 +197,7 @@ class FundLedgerTest extends TestCase
             'description' => 'Initial deposit',
         ])->assertCreated();
 
-        $this->withToken($token)->getJson('/api/v1/admin/funds/' . $fund->id . '/transactions')
+        $this->withToken($token)->getJson('/api/v1/admin/funds/'.$fund->id.'/transactions')
             ->assertOk()
             ->assertJsonPath('data.data.0.amount', '0.10');
     }

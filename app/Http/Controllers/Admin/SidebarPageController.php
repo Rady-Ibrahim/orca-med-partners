@@ -14,6 +14,7 @@ use App\Models\Fund;
 use App\Models\Participant;
 use App\Support\AppSettingBag;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 
@@ -32,14 +33,7 @@ final class SidebarPageController
     {
         return view('admin.pages.investments', [
             'items' => $action->investments($request->only(['participant', 'status', 'date_from', 'date_to'])),
-            'participants' => Participant::query()
-                ->orderBy('first_name')
-                ->orderBy('last_name')
-                ->get()
-                ->map(fn (Participant $p): array => [
-                    'id' => $p->getKey(),
-                    'name' => trim($p->first_name.' '.$p->last_name) ?: $p->username,
-                ]),
+            'participants' => $this->participantOptions(),
             'title' => 'الاستثمارات',
             'filters' => $request->only(['participant', 'status', 'date_from', 'date_to']),
         ]);
@@ -48,17 +42,10 @@ final class SidebarPageController
     public function capital(Request $request, SidebarPageDataAction $action): View
     {
         return view('admin.pages.capital', [
-            'items' => $action->capitalSnapshots($request->only(['year', 'month', 'status'])),
-            'participants' => Participant::query()
-                ->orderBy('first_name')
-                ->orderBy('last_name')
-                ->get()
-                ->map(fn (Participant $p): array => [
-                    'id' => $p->getKey(),
-                    'name' => trim($p->first_name.' '.$p->last_name) ?: $p->username,
-                ]),
+            'items' => $action->capitalSnapshots($request->only(['status'])),
+            'participants' => $this->participantOptions(),
             'title' => 'رأس المال',
-            'filters' => $request->only(['year', 'month', 'status']),
+            'filters' => $request->only(['status']),
         ]);
     }
 
@@ -110,14 +97,7 @@ final class SidebarPageController
     {
         return view('admin.pages.depreciation', [
             'items' => $action->depreciationNotes($request->only(['year', 'month', 'fund'])),
-            'participants' => Participant::query()
-                ->orderBy('first_name')
-                ->orderBy('last_name')
-                ->get()
-                ->map(fn (Participant $p): array => [
-                    'id' => $p->getKey(),
-                    'name' => trim($p->first_name.' '.$p->last_name) ?: $p->username,
-                ]),
+            'participants' => $this->participantOptions(),
             'funds' => Fund::query()
                 ->orderBy('name')
                 ->get()
@@ -188,6 +168,21 @@ final class SidebarPageController
     private function percentFixed(string $ratio): string
     {
         return rtrim(rtrim(bcmul($ratio, '100', 4), '0'), '.');
+    }
+
+    /**
+     * @return Collection<int, array{id: int, name: string}>
+     */
+    private function participantOptions(): Collection
+    {
+        return Participant::query()
+            ->orderBy('first_name')
+            ->orderBy('last_name')
+            ->get()
+            ->map(fn (Participant $p): array => [
+                'id' => $p->getKey(),
+                'name' => ($p->code ? "[{$p->code}] " : '').(trim($p->first_name.' '.$p->last_name) ?: $p->username),
+            ]);
     }
 
     public function auditLogs(Request $request, AuditLogFilterRequest $filterRequest, QueryAuditLogsAction $action): View

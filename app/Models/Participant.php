@@ -6,6 +6,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -21,6 +22,7 @@ class Participant extends Authenticatable
         'first_name',
         'last_name',
         'username',
+        'code',
         'email',
         'password',
         'status',
@@ -92,7 +94,7 @@ class Participant extends Authenticatable
         return $this->hasMany(SupportTicket::class);
     }
 
-    public function settlements(): \Illuminate\Database\Eloquent\Relations\HasManyThrough
+    public function settlements(): HasManyThrough
     {
         return $this->hasManyThrough(
             Settlement::class,

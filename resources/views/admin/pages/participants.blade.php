@@ -16,8 +16,8 @@
 
 <form class="page-filter-bar" method="GET" action="{{ route('admin.participants') }}">
     <label>
-        بحث (الاسم / المستخدم)
-        <input name="search" value="{{ request('search') }}" placeholder="أحمد...">
+        بحث (الاسم / الكود / المستخدم)
+        <input name="search" value="{{ request('search') }}" placeholder="أحمد أو PC-100...">
     </label>
     <label>
         الحالة
@@ -42,6 +42,7 @@
                 <thead>
                     <tr>
                         <th>المشارك</th>
+                        <th>الكود</th>
                         <th>اسم المستخدم</th>
                         <th>البريد الإلكتروني</th>
                         <th>الحالة</th>
@@ -54,6 +55,7 @@
                     @foreach ($items as $item)
                         <tr>
                             <td><strong>{{ $item['name'] }}</strong></td>
+                            <td @if ($item['code'] !== '—') dir="ltr" @endif>{{ $item['code'] }}</td>
                             <td>{{ $item['username'] }}</td>
                             <td>{{ $item['email'] }}</td>
                             <td><span class="status-badge status-{{ $item['status'] }}">{{ $item['status'] === 'active' ? 'نشط' : 'غير نشط' }}</span></td>
@@ -101,6 +103,10 @@
                     <div class="om-field">
                         <label for="p_username">اسم المستخدم</label>
                         <input id="p_username" name="username" required dir="ltr">
+                    </div>
+                    <div class="om-field">
+                        <label for="p_code">كود المشارك</label>
+                        <input id="p_code" name="code" required dir="ltr" placeholder="PC-100">
                     </div>
                     <div class="om-field">
                         <label for="p_email">البريد الإلكتروني</label>
@@ -167,6 +173,10 @@
                     <div class="om-field">
                         <label for="pe_username">اسم المستخدم</label>
                         <input id="pe_username" name="username" dir="ltr">
+                    </div>
+                    <div class="om-field">
+                        <label for="pe_code">كود المشارك</label>
+                        <input id="pe_code" name="code" dir="ltr" placeholder="PC-100">
                     </div>
                     <div class="om-field">
                         <label for="pe_email">البريد الإلكتروني</label>

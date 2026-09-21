@@ -7,6 +7,7 @@ namespace Tests\Feature\Admin;
 use App\Models\Admin;
 use App\Models\CapitalSnapshot;
 use App\Models\CapitalSnapshotItem;
+use App\Models\DistributionRule;
 use App\Models\MonthlyProfit;
 use App\Models\Participant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -29,9 +30,9 @@ final class AdminCapitalCrudTest extends TestCase
         ]);
     }
 
-    private function rule(Admin $admin): \App\Models\DistributionRule
+    private function rule(Admin $admin): DistributionRule
     {
-        return \App\Models\DistributionRule::query()->create([
+        return DistributionRule::query()->create([
             'effective_from' => '2026-01-01',
             'management_fee_rate' => '0.1000',
             'depreciation_fund_rate' => '0.0500',
@@ -95,14 +96,14 @@ final class AdminCapitalCrudTest extends TestCase
 
         $this->withSession(['web_admin_id' => $admin->id])
             ->patchJson("/admin/capital/{$snapshot->id}", [
-                'year' => 2026,
-                'month' => 2,
+                'snapshot_date' => '2026-02-15',
             ])
             ->assertOk()
             ->assertJsonPath('success', true);
 
         $snapshot->refresh();
         $this->assertSame(2, (int) $snapshot->month);
+        $this->assertSame(2026, (int) $snapshot->year);
         $this->assertSame('10000.00', (string) $snapshot->total_capital);
     }
 
@@ -141,7 +142,7 @@ final class AdminCapitalCrudTest extends TestCase
         $this->assertDatabaseCount('capital_snapshots', 0);
     }
 
-    public function test_capital_snapshot_used_by_approved_profit_cannot_be_updated(): void
+    public function test_capital_snapshot_used_by_approved_profit_can_be_updated(): void
     {
         $admin = $this->admin();
         $snapshot = $this->snapshot($admin);
@@ -149,15 +150,16 @@ final class AdminCapitalCrudTest extends TestCase
 
         $this->withSession(['web_admin_id' => $admin->id])
             ->patchJson("/admin/capital/{$snapshot->id}", [
-                'month' => 3,
+                'snapshot_date' => '2026-03-20',
             ])
-            ->assertStatus(422);
+            ->assertOk()
+            ->assertJsonPath('success', true);
 
         $snapshot->refresh();
-        $this->assertSame(1, (int) $snapshot->month);
+        $this->assertSame(3, (int) $snapshot->month);
     }
 
-    public function test_capital_snapshot_used_by_approved_profit_cannot_be_deleted(): void
+    public function test_capital_snapshot_used_by_approved_profit_can_be_deleted(): void
     {
         $admin = $this->admin();
         $snapshot = $this->snapshot($admin);
@@ -165,9 +167,10 @@ final class AdminCapitalCrudTest extends TestCase
 
         $this->withSession(['web_admin_id' => $admin->id])
             ->deleteJson("/admin/capital/{$snapshot->id}")
-            ->assertStatus(422);
+            ->assertOk()
+            ->assertJsonPath('success', true);
 
-        $this->assertDatabaseHas('capital_snapshots', ['id' => $snapshot->id]);
+        $this->assertDatabaseMissing('capital_snapshots', ['id' => $snapshot->id]);
     }
 
     private function createApprovedProfitFor(CapitalSnapshot $snapshot): MonthlyProfit

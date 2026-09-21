@@ -1742,6 +1742,59 @@ td strong {
     color: #0F172A;
 }
 
+.row-actions .action-history {
+    color: var(--cyan);
+    background: var(--cyan-dim);
+    border: 1px solid rgba(0, 240, 255, .18);
+}
+
+.row-actions .action-history:hover {
+    background: var(--cyan);
+    color: #0F172A;
+}
+
+html.light .row-actions .action-history:hover {
+    color: #fff;
+}
+
+.history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.history-item {
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--panel);
+}
+
+.history-item-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 6px;
+}
+
+.history-item-head strong {
+    color: var(--text-head);
+    font-size: 12px;
+}
+
+.history-item-head span {
+    color: var(--text-faint);
+    font-size: 11px;
+}
+
+.history-item p {
+    margin: 0;
+    color: var(--text-body);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
 /* ═══════════════════════════════════════════════════════════
    STATUS BADGES
 ═══════════════════════════════════════════════════════════ */

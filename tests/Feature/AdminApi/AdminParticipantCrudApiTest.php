@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\AdminApi;
 
 use App\Models\Admin;
+use App\Models\AuditLog;
 use App\Models\Investment;
 use App\Models\Participant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -33,6 +34,7 @@ final class AdminParticipantCrudApiTest extends TestCase
             'first_name' => 'New',
             'last_name' => 'Participant',
             'username' => 'new.participant',
+            'code' => 'PC-NEW-01',
             'email' => 'new@example.com',
             'password' => 'secret123',
             'password_confirmation' => 'secret123',
@@ -45,6 +47,7 @@ final class AdminParticipantCrudApiTest extends TestCase
         self::assertTrue(Hash::check('secret123', $participant->password), 'Password must be stored hashed.');
         self::assertSame('participant', $participant->role);
         self::assertSame('active', $participant->status);
+        self::assertSame('PC-NEW-01', $participant->code);
         self::assertDatabaseHas('audit_logs', ['action' => 'participant_created']);
     }
 
@@ -55,7 +58,7 @@ final class AdminParticipantCrudApiTest extends TestCase
 
         $this->withToken($token)
             ->postJson('/api/v1/admin/participants', [
-                'first_name' => 'A', 'last_name' => 'B', 'username' => 'taken.name',
+                'first_name' => 'A', 'last_name' => 'B', 'username' => 'taken.name', 'code' => 'PC-TAKEN',
                 'password' => 'secret123', 'password_confirmation' => 'secret123', 'status' => 'active',
             ])
             ->assertStatus(422)
@@ -63,7 +66,7 @@ final class AdminParticipantCrudApiTest extends TestCase
 
         $this->withToken($token)
             ->postJson('/api/v1/admin/participants', [
-                'first_name' => 'A', 'last_name' => 'B', 'username' => 'fresh.name',
+                'first_name' => 'A', 'last_name' => 'B', 'username' => 'fresh.name', 'code' => 'PC-FRESH',
                 'password' => 'short', 'password_confirmation' => 'short', 'status' => 'active',
             ])
             ->assertStatus(422)
@@ -80,13 +83,47 @@ final class AdminParticipantCrudApiTest extends TestCase
                 'first_name' => 'Renamed',
                 'last_name' => 'Surname',
                 'username' => 'update.me',
+                'code' => 'PC-UPDATED-01',
                 'status' => 'inactive',
             ])
             ->assertOk()
             ->assertJsonPath('data.first_name', 'Renamed')
+            ->assertJsonPath('data.code', 'PC-UPDATED-01')
             ->assertJsonPath('data.status', 'inactive');
 
         self::assertDatabaseHas('audit_logs', ['action' => 'participant_updated']);
+    }
+
+    public function test_participants_can_be_searched_by_code_via_api(): void
+    {
+        $token = $this->admin()->createToken('admin-api', ['*'])->plainTextToken;
+        Participant::factory()->create(['username' => 'code.search.target', 'code' => 'PC-SKY-77']);
+
+        $this->withToken($token)
+            ->getJson('/api/v1/admin/participants?search=PC-SKY-77')
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.total', 1)
+            ->assertJsonPath('data.data.0.code', 'PC-SKY-77');
+    }
+
+    public function test_store_rejects_duplicate_code(): void
+    {
+        $token = $this->admin()->createToken('admin-api', ['*'])->plainTextToken;
+        Participant::factory()->create(['username' => 'holder.user', 'code' => 'PC-DUP-01']);
+
+        $this->withToken($token)
+            ->postJson('/api/v1/admin/participants', [
+                'first_name' => 'Dupe',
+                'last_name' => 'Code',
+                'username' => 'dupe.code',
+                'code' => 'PC-DUP-01',
+                'password' => 'secret123',
+                'password_confirmation' => 'secret123',
+                'status' => 'active',
+            ])
+            ->assertStatus(422)
+            ->assertJsonPath('success', false);
     }
 
     public function test_destroy_soft_deletes_clean_participant(): void
@@ -139,7 +176,7 @@ final class AdminParticipantCrudApiTest extends TestCase
 
         $this->withToken($token)
             ->postJson('/api/v1/admin/participants', [
-                'first_name' => 'A', 'last_name' => 'B', 'username' => 'no.create',
+                'first_name' => 'A', 'last_name' => 'B', 'username' => 'no.create', 'code' => 'PC-NO403',
                 'password' => 'secret123', 'password_confirmation' => 'secret123', 'status' => 'active',
             ])
             ->assertForbidden();
@@ -206,6 +243,6 @@ final class AdminParticipantCrudApiTest extends TestCase
             ->assertJsonPath('success', false);
 
         self::assertSame(1, Investment::query()->where('id', $investment->id)->where('status', 'approved')->count());
-        self::assertSame(1, \App\Models\AuditLog::query()->where('action', 'investment_approved')->where('auditable_id', $investment->id)->count());
+        self::assertSame(1, AuditLog::query()->where('action', 'investment_approved')->where('auditable_id', $investment->id)->count());
     }
 }

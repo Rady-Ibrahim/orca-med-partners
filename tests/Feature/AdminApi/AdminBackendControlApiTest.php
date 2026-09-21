@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\AdminApi;
 
+use App\Actions\Financial\ApproveMonthlyProfitAction;
+use App\Actions\Financial\CreateMonthlyProfitAction;
 use App\Models\Admin;
 use App\Models\AppSetting;
 use App\Models\CapitalSnapshot;
@@ -12,9 +14,9 @@ use App\Models\DistributionRule;
 use App\Models\Fund;
 use App\Models\Participant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
-use App\Domain\Financial\Exceptions\ImmutableFinancialRecordException;
 
 final class AdminBackendControlApiTest extends TestCase
 {
@@ -122,7 +124,7 @@ final class AdminBackendControlApiTest extends TestCase
         ]);
     }
 
-    public function test_capital_update_rejected_when_used_by_approved_profit(): void
+    public function test_capital_can_be_updated_when_used_by_approved_profit(): void
     {
         $token = $this->adminToken();
         $participant = Participant::factory()->create();
@@ -153,13 +155,14 @@ final class AdminBackendControlApiTest extends TestCase
             'distributed_share_rate' => '0.6500',
             'status' => 'active',
         ]);
-        $profit = app(\App\Actions\Financial\CreateMonthlyProfitAction::class)->execute(Admin::query()->first(), $snapshot, $rule, '100.00', 2026, 6);
-        app(\App\Actions\Financial\ApproveMonthlyProfitAction::class)->execute(Admin::query()->first(), $profit);
+        $profit = app(CreateMonthlyProfitAction::class)->execute(Admin::query()->first(), $snapshot, $rule, '100.00', 2026, 6);
+        app(ApproveMonthlyProfitAction::class)->execute(Admin::query()->first(), $profit);
 
         $this->withToken($token)
             ->patchJson("/api/v1/admin/capital/{$snapshot->id}", ['total_capital' => '300.00'])
-            ->assertStatus(422)
-            ->assertJsonPath('success', false);
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.total_capital', '300.00');
     }
 
     public function test_depreciation_notes_crud_and_approved_link_guard(): void
@@ -199,7 +202,7 @@ final class AdminBackendControlApiTest extends TestCase
         $this->assertDatabaseMissing('depreciation_notes', ['id' => $noteId]);
     }
 
-    public function test_depreciation_linked_to_approved_profit_cannot_be_deleted_via_api(): void
+    public function test_depreciation_linked_to_approved_profit_can_be_deleted_via_api(): void
     {
         $token = $this->adminToken();
         $admin = Admin::query()->firstOrFail();
@@ -225,15 +228,17 @@ final class AdminBackendControlApiTest extends TestCase
             'distributed_share_rate' => '0.6500',
             'status' => 'active',
         ]);
-        $profit = app(\App\Actions\Financial\CreateMonthlyProfitAction::class)->execute($admin, $snapshot, $rule, '100.00', 2026, 8);
-        app(\App\Actions\Financial\ApproveMonthlyProfitAction::class)->execute($admin, $profit);
+        $profit = app(CreateMonthlyProfitAction::class)->execute($admin, $snapshot, $rule, '100.00', 2026, 8);
+        app(ApproveMonthlyProfitAction::class)->execute($admin, $profit);
 
         $note = DepreciationNote::query()->where('monthly_profit_id', $profit->id)->firstOrFail();
 
         $this->withToken($token)
             ->deleteJson("/api/v1/admin/depreciation/{$note->id}")
-            ->assertStatus(422)
-            ->assertJsonPath('success', false);
+            ->assertOk()
+            ->assertJsonPath('success', true);
+
+        $this->assertDatabaseMissing('depreciation_notes', ['id' => $note->id]);
     }
 
     public function test_distribution_rules_index_store_show_update(): void
@@ -314,7 +319,7 @@ final class AdminBackendControlApiTest extends TestCase
             ->assertJsonPath('data.company_name', 'Orca Med')
             ->assertJsonPath('data.support_email', 'support@orcam.com');
 
-        $this->assertSame('"Orca Med"', \Illuminate\Support\Facades\DB::table('app_settings')->where('key', 'company_name')->value('value'));
+        $this->assertSame('"Orca Med"', DB::table('app_settings')->where('key', 'company_name')->value('value'));
     }
 
     public function test_admin_api_unified_error_envelope(): void

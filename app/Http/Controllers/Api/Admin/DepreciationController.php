@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\Admin;
 
-use App\Domain\Financial\Exceptions\ImmutableFinancialRecordException;
 use App\Models\DepreciationNote;
 use App\Models\Fund;
-use App\Models\MonthlyProfit;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -20,9 +18,9 @@ final class DepreciationController
 
         $notes = DepreciationNote::query()
             ->with(['participant', 'fund'])
-            ->when($request->filled('year'), fn($query) => $query->where('year', (int) $request->integer('year')))
-            ->when($request->filled('month'), fn($query) => $query->where('month', (int) $request->integer('month')))
-            ->when($request->filled('fund_id'), fn($query) => $query->where('fund_id', (int) $request->integer('fund_id')))
+            ->when($request->filled('year'), fn ($query) => $query->where('year', (int) $request->integer('year')))
+            ->when($request->filled('month'), fn ($query) => $query->where('month', (int) $request->integer('month')))
+            ->when($request->filled('fund_id'), fn ($query) => $query->where('fund_id', (int) $request->integer('fund_id')))
             ->latest('transaction_date')
             ->paginate((int) $request->integer('per_page', 15))
             ->withQueryString();
@@ -46,14 +44,6 @@ final class DepreciationController
             'fund_id' => ['nullable', 'integer', 'exists:funds,id'],
             'monthly_profit_id' => ['nullable', 'integer', 'exists:monthly_profits,id'],
         ]);
-
-        if (isset($data['monthly_profit_id'])
-            && MonthlyProfit::query()->where('id', (int) $data['monthly_profit_id'])->where('status', 'approved')->exists()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Depreciation notes cannot be linked to an approved profit period.',
-            ], 422);
-        }
 
         $admin = $request->user();
 
@@ -93,11 +83,7 @@ final class DepreciationController
             'admin_note' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        try {
-            $depreciationNote->fill($data)->save();
-        } catch (ImmutableFinancialRecordException $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
-        }
+        $depreciationNote->fill($data)->save();
 
         return response()->json([
             'success' => true,
@@ -109,11 +95,7 @@ final class DepreciationController
     {
         Gate::forUser($request->user())->authorize('depreciation.update');
 
-        try {
-            $depreciationNote->delete();
-        } catch (ImmutableFinancialRecordException $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
-        }
+        $depreciationNote->delete();
 
         return response()->json(['success' => true, 'message' => 'Depreciation note deleted.']);
     }

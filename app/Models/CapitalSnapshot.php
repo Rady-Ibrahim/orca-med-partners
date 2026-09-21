@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Domain\Financial\Exceptions\ImmutableFinancialRecordException;
 use App\Services\SecurityAuditService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -41,18 +40,54 @@ class CapitalSnapshot extends Model
         static::updated(function (self $snapshot): void {
             app(SecurityAuditService::class)->log('capital_snapshot_updated', $snapshot->created_by_admin_id ? Admin::query()->find($snapshot->created_by_admin_id) : null, 'capital_snapshot', $snapshot->id, ['old' => $snapshot->getOriginal(), 'new' => $snapshot->only(['snapshot_date', 'year', 'month', 'total_capital', 'status'])]);
         });
+    }
 
-        static::updating(function (self $snapshot) {
-            if (MonthlyProfit::query()->where('capital_snapshot_id', $snapshot->id)->where('status', 'approved')->exists()) {
-                throw new ImmutableFinancialRecordException('Capital snapshots used by approved financial calculations are immutable.');
-            }
-        });
+    public function syncItems(array $items, ?Admin $actor): void
+    {
+        $oldItems = $this->items->keyBy('participant_id');
 
-        static::deleting(function (self $snapshot) {
-            if (MonthlyProfit::query()->where('capital_snapshot_id', $snapshot->id)->where('status', 'approved')->exists()) {
-                throw new ImmutableFinancialRecordException('Capital snapshots used by approved financial calculations cannot be deleted.');
+        $totalCapital = '0.00';
+        foreach ($items as $item) {
+            $totalCapital = bcadd($totalCapital, number_format((float) $item['capital'], 2, '.', ''), 2);
+        }
+
+        $this->items()->delete();
+
+        foreach ($items as $index => $item) {
+            $capital = number_format((float) $item['capital'], 2, '.', '');
+            $ratio = bccomp($totalCapital, '0.00', 2) === 0
+                ? '0.0000'
+                : bcdiv($capital, $totalCapital, 4);
+
+            $created = CapitalSnapshotItem::query()->create([
+                'capital_snapshot_id' => $this->id,
+                'participant_id' => (int) $item['participant_id'],
+                'participant_capital_snapshot' => $capital,
+                'participant_ratio_snapshot' => $ratio,
+                'calculation_metadata' => ['index' => $index],
+            ]);
+
+            $old = $oldItems->get((int) $item['participant_id']);
+            if ($old === null || bccomp((string) $old->participant_capital_snapshot, $capital, 2) === 0) {
+                continue;
             }
-        });
+
+            app(SecurityAuditService::class)->log(
+                'capital_snapshot_item_updated',
+                $actor,
+                'capital_snapshot_item',
+                $created->id,
+                [
+                    'snapshot_id' => $this->id,
+                    'participant_id' => (int) $item['participant_id'],
+                    'old_capital' => (string) $old->participant_capital_snapshot,
+                    'new_capital' => $capital,
+                ],
+            );
+        }
+
+        $this->total_capital = $totalCapital;
+        $this->save();
     }
 
     public function items(): HasMany

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Domain\Financial\Exceptions\ImmutableFinancialRecordException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -32,21 +31,6 @@ class SettlementItem extends Model
             'paid_amount' => 'decimal:2',
             'paid_at' => 'datetime',
         ];
-    }
-
-    protected static function booted(): void
-    {
-        static::updating(function (self $item) {
-            if ($item->settlement()->whereIn('status', ['approved', 'paid', 'cancelled'])->exists()) {
-                throw new ImmutableFinancialRecordException('Settlement items for finalized settlements are immutable.');
-            }
-        });
-
-        static::deleting(function (self $item) {
-            if ($item->settlement()->whereIn('status', ['approved', 'paid', 'cancelled'])->exists()) {
-                throw new ImmutableFinancialRecordException('Settlement items for finalized settlements cannot be deleted.');
-            }
-        });
     }
 
     public function settlement(): BelongsTo

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Domain\Financial\Exceptions\ImmutableFinancialRecordException;
 use App\Services\ParticipantNotificationService;
 use App\Services\SecurityAuditService;
 use Illuminate\Database\Eloquent\Model;
@@ -36,12 +35,6 @@ class Investment extends Model
 
     protected static function booted(): void
     {
-        static::deleting(function (self $investment): void {
-            if ($investment->approved_at !== null) {
-                throw new ImmutableFinancialRecordException('Approved investments cannot be deleted.');
-            }
-        });
-
         static::updated(function (self $investment): void {
             app(SecurityAuditService::class)->log('investment_updated', $investment->created_by_admin_id ? Admin::query()->find($investment->created_by_admin_id) : null, 'investment', $investment->id, ['old' => $investment->getOriginal(), 'new' => $investment->only(['participant_id', 'amount', 'invested_at', 'status', 'approved_at'])]);
             if (! $investment->participant) {

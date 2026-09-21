@@ -22,20 +22,20 @@ class Fund extends Model
         'created_by_admin_id',
     ];
 
-    protected static function booted(): void
-    {
-        static::deleting(function (self $fund): void {
-            if ($fund->transactions()->exists()) {
-                throw new ImmutableFinancialRecordException('Funds with a transaction history cannot be deleted.');
-            }
-        });
-    }
-
     protected function casts(): array
     {
         return [
             'current_balance' => 'decimal:2',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::deleting(function (Fund $fund): void {
+            if (in_array($fund->code, ['depreciation_fund', 'growth_fund', 'incentive_fund'], true)) {
+                throw new ImmutableFinancialRecordException('الصناديق البرمجية الأساسية لا يمكن حذفها.');
+            }
+        });
     }
 
     public function transactions(): HasMany

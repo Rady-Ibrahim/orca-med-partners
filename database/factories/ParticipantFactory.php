@@ -21,6 +21,7 @@ class ParticipantFactory extends Factory
             'first_name' => $this->faker->firstName(),
             'last_name' => $this->faker->lastName(),
             'username' => $this->faker->unique()->userName(),
+            'code' => strtoupper(uniqid('PC-')),
             'email' => $this->faker->unique()->safeEmail(),
             'password' => Hash::make('password'),
             'status' => 'active',

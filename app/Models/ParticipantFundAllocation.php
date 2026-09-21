@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Domain\Financial\Exceptions\ImmutableFinancialRecordException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -19,16 +18,6 @@ class ParticipantFundAllocation extends Model
         'amount',
         'allocation_type',
     ];
-
-    protected static function booted(): void
-    {
-        static::deleting(function (self $allocation): void {
-            if ($allocation->monthly_profit_id !== null
-                && $allocation->monthlyProfit?->status === 'approved') {
-                throw new ImmutableFinancialRecordException('Fund allocations linked to an approved profit period cannot be deleted.');
-            }
-        });
-    }
 
     protected function casts(): array
     {
