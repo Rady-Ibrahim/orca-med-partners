@@ -62,6 +62,15 @@
                 </tr>
             @endforelse
         </tbody>
+        @if (! empty($reportTotals))
+            <tfoot>
+                <tr>
+                    @foreach ($columns as $key => $column)
+                        <td><strong>{{ $reportTotals[$key] ?? '—' }}</strong></td>
+                    @endforeach
+                </tr>
+            </tfoot>
+        @endif
     </table>
 </body>
 

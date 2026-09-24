@@ -103,12 +103,20 @@ private function wireFundComponents(MonthlyProfit $profit, MonthlyProfitCalculat
                 continue;
             }
 
-            foreach ($result->participantAllocations as $allocation) {
+            $shares = array_map(
+                static fn (array $allocation): array => [
+                    'participant_id' => $allocation['participant_id'],
+                    'amount' => bcmul($amount, $allocation['share_ratio'], 8),
+                ],
+                $result->participantAllocations,
+            );
+
+            foreach ($this->exactAmounts($amount, $shares) as $share) {
                 ParticipantFundAllocation::query()->create([
                     'fund_id' => $fund->id,
                     'monthly_profit_id' => $profit->id,
-                    'participant_id' => $allocation['participant_id'],
-                    'amount' => $this->rounding->money(bcmul($amount, $allocation['share_ratio'], 8)),
+                    'participant_id' => $share['participant_id'],
+                    'amount' => $share['amount'],
                     'allocation_type' => $type,
                 ]);
             }
@@ -135,5 +143,53 @@ private function wireFundComponents(MonthlyProfit $profit, MonthlyProfitCalculat
     private function fundByCode(string $code): ?Fund
     {
         return Fund::resolveSystemFund($code);
+    }
+
+    /**
+     * Rounds raw per-participant amounts and redistributes the residual so the
+     * stored shares sum to exactly the assigned fund amount.
+     *
+     * @param array<int, array{participant_id:int, amount:string}> $shares
+     * @return array<int, array{participant_id:int, amount:string}>
+     */
+    private function exactAmounts(string $total, array $shares): array
+    {
+        $normalized = [];
+        $sum = '0.00';
+        foreach ($shares as $share) {
+            $amount = $this->rounding->money($share['amount']);
+            $sum = bcadd($sum, $amount, 2);
+            $normalized[] = ['participant_id' => $share['participant_id'], 'amount' => $amount];
+        }
+
+        $delta = bcsub($total, $sum, 2);
+        if (bccomp($delta, '0', 2) === 0 || $normalized === []) {
+            return $normalized;
+        }
+
+        $indexes = array_keys($normalized);
+        usort(
+            $indexes,
+            static fn (int $a, int $b): int => bccomp($normalized[$b]['amount'], $normalized[$a]['amount'], 2),
+        );
+
+        $remaining = $delta;
+        $cursor = 0;
+        while (bccomp($remaining, '0', 2) !== 0 && $cursor < count($indexes)) {
+            $index = $indexes[$cursor];
+            $candidate = $this->rounding->money(bcadd($normalized[$index]['amount'], $remaining, 2));
+
+            if (bccomp($candidate, '0', 2) < 0) {
+                $normalized[$index]['amount'] = '0.00';
+                $remaining = $candidate;
+                $cursor++;
+                continue;
+            }
+
+            $normalized[$index]['amount'] = $candidate;
+            $remaining = '0.00';
+        }
+
+        return $normalized;
     }
 }

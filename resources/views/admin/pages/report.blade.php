@@ -1,6 +1,20 @@
 @extends('admin.pages.layout')
 
 @section('content')
+    <style>
+        .table-panel tfoot td {
+            background: #f4ecd9;
+            color: #7a5c0e;
+            font-weight: 700;
+            border-top: 2px solid #d4af37;
+        }
+
+        .table-panel tfoot td {
+            position: sticky;
+            bottom: 0;
+        }
+    </style>
+
     <div class="admin-page-header">
         <div>
             <p class="eyebrow">التقارير المالية</p>
@@ -56,6 +70,15 @@
                         </tr>
                     @endforelse
                 </tbody>
+                @if ($reportTotals)
+                    <tfoot>
+                        <tr>
+                            @foreach ($columns as $key => $column)
+                                <td class="totals-cell">{{ $reportTotals[$key] ?? '—' }}</td>
+                            @endforeach
+                        </tr>
+                    </tfoot>
+                @endif
             </table>
         </div>
         <div class="pagination-wrap">{{ $items->links() }}</div>

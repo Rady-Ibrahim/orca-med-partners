@@ -106,6 +106,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/me/capital', [DashboardController::class, 'capital']);
         Route::get('/me/capital/growth', [DashboardController::class, 'capitalGrowth']);
         Route::get('/me/profits', [DashboardController::class, 'profits']);
+        Route::get('/me/financial/summary', [DashboardController::class, 'financialSummary']);
         Route::get('/me/funds', [DashboardController::class, 'funds']);
         Route::get('/me/depreciation', [DashboardController::class, 'depreciation']);
         Route::get('/me/settlements', [DashboardController::class, 'settlements']);

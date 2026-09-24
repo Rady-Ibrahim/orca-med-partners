@@ -49,19 +49,7 @@ final class FinancialCalculationService implements FinancialCalculationServiceCo
 
         $amount = fn(string $rate): string => $this->rounding->money(bcmul($grossProfit, $rate, 8));
         $distributedPool = $amount($ruleSnapshot['distributed_share_rate']);
-        $allocations = [];
-        $roundedTotal = '0.00';
-
-        foreach ($items as $item) {
-            $ratio = $this->rounding->rate(bcdiv((string) $item->participant_capital_snapshot, $totalCapital, 8));
-            $allocation = $this->rounding->money(bcmul($distributedPool, $ratio, 8));
-            $roundedTotal = bcadd($roundedTotal, $allocation, 2);
-            $allocations[] = [
-                'participant_id' => (int) $item->participant_id,
-                'amount' => $allocation,
-                'share_ratio' => $ratio,
-            ];
-        }
+        $allocations = $this->allocateExactly($distributedPool, $items, $totalCapital);
 
         return new MonthlyProfitCalculationResult(
             grossProfit: $this->rounding->money($grossProfit),
@@ -73,8 +61,89 @@ final class FinancialCalculationService implements FinancialCalculationServiceCo
             distributedPool: $distributedPool,
             totalParticipantCapital: $this->rounding->money($totalCapital),
             participantAllocations: $allocations,
-            roundedAllocationsTotal: $roundedTotal,
-            roundingDelta: bcsub($distributedPool, $roundedTotal, 2),
+            roundedAllocationsTotal: $distributedPool,
+            roundingDelta: '0.00',
         );
+    }
+
+    /**
+     * Allocates the pool across participants so that the stored ratios sum to
+     * exactly 1.0000 and the individual rounded amounts sum to exactly the pool.
+     *
+     * @return array<int, array{participant_id:int, amount:string, share_ratio:string}>
+     */
+    private function allocateExactly(string $distributedPool, iterable $items, string $totalCapital): array
+    {
+        $entries = [];
+        $ratioSum = '0.0000';
+        $largestIndex = 0;
+        $largestRatio = '-1';
+
+        foreach ($items as $item) {
+            $ratio = $this->rounding->rate(bcdiv((string) $item->participant_capital_snapshot, $totalCapital, 8));
+            $ratioSum = bcadd($ratioSum, $ratio, 4);
+            $entries[] = ['participant_id' => (int) $item->participant_id, 'ratio' => $ratio];
+            if (bccomp($ratio, $largestRatio, 4) > 0) {
+                $largestRatio = $ratio;
+                $largestIndex = count($entries) - 1;
+            }
+        }
+
+        $ratioDelta = bcsub('1.0000', $ratioSum, 4);
+        if (bccomp($ratioDelta, '0', 4) !== 0 && $entries !== []) {
+            $entries[$largestIndex]['ratio'] = $this->rounding->rate(bcadd($entries[$largestIndex]['ratio'], $ratioDelta, 4));
+        }
+
+        $allocations = [];
+        foreach ($entries as $entry) {
+            $allocations[] = [
+                'participant_id' => $entry['participant_id'],
+                'amount' => $this->rounding->money(bcmul($distributedPool, $entry['ratio'], 8)),
+                'share_ratio' => $entry['ratio'],
+            ];
+        }
+
+        return $this->applyAmountDelta($distributedPool, $allocations);
+    }
+
+    /** @param array<int, array{participant_id:int, amount:string, share_ratio:string}> $allocations */
+    private function applyAmountDelta(string $pool, array $allocations): array
+    {
+        if ($allocations === []) {
+            return $allocations;
+        }
+
+        $total = '0.00';
+        foreach ($allocations as $allocation) {
+            $total = bcadd($total, $allocation['amount'], 2);
+        }
+
+        $delta = bcsub($pool, $total, 2);
+        if (bccomp($delta, '0', 2) === 0) {
+            return $allocations;
+        }
+
+        $byAmount = $allocations;
+        uasort($byAmount, static fn (array $a, array $b): int => bccomp($b['amount'], $a['amount'], 2));
+        $indexes = array_keys($byAmount);
+
+        $remaining = $delta;
+        $cursor = 0;
+        while (bccomp($remaining, '0', 2) !== 0 && $cursor < count($indexes)) {
+            $index = $indexes[$cursor];
+            $candidate = $this->rounding->money(bcadd($allocations[$index]['amount'], $remaining, 2));
+
+            if (bccomp($candidate, '0', 2) < 0) {
+                $allocations[$index]['amount'] = '0.00';
+                $remaining = $candidate;
+                $cursor++;
+                continue;
+            }
+
+            $allocations[$index]['amount'] = $candidate;
+            $remaining = '0.00';
+        }
+
+        return $allocations;
     }
 }

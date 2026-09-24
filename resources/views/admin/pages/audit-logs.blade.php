@@ -31,7 +31,7 @@
                             <th>الحدث</th>
                             <th>المستخدم</th>
                             <th>الكائن</th>
-                            <th>النوع</th>
+                            <th>الأداة</th>
                             <th>التاريخ</th>
                         </tr>
                     </thead>
@@ -39,10 +39,14 @@
                         @foreach ($items as $item)
                             <tr>
                                 <td><a class="text-link"
-                                        href="{{ route('admin.audit-logs.show', $item->id) }}">{{ $item->action }}</a></td>
-                                <td>{{ $item->actor_type }}:{{ $item->actor_id }}</td>
-                                <td>{{ $item->auditable_type }}:{{ $item->auditable_id }}</td>
-                                <td><span class="status-badge status-info">{{ $item->action }}</span></td>
+                                        href="{{ route('admin.audit-logs.show', $item->id) }}">{{ \App\Support\AuditLogPresenter::action($item->action) }}</a>
+                                </td>
+                                <td>{{ \App\Support\AuditLogPresenter::actor($item->actor_type, (string) $item->actor_id) }}
+                                </td>
+                                <td>{{ \App\Support\AuditLogPresenter::entity($item->auditable_type) }} #{{ $item->auditable_id }}
+                                </td>
+                                <td><span class="status-badge status-info">{{ \App\Support\AuditLogPresenter::action($item->action) }}</span>
+                                </td>
                                 <td>{{ $item->created_at?->format('Y-m-d H:i') }}</td>
                             </tr>
                         @endforeach

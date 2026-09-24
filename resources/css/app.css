@@ -1220,6 +1220,8 @@ html.light .notification-row.unread .notification-dot {
     background: linear-gradient(135deg, rgba(0, 240, 255, .1) 0%, rgba(59, 130, 246, .08) 100%);
     border-color: rgba(0, 240, 255, .25);
     box-shadow: var(--shadow-glow);
+    grid-column: span 2;
+    padding: 22px 24px;
 }
 
 html.light .kpi-primary {
@@ -1236,7 +1238,7 @@ html.light .kpi-primary {
 }
 
 .kpi-primary strong {
-    font-size: 22px;
+    font-size: 30px;
 }
 
 .kpi-icon {

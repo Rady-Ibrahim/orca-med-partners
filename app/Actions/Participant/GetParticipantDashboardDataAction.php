@@ -7,6 +7,7 @@ namespace App\Actions\Participant;
 use App\Models\CapitalSnapshotItem;
 use App\Models\DepreciationNote;
 use App\Models\Investment;
+use App\Models\MonthlyProfit;
 use App\Models\Notification;
 use App\Models\Participant;
 use App\Models\ParticipantFundAllocation;
@@ -58,6 +59,130 @@ final class GetParticipantDashboardDataAction
     public function notifications(Participant $participant, array $filters): LengthAwarePaginator
     {
         return Notification::query()->where('participant_id', $participant->id)->when(array_key_exists('read', $filters), fn($query) => $query->where('is_read', (bool) $filters['read']))->latest('created_at')->paginate(20)->through(fn(Notification $notification): array => ['id' => $notification->id, 'type' => $notification->type, 'title' => $notification->title, 'message' => $notification->body, 'data' => is_array($notification->metadata) ? $notification->metadata : [], 'read' => $notification->is_read, 'created_at' => $notification->created_at?->toISOString()]);
+    }
+
+    public function financialSummary(Participant $participant, array $filters = []): array
+    {
+        $year = isset($filters['year']) ? (int) $filters['year'] : null;
+
+        $profits = MonthlyProfit::query()
+            ->where('status', 'approved')
+            ->when($year !== null, function ($query) use ($year): void {
+                $query->where('year', $year);
+            })
+            ->orderBy('year')
+            ->orderBy('month')
+            ->get();
+
+        if ($year === null) {
+            $year = (int) ($profits->max('year') ?? now()->year);
+            $profits = $profits->where('year', $year)->values();
+        }
+
+        $profitIds = $profits->pluck('id');
+
+        $profitAllocations = ParticipantProfitAllocation::query()
+            ->where('participant_id', $participant->id)
+            ->whereIn('monthly_profit_id', $profitIds)
+            ->get()
+            ->keyBy('monthly_profit_id');
+
+        $fundAllocations = ParticipantFundAllocation::query()
+            ->where('participant_id', $participant->id)
+            ->whereIn('monthly_profit_id', $profitIds)
+            ->get();
+
+        $fundsByMonth = $fundAllocations->groupBy('monthly_profit_id');
+
+        $totals = [
+            'gross' => '0.00',
+            'management' => '0.00',
+            'depreciation' => '0.00',
+            'growth' => '0.00',
+            'incentive' => '0.00',
+            'distributed' => '0.00',
+            'profit_share' => '0.00',
+            'growth_share' => '0.00',
+            'incentive_share' => '0.00',
+            'months' => 0,
+        ];
+
+        $monthly = [];
+        foreach ($profits->sortBy(fn($profit) => sprintf('%04d/%02d', $profit->year, $profit->month)) as $profit) {
+            $share = $profitAllocations->get($profit->id);
+            $growth = $fundsByMonth->get($profit->id)->firstWhere('allocation_type', 'growth');
+            $incentive = $fundsByMonth->get($profit->id)->firstWhere('allocation_type', 'incentive');
+
+            $growthAmount = $growth ? (string) $growth->amount : '0.00';
+            $incentiveAmount = $incentive ? (string) $incentive->amount : '0.00';
+
+            $totals['gross'] = bcadd($totals['gross'], (string) $profit->gross_profit, 2);
+            $totals['management'] = bcadd($totals['management'], (string) $profit->management_amount, 2);
+            $totals['depreciation'] = bcadd($totals['depreciation'], (string) $profit->depreciation_amount, 2);
+            $totals['growth'] = bcadd($totals['growth'], (string) $profit->growth_amount, 2);
+            $totals['incentive'] = bcadd($totals['incentive'], (string) $profit->incentive_amount, 2);
+            $totals['distributed'] = bcadd($totals['distributed'], (string) $profit->distributed_amount, 2);
+            $totals['profit_share'] = bcadd($totals['profit_share'], $share ? (string) $share->amount : '0.00', 2);
+            $totals['growth_share'] = bcadd($totals['growth_share'], $growthAmount, 2);
+            $totals['incentive_share'] = bcadd($totals['incentive_share'], $incentiveAmount, 2);
+            $totals['months']++;
+
+            $monthly[] = [
+                'year' => $profit->year,
+                'month' => $profit->month,
+                'period' => sprintf('%04d/%02d', $profit->year, $profit->month),
+                'gross_profit' => (string) $profit->gross_profit,
+                'management_amount' => (string) $profit->management_amount,
+                'depreciation_amount' => (string) $profit->depreciation_amount,
+                'growth_amount' => (string) $profit->growth_amount,
+                'incentive_amount' => (string) $profit->incentive_amount,
+                'distributed_amount' => (string) $profit->distributed_amount,
+                'my_profit_share' => $share ? (string) $share->amount : '0.00',
+                'my_growth_share' => $growthAmount,
+                'my_incentive_share' => $incentiveAmount,
+                'status' => $profit->status,
+                'approved_at' => $profit->approved_at?->toISOString(),
+            ];
+        }
+
+        $settlementItem = SettlementItem::query()
+            ->where('participant_id', $participant->id)
+            ->whereHas('settlement', fn($query) => $query->where('year', $year)->where('status', '!=', 'cancelled'))
+            ->latest('id')
+            ->first();
+
+        $capitalItem = CapitalSnapshotItem::query()
+            ->with('capitalSnapshot')
+            ->where('participant_id', $participant->id)
+            ->whereHas('capitalSnapshot', fn($query) => $query->whereNotNull('total_capital'))
+            ->latest('id')
+            ->first();
+
+        return [
+            'year' => $year,
+            'kpi' => [
+                'total_gross_profit' => $totals['gross'],
+                'management_amount' => $totals['management'],
+                'depreciation_amount' => $totals['depreciation'],
+                'growth_amount' => $totals['growth'],
+                'incentive_amount' => $totals['incentive'],
+                'distributed_amount' => $totals['distributed'],
+                'approved_month_count' => $totals['months'],
+            ],
+            'participant' => [
+                'total_approved_profit_share' => $totals['profit_share'],
+                'growth_fund_share' => $totals['growth_share'],
+                'incentive_fund_share' => $totals['incentive_share'],
+                'total_fund_shares' => bcadd($totals['growth_share'], $totals['incentive_share'], 2),
+                'capital' => $capitalItem ? (string) $capitalItem->participant_capital_snapshot : null,
+                'capital_ratio' => $capitalItem ? (string) $capitalItem->participant_ratio_snapshot : null,
+                'settlement_amount_due' => $settlementItem ? (string) $settlementItem->net_payable : '0.00',
+                'settlement_paid_amount' => $settlementItem ? (string) $settlementItem->paid_amount : '0.00',
+                'settlement_remaining' => $settlementItem ? bcsub((string) $settlementItem->net_payable, (string) $settlementItem->paid_amount, 2) : '0.00',
+            ],
+            'net_profitability_kpi' => bcadd($totals['profit_share'], bcadd($totals['growth_share'], $totals['incentive_share'], 2), 2),
+            'monthly_details' => $monthly,
+        ];
     }
 
     public function settlement(Participant $participant, Settlement $settlement): array

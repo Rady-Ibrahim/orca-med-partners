@@ -38,6 +38,11 @@ final class DashboardController
         return $this->success($action->profits($this->participant($request), $request->filters()));
     }
 
+    public function financialSummary(Request $request, GetParticipantDashboardDataAction $action): JsonResponse
+    {
+        return $this->success($action->financialSummary($this->participant($request), $request->only(['year'])));
+    }
+
     public function funds(ParticipantCollectionRequest $request, GetParticipantDashboardDataAction $action): JsonResponse
     {
         return $this->success($action->funds($this->participant($request), $request->filters()));

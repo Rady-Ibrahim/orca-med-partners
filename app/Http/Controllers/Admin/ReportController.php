@@ -27,6 +27,7 @@ final class ReportController
             'columns' => $reports->columns($report),
             'items' => $items,
             'rows' => $reports->normalize($items->getCollection(), $report),
+            'reportTotals' => $reports->totals($report, $request->filters()),
             'filters' => $request->filters(),
             'reportOptions' => ReportDataAction::REPORTS,
         ]);
@@ -51,6 +52,7 @@ final class ReportController
             'title' => $reports->title($report),
             'columns' => $reports->columns($report),
             'rows' => $normalized,
+            'reportTotals' => $reports->totals($report, $request->filters()),
             'filters' => $request->filters(),
         ])->setPaper('a4', 'landscape')->download($report . '-report.pdf');
     }
