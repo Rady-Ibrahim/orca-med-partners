@@ -9,12 +9,14 @@ use App\Domain\Financial\Exceptions\InvalidGrossProfitException;
 use App\Domain\Financial\ValueObjects\FinancialRoundingService;
 use App\Domain\Financial\ValueObjects\MonthlyProfitCalculationResult;
 use App\Models\CapitalSnapshot;
+use App\Models\CapitalSnapshotItem;
 use App\Models\DistributionRule;
 
 final class FinancialCalculationService implements FinancialCalculationServiceContract
 {
     public function __construct(
         private FinancialRoundingService $rounding,
+        private CapitalCalculatorService $capital,
     ) {}
 
     /** @param array<string, string>|null $ruleSnapshot */
@@ -35,11 +37,13 @@ final class FinancialCalculationService implements FinancialCalculationServiceCo
 
         $items = $snapshot->items()->lockForUpdate()->get();
         $totalCapital = '0';
+        $capitals = [];
         foreach ($items as $item) {
             $capital = (string) $item->participant_capital_snapshot;
             if (bccomp($capital, '0', 2) < 0) {
                 throw new InvalidCapitalSnapshotException('Capital snapshot values cannot be negative.');
             }
+            $capitals[(int) $item->participant_id] = $capital;
             $totalCapital = bcadd($totalCapital, $capital, 2);
         }
 
@@ -49,7 +53,7 @@ final class FinancialCalculationService implements FinancialCalculationServiceCo
 
         $amount = fn(string $rate): string => $this->rounding->money(bcmul($grossProfit, $rate, 8));
         $distributedPool = $amount($ruleSnapshot['distributed_share_rate']);
-        $allocations = $this->allocateExactly($distributedPool, $items, $totalCapital);
+        $allocations = $this->allocateExactly($distributedPool, $items, $capitals);
 
         return new MonthlyProfitCalculationResult(
             grossProfit: $this->rounding->money($grossProfit),
@@ -70,36 +74,25 @@ final class FinancialCalculationService implements FinancialCalculationServiceCo
      * Allocates the pool across participants so that the stored ratios sum to
      * exactly 1.0000 and the individual rounded amounts sum to exactly the pool.
      *
+     * Ratios come from {@see CapitalCalculatorService::recalculateRatios()} so a
+     * participant's ownership ratio on the capital page is byte-identical to the
+     * share ratio used when their profit is distributed.
+     *
+     * @param  iterable<CapitalSnapshotItem>  $items
+     * @param  array<int, string>  $capitals
      * @return array<int, array{participant_id:int, amount:string, share_ratio:string}>
      */
-    private function allocateExactly(string $distributedPool, iterable $items, string $totalCapital): array
+    private function allocateExactly(string $distributedPool, iterable $items, array $capitals): array
     {
-        $entries = [];
-        $ratioSum = '0.0000';
-        $largestIndex = 0;
-        $largestRatio = '-1';
-
-        foreach ($items as $item) {
-            $ratio = $this->rounding->rate(bcdiv((string) $item->participant_capital_snapshot, $totalCapital, 8));
-            $ratioSum = bcadd($ratioSum, $ratio, 4);
-            $entries[] = ['participant_id' => (int) $item->participant_id, 'ratio' => $ratio];
-            if (bccomp($ratio, $largestRatio, 4) > 0) {
-                $largestRatio = $ratio;
-                $largestIndex = count($entries) - 1;
-            }
-        }
-
-        $ratioDelta = bcsub('1.0000', $ratioSum, 4);
-        if (bccomp($ratioDelta, '0', 4) !== 0 && $entries !== []) {
-            $entries[$largestIndex]['ratio'] = $this->rounding->rate(bcadd($entries[$largestIndex]['ratio'], $ratioDelta, 4));
-        }
+        $ratios = $this->capital->recalculateRatios($capitals);
 
         $allocations = [];
-        foreach ($entries as $entry) {
+        foreach ($items as $item) {
+            $ratio = $ratios[(int) $item->participant_id];
             $allocations[] = [
-                'participant_id' => $entry['participant_id'],
-                'amount' => $this->rounding->money(bcmul($distributedPool, $entry['ratio'], 8)),
-                'share_ratio' => $entry['ratio'],
+                'participant_id' => (int) $item->participant_id,
+                'amount' => $this->rounding->money(bcmul($distributedPool, $ratio, 8)),
+                'share_ratio' => $ratio,
             ];
         }
 

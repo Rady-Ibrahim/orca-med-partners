@@ -20,6 +20,7 @@ use App\Domain\Financial\Exceptions\InvalidAnnualSettlementException;
 use App\Domain\Financial\Exceptions\InvalidCapitalSnapshotException;
 use App\Domain\Financial\Exceptions\InvalidGrossProfitException;
 use App\Domain\Financial\Rules\DistributionRuleValidator;
+use App\Domain\Financial\Services\CapitalCalculatorService;
 use App\Domain\Financial\Services\FundBalanceService;
 use App\Http\Requests\StoreFundRequest;
 use App\Http\Requests\StoreFundTransactionRequest;
@@ -27,7 +28,6 @@ use App\Http\Requests\StoreSettlementPaymentRequest;
 use App\Http\Requests\UpdateFundRequest;
 use App\Models\AppSetting;
 use App\Models\CapitalSnapshot;
-use App\Models\CapitalSnapshotItem;
 use App\Models\DepreciationNote;
 use App\Models\DistributionRule;
 use App\Models\Fund;
@@ -51,6 +51,7 @@ final class AdminActionsController
     public function __construct(
         private FundBalanceService $funds,
         private SecurityAuditService $audit,
+        private CapitalCalculatorService $capital,
     ) {}
 
     public function storeMonthlyProfit(Request $request, CreateMonthlyProfitAction $action): JsonResponse|RedirectResponse
@@ -474,34 +475,18 @@ final class AdminActionsController
         $snapshotDate = Carbon::parse($data['snapshot_date']);
 
         $snapshot = DB::transaction(function () use ($data, $snapshotDate, $request): CapitalSnapshot {
-            $totalCapital = '0.00';
-            foreach ($data['items'] as $item) {
-                $totalCapital = bcadd($totalCapital, number_format((float) $item['capital'], 2, '.', ''), 2);
-            }
+            $normalized = $this->capital->normalizeItems($data['items']);
 
             $snapshot = CapitalSnapshot::query()->create([
                 'snapshot_date' => $data['snapshot_date'],
                 'year' => $snapshotDate->year,
                 'month' => $snapshotDate->month,
-                'total_capital' => isset($data['total_capital']) && $data['total_capital'] !== null ? (string) $data['total_capital'] : $totalCapital,
+                'total_capital' => $normalized['total_capital'],
                 'status' => 'final',
                 'created_by_admin_id' => $request->user()->id,
             ]);
 
-            foreach ($data['items'] as $index => $item) {
-                $capital = number_format((float) $item['capital'], 2, '.', '');
-                $ratio = bccomp((string) $totalCapital, '0.00', 2) === 0
-                    ? '0.0000'
-                    : bcdiv($capital, $totalCapital, 4);
-
-                CapitalSnapshotItem::query()->create([
-                    'capital_snapshot_id' => $snapshot->id,
-                    'participant_id' => (int) $item['participant_id'],
-                    'participant_capital_snapshot' => $capital,
-                    'participant_ratio_snapshot' => $ratio,
-                    'calculation_metadata' => ['index' => $index],
-                ]);
-            }
+            $snapshot->syncItems($normalized['items'], $request->user());
 
             return $snapshot;
         });

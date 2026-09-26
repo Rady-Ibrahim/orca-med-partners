@@ -226,6 +226,14 @@ final class SidebarPageDataAction
                 .(isset($new['total_capital']) ? ' بإجمالي '.DecimalFormatter::money($new['total_capital']).' ر.س' : '');
         }
 
+        if ($log->action === 'capital_snapshot_item_created') {
+            $meta = $log->metadata ?? [];
+            $participantId = (int) ($meta['participant_id'] ?? 0);
+            $name = $participantNames[$participantId] ?? "مشارك #{$participantId}";
+
+            return "إضافة {$name} برأس مال ".DecimalFormatter::money($meta['new_capital'] ?? '0').' ر.س';
+        }
+
         if ($log->action === 'capital_snapshot_item_updated') {
             $meta = $log->metadata ?? [];
             $participantId = (int) ($meta['participant_id'] ?? 0);

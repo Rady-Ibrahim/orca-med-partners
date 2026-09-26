@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Domain\Financial\Services\CapitalCalculatorService;
 use App\Services\SecurityAuditService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -42,52 +43,114 @@ class CapitalSnapshot extends Model
         });
     }
 
+    /**
+     * Applies a capital edit from the capital page (or admin API).
+     *
+     * Capital entered here is authoritative and is deliberately independent of
+     * the `investments` table. Rows are upserted rather than deleted and
+     * re-inserted so capital_snapshot_item ids stay stable and keep pointing at
+     * the same audit trail, and participants absent from the payload keep the
+     * capital they already had.
+     *
+     * @param  array<int, array{participant_id:int, capital:string|int|float}>  $items
+     */
     public function syncItems(array $items, ?Admin $actor): void
     {
-        $oldItems = $this->items->keyBy('participant_id');
+        $calculator = app(CapitalCalculatorService::class);
+        $normalized = $calculator->normalizeItems($items);
 
-        $totalCapital = '0.00';
-        foreach ($items as $item) {
-            $totalCapital = bcadd($totalCapital, number_format((float) $item['capital'], 2, '.', ''), 2);
+        $existing = $this->items()->get()->keyBy('participant_id');
+
+        // Ratios are relative, so a partial payload still changes everyone
+        // else's share. Merge the retained rows into the base before dividing,
+        // otherwise the header total and the stored ratios silently disagree
+        // with the item rows that were left untouched.
+        $capitals = [];
+        foreach ($existing as $participantId => $row) {
+            $capitals[(int) $participantId] = (string) $row->participant_capital_snapshot;
         }
 
-        $this->items()->delete();
+        foreach ($normalized['items'] as $item) {
+            $capitals[$item['participant_id']] = $item['capital'];
+        }
 
-        foreach ($items as $index => $item) {
-            $capital = number_format((float) $item['capital'], 2, '.', '');
-            $ratio = bccomp($totalCapital, '0.00', 2) === 0
-                ? '0.0000'
-                : bcdiv($capital, $totalCapital, 4);
+        $ratios = $calculator->recalculateRatios($capitals);
 
-            $created = CapitalSnapshotItem::query()->create([
-                'capital_snapshot_id' => $this->id,
-                'participant_id' => (int) $item['participant_id'],
-                'participant_capital_snapshot' => $capital,
-                'participant_ratio_snapshot' => $ratio,
-                'calculation_metadata' => ['index' => $index],
-            ]);
+        foreach ($ratios as $participantId => $ratio) {
+            $participantId = (int) $participantId;
+            $capital = $capitals[$participantId];
 
-            $old = $oldItems->get((int) $item['participant_id']);
-            if ($old === null || bccomp((string) $old->participant_capital_snapshot, $capital, 2) === 0) {
+            /** @var CapitalSnapshotItem $row */
+            $row = $existing->get($participantId);
+
+            if ($row === null) {
+                $created = $this->items()->create([
+                    'participant_id' => $participantId,
+                    'participant_capital_snapshot' => $capital,
+                    'participant_ratio_snapshot' => $ratio,
+                    'calculation_metadata' => ['source' => 'capital_page'],
+                ]);
+
+                app(SecurityAuditService::class)->log(
+                    'capital_snapshot_item_created',
+                    $actor,
+                    'capital_snapshot_item',
+                    $created->id,
+                    [
+                        'snapshot_id' => $this->id,
+                        'participant_id' => $participantId,
+                        'new_capital' => $capital,
+                        'new_ratio' => $ratio,
+                    ],
+                );
+
                 continue;
             }
+
+            $oldCapital = (string) $row->participant_capital_snapshot;
+            $oldRatio = (string) $row->participant_ratio_snapshot;
+
+            if (bccomp($oldCapital, $capital, 2) === 0 && bccomp($oldRatio, $ratio, 4) === 0) {
+                continue;
+            }
+
+            $row->forceFill([
+                'participant_capital_snapshot' => $capital,
+                'participant_ratio_snapshot' => $ratio,
+            ])->saveQuietly();
 
             app(SecurityAuditService::class)->log(
                 'capital_snapshot_item_updated',
                 $actor,
                 'capital_snapshot_item',
-                $created->id,
+                $row->id,
                 [
                     'snapshot_id' => $this->id,
-                    'participant_id' => (int) $item['participant_id'],
-                    'old_capital' => (string) $old->participant_capital_snapshot,
+                    'participant_id' => $participantId,
+                    'old_capital' => $oldCapital,
                     'new_capital' => $capital,
+                    'old_ratio' => $oldRatio,
+                    'new_ratio' => $ratio,
                 ],
             );
         }
 
-        $this->total_capital = $totalCapital;
+        $this->total_capital = array_reduce(
+            $capitals,
+            static fn (string $carry, string $capital): string => bcadd($carry, $capital, 2),
+            '0.00',
+        );
         $this->save();
+    }
+
+    /**
+     * Recomputes this snapshot's ownership ratios and header total in place.
+     *
+     * @return array{changed: bool, total_capital: string, updated: int}
+     */
+    public function recalculateRatios(): array
+    {
+        return app(CapitalCalculatorService::class)->recalculateSnapshot($this);
     }
 
     public function items(): HasMany

@@ -1,0 +1,42 @@
+{
+    "database": "orca-med-partners",
+    "backup": "backup_data_20260926_111716.sql",
+    "kept": [
+        "admins",
+        "app_settings",
+        "migrations",
+        "cache",
+        "cache_locks",
+        "failed_jobs",
+        "jobs",
+        "job_batches",
+        "password_reset_tokens",
+        "users"
+    ],
+    "deleted": {
+        "audit_logs": 267,
+        "capital_snapshots": 1,
+        "capital_snapshot_items": 11,
+        "depreciation_notes": 7,
+        "distribution_rules": 2,
+        "funds": 5,
+        "fund_transactions": 20,
+        "investments": 1,
+        "monthly_profits": 5,
+        "notifications": 87,
+        "participants": 11,
+        "participant_fund_allocations": 110,
+        "participant_profit_allocations": 55,
+        "personal_access_tokens": 11,
+        "profit_projection_logs": 0,
+        "refresh_tokens": 15,
+        "sessions": 11,
+        "settlements": 1,
+        "settlement_adjustments": 0,
+        "settlement_items": 11,
+        "settlement_payments": 0,
+        "settlement_payment_receipts": 0,
+        "support_tickets": 1
+    },
+    "at": "2026-09-26T11:19:09+00:00"
+}

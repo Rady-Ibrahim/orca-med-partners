@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Domain\Financial\Services\CapitalCalculatorService;
 use App\Domain\Financial\Services\FinancialCalculationServiceContract;
 use App\Domain\Financial\Services\FundBalanceService;
 use App\Domain\Financial\ValueObjects\FinancialRoundingService;
 use App\Enums\FundTransactionType;
 use App\Models\Admin;
+use App\Models\CapitalSnapshot;
 use App\Models\DepreciationNote;
 use App\Models\Fund;
 use App\Models\MonthlyProfit;
@@ -18,20 +20,24 @@ use App\Models\Settlement;
 use App\Models\SettlementItem;
 use App\Services\SecurityAuditService;
 use Illuminate\Console\Command;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
 final class FinanceReconcileCommand extends Command
 {
-    protected $signature = 'finance:reconcile {--year= : Restrict repairs to a specific year}';
+    protected $signature = 'finance:reconcile
+        {--year= : Restrict repairs to a specific year}
+        {--force : Also overwrite stored monthly profit header amounts that disagree with the recomputed split, instead of only reporting the mismatch}';
 
-    protected $description = 'Recomputes profit/fund allocations to exact sums, backfills missing fund deposits and depreciation notes for approved profits, and regenerates stale draft annual settlements.';
+    protected $description = 'Repairs capital snapshot ownership ratios, recomputes profit/fund allocations to exact sums, backfills missing fund deposits and depreciation notes for approved profits, and regenerates stale draft annual settlements.';
 
     public function __construct(
         private FinancialCalculationServiceContract $calculationService,
         private FinancialRoundingService $rounding,
         private FundBalanceService $funds,
         private SecurityAuditService $audit,
+        private CapitalCalculatorService $capital,
     ) {
         parent::__construct();
     }
@@ -60,6 +66,7 @@ final class FinanceReconcileCommand extends Command
 
         $summary = [
             'profits' => count($profits),
+            'snapshots_repaired' => 0,
             'allocations_recomputed' => 0,
             'fund_allocations_rebuilt' => 0,
             'deposits_created' => 0,
@@ -69,6 +76,8 @@ final class FinanceReconcileCommand extends Command
         ];
 
         DB::transaction(function () use ($profits, $actor, &$summary): void {
+            $summary['snapshots_repaired'] = $this->repairSnapshotRatios($profits, $actor);
+
             foreach ($profits as $profit) {
                 if ($profit->parent_id !== null || $profit->version > 1) {
                     continue;
@@ -108,7 +117,17 @@ final class FinanceReconcileCommand extends Command
                         );
                     }
 
-                    $profit->forceFill(['rounding_delta_adjustment' => $result->roundingDelta])->saveQuietly();
+                    $repaired = [
+                        'rounding_delta_adjustment' => $result->roundingDelta,
+                    ];
+
+                    if ($this->option('force')) {
+                        foreach ($storedKeyToResult as $storedKey => $resultKey) {
+                            $repaired[$storedKey] = $result->{$resultKey};
+                        }
+                    }
+
+                    $profit->forceFill($repaired)->saveQuietly();
 
                     $this->rebuildProfitAllocations($profit, $result->participantAllocations);
                     $summary['allocations_recomputed']++;
@@ -151,6 +170,46 @@ final class FinanceReconcileCommand extends Command
         $this->info(json_encode($summary, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Repairs ownership ratios on every snapshot the target profits depend on.
+     *
+     * Without this the command would faithfully re-derive downstream numbers
+     * from ratios that were themselves wrong, which is exactly how a stale
+     * snapshot kept reproducing a zero share for a funded partner.
+     *
+     * @param  Collection<int, MonthlyProfit>  $profits
+     */
+    private function repairSnapshotRatios(iterable $profits, Admin $actor): int
+    {
+        $snapshotIds = [];
+        foreach ($profits as $profit) {
+            if ($profit->parent_id === null && $profit->version === 1 && $profit->capital_snapshot_id !== null) {
+                $snapshotIds[(int) $profit->capital_snapshot_id] = true;
+            }
+        }
+
+        $repaired = 0;
+        foreach (array_keys($snapshotIds) as $snapshotId) {
+            $snapshot = CapitalSnapshot::query()->lockForUpdate()->find($snapshotId);
+            if ($snapshot === null) {
+                continue;
+            }
+
+            $result = $this->capital->recalculateSnapshot($snapshot);
+            if (! $result['changed']) {
+                continue;
+            }
+
+            $repaired++;
+            $this->audit->log('finance_reconcile_capital_ratios_repaired', $actor, 'capital_snapshot', $snapshot->id, [
+                'total_capital' => $result['total_capital'],
+                'ratios_updated' => $result['updated'],
+            ]);
+        }
+
+        return $repaired;
     }
 
     /** @param array<int, array{participant_id:int, amount:string, share_ratio:string}> $allocations */

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\Admin;
 
+use App\Domain\Financial\Services\CapitalCalculatorService;
 use App\Models\CapitalSnapshot;
-use App\Models\CapitalSnapshotItem;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -14,6 +14,9 @@ use Illuminate\Support\Facades\Gate;
 
 final class CapitalController
 {
+    public function __construct(
+        private CapitalCalculatorService $capital,
+    ) {}
     public function index(Request $request): JsonResponse
     {
         Gate::forUser($request->user())->authorize('capital.view');
@@ -46,34 +49,18 @@ final class CapitalController
         $snapshotDate = Carbon::parse($data['snapshot_date']);
 
         $snapshot = DB::transaction(function () use ($data, $snapshotDate, $admin): CapitalSnapshot {
-            $totalCapital = '0.00';
-            foreach ($data['items'] as $item) {
-                $totalCapital = bcadd($totalCapital, number_format((float) $item['capital'], 2, '.', ''), 2);
-            }
+            $normalized = $this->capital->normalizeItems($data['items']);
 
             $snapshot = CapitalSnapshot::query()->create([
                 'snapshot_date' => $data['snapshot_date'],
                 'year' => $snapshotDate->year,
                 'month' => $snapshotDate->month,
-                'total_capital' => isset($data['total_capital']) ? (string) $data['total_capital'] : $totalCapital,
+                'total_capital' => $normalized['total_capital'],
                 'status' => 'final',
                 'created_by_admin_id' => $admin->id,
             ]);
 
-            foreach ($data['items'] as $index => $item) {
-                $capital = number_format((float) $item['capital'], 2, '.', '');
-                $ratio = bccomp((string) $totalCapital, '0.00', 2) === 0
-                    ? '0.0000'
-                    : bcdiv($capital, $totalCapital, 4);
-
-                CapitalSnapshotItem::query()->create([
-                    'capital_snapshot_id' => $snapshot->id,
-                    'participant_id' => (int) $item['participant_id'],
-                    'participant_capital_snapshot' => $capital,
-                    'participant_ratio_snapshot' => $ratio,
-                    'calculation_metadata' => ['index' => $index],
-                ]);
-            }
+            $snapshot->syncItems($normalized['items'], $admin);
 
             return $snapshot;
         });
